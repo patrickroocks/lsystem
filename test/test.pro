@@ -1,5 +1,4 @@
-QT += testlib
-QT += gui
+QT += testlib gui
 
 CONFIG += c++17
 QMAKE_CXXFLAGS += -Wno-deprecated-copy

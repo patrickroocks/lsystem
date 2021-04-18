@@ -24,7 +24,6 @@ public:
 	bool setData(const QModelIndex & index, const QVariant & value, int role) override;
 
 	void selectionChanged(const QItemSelection & selected, const QItemSelection & deselected);
-
 	bool add();
 	bool remove();
 

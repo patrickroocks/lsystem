@@ -28,7 +28,6 @@ signals:
 protected:
 	void paintEvent(QPaintEvent *event) override;
 	void resizeEvent(QResizeEvent *event) override;
-
 	void mousePressEvent(QMouseEvent *event) override;
 
 private:
@@ -36,15 +35,16 @@ private:
 	void setNextUndoRedo(bool undoOrRedo);
 
 private:
-	QImage image;
-	QImage lastImage;
-
 	struct Drawing {
 		bool rectValid = false;
-		QPointF topLeft;
-		QPointF botRight;
+		QPoint topLeft;
+		QPoint botRight;
+		QImage image;
 		void updateRect(double minX, double minY, double maxX, double maxY);
-	} drawing;
+	};
+
+	Drawing drawing;
+	Drawing lastDrawing;
 
 	bool nextUndoOrRedo = true;
 };

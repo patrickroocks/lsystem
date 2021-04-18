@@ -13,24 +13,31 @@ using DynActionList = QList<DynAction>;
 class ProcessLiteralAction;
 using DynProcessLiteralAction = QSharedPointer<ProcessLiteralAction>;
 
-struct StateGeom {
+struct StateGeom
+{
 	QPointF cur;
 	QPointF d;
 };
 
-struct State : public StateGeom {
+struct State : public StateGeom
+{
 	QStack<StateGeom> subStates;
 };
 
 using States = QList<State>;
 
-class ActionInterface {
+// ----------------------------------------------------------------------
+
+class ActionInterface
+{
 public:
+	virtual ~ActionInterface() {}
 	virtual void addAction(const Action * state) = 0;
 	virtual void addSegment(const common::LineSeg & seg) = 0;
 };
 
-class Action {
+class Action
+{
 public:
 	Action(ActionInterface & actInt, char literal)
 		: actInt(actInt),
@@ -45,11 +52,10 @@ public:
 
 protected:
 	ActionInterface & actInt;
+
 private:
 	char literal;
 };
-
-
 
 class ProcessLiteralAction : public Action
 {
@@ -61,10 +67,11 @@ public:
 	{}
 
 	void expand() const override;
-
 	void exec(State & state) const override;
 
+public:
 	DynActionList subActions;
+
 private:
 	QRgb color;
 	bool paint = false;
@@ -119,19 +126,20 @@ public:
 
 // ---------------------------------------------------------------------------------------------------------
 
-class Simulator : public impl::ActionInterface
+class Simulator : public QObject, public impl::ActionInterface
 {
-public:
+	Q_OBJECT
 
+public:
 	enum class ExecResult {
 		Ok,
-		Invalid,
+		InvalidConfig,
 		ExceedStackSize
 	};
+	Q_ENUM(ExecResult)
 
 	ExecResult execAndExpand(const common::ConfigSet & newConfig);
 	ExecResult execWithDoubleStackSize();
-
 
 	bool isValid();
 	QString getLastError() const { return lastError; }
@@ -139,15 +147,15 @@ public:
 	QString getActionStr() const;
 	quint32 getLastIterNum() const { return lastIterNum; }
 
+public:
 	static const constexpr int DefaultMaxStackSize = 100000;
-	int curMaxStackSize = DefaultMaxStackSize;
 
 private:
 	void addAction(const impl::Action * action) override;
 	void addSegment(const common::LineSeg & seg) override;
 
 	bool parseActions(const common::ConfigSet & newConfig);
-	bool expansionEqual(const common::ConfigSet & newConfig);
+	bool expansionEqual(const common::ConfigSet & newConfig) const;
 	ExecResult execIterations();
 	bool execIter();
 
@@ -159,6 +167,7 @@ private:
 	QList<const impl::Action *> currentActions;
 	QList<const impl::Action *> nextActions;
 
+	int curMaxStackSize = DefaultMaxStackSize;
 	QString lastError;
 	quint32 lastIterNum = 0;
 

@@ -78,7 +78,6 @@ private:
 
 	lsystem::DefinitionModel defModel;
 	lsystem::ConfigStore configStore;
-
 	lsystem::Simulator simulator;
 
 	QTimer errorDecayTimer;

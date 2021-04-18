@@ -60,16 +60,19 @@ template<typename T>               QString printImpl(const QSet<T>          & se
 template<typename... T>            QString printImpl(const std::tuple<T...> & tup);
 template<typename T, typename A>   QString printImpl(const std::deque<T, A> & deq);
 
-// * search for toString, stringify, toJson
-
-// switch between toString (first try), stringify (second try) and toJson (third try)
+// * search for toString
 template<typename T>
-inline typename std::enable_if<has_to_string<T>::value, QString>::type
+inline typename std::enable_if<has_to_string<T>::value && !std::is_enum<T>::value, QString>::type
 printImpl(const T & cl) { return cl.toString(); }
+
+// * check if is enum with Q_ENUM macro
+template<typename T>
+inline typename std::enable_if<!has_to_string<T>::value && std::is_enum<T>::value, QString>::type
+printImpl(const T & cl) { return QVariant::fromValue(cl).toString(); }
 
 // * other classes: assume that () operator is overloaded (std::function, lambda, ...)
 template<typename T>
-inline typename std::enable_if<!has_to_string<T>::value, QString>::type
+inline typename std::enable_if<!has_to_string<T>::value && !std::is_enum<T>::value, QString>::type
 printImpl(const T & fun) { return fun(); }
 
 // * Containers and complex types definitions (recursion possible!)

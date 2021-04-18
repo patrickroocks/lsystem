@@ -68,13 +68,11 @@ Simulator::ExecResult Simulator::execAndExpand(const common::ConfigSet & newConf
 	curMaxStackSize = DefaultMaxStackSize;
 
 	if (!(valid && expansionEqual(newConfig))) {
-
 		valid = parseActions(newConfig);
-		if (!valid) return ExecResult::Invalid;
+		if (!valid) return ExecResult::InvalidConfig;
 	}
 
 	config = newConfig;
-
 	return execIterations();
 }
 
@@ -196,7 +194,7 @@ bool Simulator::parseActions(const ConfigSet & newConfig)
 			char c = qc.toLatin1();
 
 			if (!allActions.contains(c)) {
-				lastError = QString("unexpected literal '%1' in actions for literal '%2'").arg(qc).arg(key);
+				lastError = QString("Unexpected literal '%1' in actions for literal '%2'").arg(qc).arg(key);
 				return false;
 			}
 
@@ -206,7 +204,7 @@ bool Simulator::parseActions(const ConfigSet & newConfig)
 		}
 
 		if (scaleLevel != 0) {
-			lastError = QString("scale down/up, i.e., '[' and ']' symbols do not match in actions for literal '%1': %2").arg(key).arg(value.command);
+			lastError = QString("Scale down/up, i.e., '[' and ']' symbols do not match in actions for literal '%1': %2").arg(key).arg(value.command);
 			return false;
 		}
 	}
@@ -214,7 +212,7 @@ bool Simulator::parseActions(const ConfigSet & newConfig)
 	return true;
 }
 
-bool Simulator::expansionEqual(const ConfigSet & newConfig)
+bool Simulator::expansionEqual(const ConfigSet & newConfig) const
 {
 	return     newConfig.definitions == config.definitions
 			&& newConfig.numIter     == config.numIter

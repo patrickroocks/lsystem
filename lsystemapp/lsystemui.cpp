@@ -241,7 +241,7 @@ void LSystemUi::processResult(Simulator::ExecResult execResult, int x, int y, bo
 	lastX = x;
 	lastY = y;
 
-	if (execResult == Simulator::ExecResult::Invalid) {
+	if (execResult == Simulator::ExecResult::InvalidConfig) {
 		showMessage(simulator.getLastError(), MsgType::Error);
 		return;
 	}

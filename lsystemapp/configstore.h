@@ -7,7 +7,8 @@
 
 namespace lsystem {
 
-struct ConfigNameKind {
+struct ConfigNameKind
+{
 	QString configName;
 	bool fromUser = false;
 };

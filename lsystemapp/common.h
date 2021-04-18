@@ -71,5 +71,4 @@ inline bool operator==(const ConfigSet::TurnDegree & lhs, const ConfigSet::TurnD
 
 }
 
-
 #endif // COMMON_H

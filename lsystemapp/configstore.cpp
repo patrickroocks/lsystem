@@ -178,7 +178,6 @@ void ConfigStore::storeUserConfigsInFile()
 	for (const auto & [key, value] : KeyVal(userConfigs)) {
 		configs[key] = value.toJson();
 	}
-
 	QJsonDocument doc(configs);
 
 	QFile file(UserConfigFile);
@@ -216,5 +215,3 @@ ConfigStore::ConfigMap ConfigStore::getConfigsFromFile(const QString & filePath,
 }
 
 }
-
-
