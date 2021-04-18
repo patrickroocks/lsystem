@@ -1,12 +1,12 @@
 # lsystem
 
-The **lsystem** app is an interactive fractal generator for [Lindenmayer systems (also called "L-systems")](https://en.wikipedia.org/wiki/L-system). 
+The **lsystem** app is an interactive fractal generator for Lindenmayer systems (also called ["L-systems", Wikipdia](https://en.wikipedia.org/wiki/L-system)). 
 
 It supports Lindenmayer systems with arbitrary many variables (including helper variables which do not result in painted segments), different angles for left/right rotations and scaling down drawings within the recursive call. The user interface is written in Qt5.
 
 ## Build and run
 
-To build lsystem, you will need to [install the Qt Library](https://wiki.qt.io/Install_Qt_5_on_Ubuntu). To build and start lystem, run:
+To build lsystem, you will first need to [install the Qt Library](https://wiki.qt.io/Install_Qt_5_on_Ubuntu). To build and start lystem, run:
 
     git clone https://github.com/patrickroocks/lsystem lsystem
     cd lsystem
@@ -23,11 +23,7 @@ On the [lsystem page on my personal web page](https://www.p-roocks.de/wordpress2
     chmod +x lsystemapp
     ./lsystemapp
 	
-to start it. Run `./lsystemapp --version` to check if you have the newest version, i.e., the same version as in the [version file](https://github.com/patrickroocks/lsystem/blob/main/lsystem/lsystemapp/version.h) on this repository. 
-
-## Learn more about Lindenmayer systems
-
-Have a look at [L-System article on Wikipedia](https://en.wikipedia.org/wiki/L-system).
+to start it. Run `./lsystemapp --version` to check if you have the newest version, i.e., the same version as in the [version file](https://github.com/patrickroocks/lsystem/blob/main/lsystemapp/version.h) on this repository. 
 
 ## Bugs, comments, suggestions?
 
