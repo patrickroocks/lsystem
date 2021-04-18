@@ -1,0 +1,132 @@
+{
+	"Circle": {
+		"definitions": {
+			"A": {
+				"color": -16777216,
+				"command": "A+A",
+				"paint": true
+			}
+		},
+		"numIter": 3,
+		"scaling": 0.8,
+		"startAngle": 0,
+		"stepSize": 30,
+		"turnLeft": 30,
+		"turnRight": -30
+	},
+	"Hilbert curve": {
+		"definitions": {
+			"A": {
+				"color": -1,
+				"command": "-BF+AFA+FB-",
+				"paint": false
+			},
+			"B": {
+				"color": -1,
+				"command": "+AF-BFB-FA+",
+				"paint": false
+			},
+			"F": {
+				"color": -16777216,
+				"command": "F",
+				"paint": true
+			}
+		},
+		"numIter": 5,
+		"scaling": 0.8,
+		"startAngle": 0,
+		"stepSize": 10,
+		"turnLeft": 90,
+		"turnRight": -90
+	},
+	"Koch Snowflake": {
+		"definitions": {
+			"A": {
+				"color": -16777216,
+				"command": "F--F--F",
+				"paint": false
+			},
+			"F": {
+				"color": -16777216,
+				"command": "F+F--F+F",
+				"paint": true
+			}
+		},
+		"numIter": 5,
+		"scaling": 0.8,
+		"startAngle": 0,
+		"stepSize": 4,
+		"turnLeft": 60,
+		"turnRight": -60
+	},
+	"Lévy C curve": {
+		"definitions": {
+			"A": {
+				"color": -16777216,
+				"command": "+A--A+",
+				"paint": true
+			}
+		},
+		"numIter": 14,
+		"scaling": 0.8,
+		"startAngle": 0,
+		"stepSize": 2,
+		"turnLeft": 45,
+		"turnRight": -45
+	},
+	"Sierpiński Triangle": {
+		"definitions": {
+			"A": {
+				"color": -1103575,
+				"command": "B-A-B",
+				"paint": true
+			},
+			"B": {
+				"color": -16777216,
+				"command": "A+B+A",
+				"paint": true
+			}
+		},
+		"numIter": 7,
+		"scaling": 0.8,
+		"startAngle": 0,
+		"stepSize": 4,
+		"turnLeft": 60,
+		"turnRight": -60
+	},
+	"Spiral": {
+		"definitions": {
+			"A": {
+				"color": -16777216,
+				"command": "B+[A]",
+				"paint": false
+			},
+			"B": {
+				"color": -16777216,
+				"command": "B",
+				"paint": true
+			}
+		},
+		"numIter": 25,
+		"scaling": 0.9,
+		"startAngle": 0,
+		"stepSize": 50,
+		"turnLeft": 30,
+		"turnRight": -30
+	},
+	"Tree": {
+		"definitions": {
+			"A": {
+				"color": -11625978,
+				"command": "A[+A][-A]",
+				"paint": true
+			}
+		},
+		"numIter": 6,
+		"scaling": 0.8,
+		"startAngle": -90,
+		"stepSize": 50,
+		"turnLeft": 20,
+		"turnRight": -30
+	}
+}
