@@ -89,7 +89,7 @@ bool Simulator::isValid()
 
 Simulator::ExecResult Simulator::execIterations()
 {
-	currentActions = {mainActions.first().data()};
+	currentActions = {startAction.data()};
 	nextActions.clear();
 
 	for (quint32 i = 0 ; i < config.numIter ; ++i) {
@@ -160,6 +160,9 @@ void Simulator::addSegment(const LineSeg & seg)
 
 bool Simulator::parseActions(const ConfigSet & newConfig)
 {
+	mainActions.clear();
+	startAction = nullptr;
+
 	QMap<char, DynAction> allActions;
 	auto addAction = [&allActions](const DynAction & action) {
 		allActions[action->getLiteral()] = action;
@@ -180,21 +183,28 @@ bool Simulator::parseActions(const ConfigSet & newConfig)
 	addAction(scaleEnd);
 
 	// * main actions
-	for (const auto & [key, value] : KeyVal(newConfig.definitions)) {
-		DynProcessLiteralAction & mainAction = mainActions[key];
-		mainAction = DynProcessLiteralAction::create(*this, key, value.color, value.paint);
+	for (const Definition & def : newConfig.definitions) {
+		if (mainActions.contains(def.literal)) {
+			lastError = printStr("Found duplicate definition for literal '%1'", def.literal);
+			return false;
+		}
+		DynProcessLiteralAction & mainAction = mainActions[def.literal];
+		mainAction = DynProcessLiteralAction::create(*this, def.literal, def.color, def.paint);
 		addAction(mainAction);
+
+		// first action is start action
+		if (!startAction) startAction = mainAction;
 	}
 
-	for (const auto & [key, value] : KeyVal(newConfig.definitions)) {
-		DynProcessLiteralAction literalAction = mainActions[key];
+	for (const Definition & def : newConfig.definitions) {
+		DynProcessLiteralAction literalAction = mainActions[def.literal];
 
 		qint16 scaleLevel = 0;
-		for (const QChar & qc : value.command) {
+		for (const QChar & qc : def.command) {
 			char c = qc.toLatin1();
 
 			if (!allActions.contains(c)) {
-				lastError = QString("Unexpected literal '%1' in actions for literal '%2'").arg(qc).arg(key);
+				lastError = printStr("Unexpected literal '%1' in actions for literal '%2'", qc, def.literal);
 				return false;
 			}
 
@@ -204,7 +214,8 @@ bool Simulator::parseActions(const ConfigSet & newConfig)
 		}
 
 		if (scaleLevel != 0) {
-			lastError = QString("Scale down/up, i.e., '[' and ']' symbols do not match in actions for literal '%1': %2").arg(key).arg(value.command);
+			lastError = printStr("Scale down/up, i.e., '[' and ']' symbols do not match in actions for literal '%1': %2",
+								 def.literal, def.command);
 			return false;
 		}
 	}

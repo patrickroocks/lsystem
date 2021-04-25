@@ -10,10 +10,11 @@ namespace lsystem::common {
 struct Definition
 {
 	Definition() = default;
-	explicit Definition(const QString & command);
+	explicit Definition(char literal, const QString & command);
 	Definition(const QJsonObject & obj);
 	QJsonObject toJson() const;
 
+	char literal = '\0';
 	QString command;
 	QRgb color;
 	bool paint = false;
@@ -21,12 +22,13 @@ struct Definition
 
 inline bool operator==(const Definition & lhs, const Definition & rhs)
 {
-	return     lhs.command == rhs.command
+	return     lhs.literal == rhs.literal
+			&& lhs.command == rhs.command
 			&& lhs.color   == rhs.color
 			&& lhs.paint   == rhs.paint;
 }
 
-using Definitions = QMap<char, Definition>;
+using Definitions = QList<Definition>;
 
 struct Links
 {

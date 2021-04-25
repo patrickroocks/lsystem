@@ -1,5 +1,7 @@
 #include "definitionmodel.h"
 
+#include <util/print.h>
+
 #include <QBrush>
 #include <QColorDialog>
 
@@ -10,16 +12,19 @@ const int MaxNumDefinitions = 5;
 }
 
 using namespace lsystem::common;
+using namespace util;
 
 namespace lsystem {
 
 DefinitionModel::DefinitionModel(QWidget * parent)
 	: parent(parent)
 {
-	Definition & defaultDef = definitions['A'];
+	Definition defaultDef;
+	defaultDef.literal = 'A';
 	defaultDef.command = "A+A";
 	defaultDef.color = qRgb(0, 0, 0);
 	defaultDef.paint = true;
+	definitions << defaultDef;
 	checkForNewStartSymbol();
 }
 
@@ -35,7 +40,7 @@ auto DefinitionModel::getRow(const QModelIndex & index)
 
 void DefinitionModel::checkForNewStartSymbol()
 {
-	const char tmpStartSymbol = definitions.firstKey();
+	const char tmpStartSymbol = definitions.first().literal;
 	if (tmpStartSymbol != startSymbol) {
 		startSymbol = tmpStartSymbol;
 		emit newStartSymbol(QString(1, startSymbol));
@@ -58,11 +63,11 @@ QVariant DefinitionModel::data(const QModelIndex & index, int role) const
 {
 	if (role == Qt::DisplayRole || role == Qt::EditRole) {
 
-		if (index.column() == 0) return QString(getRow(index).key());
-		else if (index.column() == 1) return getRow(index).value().command;
+		if (index.column() == 0) return QString(getRow(index)->literal);
+		else if (index.column() == 1) return getRow(index)->command;
 
 	} else if (role == Qt::BackgroundRole) {
-		if (index.column() == 2) return QBrush(getRow(index).value().color);
+		if (index.column() == 2) return QBrush(getRow(index)->color);
 
 	} else if (role == Qt::CheckStateRole) {
 		if (index.column() == 3) return getRow(index)->paint ? Qt::Checked : Qt::Unchecked;
@@ -91,10 +96,14 @@ bool DefinitionModel::removeRows(int row, int count, const QModelIndex & parent)
 
 Qt::ItemFlags DefinitionModel::flags(const QModelIndex & index) const
 {
-	Qt::ItemFlags rv = QAbstractTableModel::flags(index);
-	if      (index.column() <= 1) rv |= Qt::ItemIsEditable;
-	else if (index.column() == 3) rv |= Qt::ItemIsUserCheckable;
-	return rv;
+	if (index.isValid()) {
+		Qt::ItemFlags rv = QAbstractTableModel::flags(index);
+		if      (index.column() <= 1) rv |= Qt::ItemIsEditable;
+		else if (index.column() == 3) rv |= Qt::ItemIsUserCheckable;
+		return rv | Qt::ItemIsDragEnabled;
+	} else {
+		return Qt::ItemIsDropEnabled;
+	}
 }
 
 QVariant DefinitionModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -129,20 +138,13 @@ bool DefinitionModel::setData(const QModelIndex & index, const QVariant & value,
 				emit showError(QString("Literal '%1' is not allowed, expected one char [A-Z]").arg(literalStr));
 				return false;
 			}
-			const QSet<char> currentKeys = definitions.keys().toSet();
-			if (currentKeys.contains(newChar)) {
-				emit showError(QString("Literal '%1' must not be used twice").arg(literalStr));
-				return false;
-			}
-			const char oldChar = itRow.key();
-			definitions[newChar] = definitions[oldChar];
-			definitions.remove(oldChar);
+			itRow->literal = newChar;
 			checkForNewStartSymbol();
 			emit edited();
 			return true;
 		} else if (index.column() == 1) {
-			if (itRow.value().command != value.toString()) {
-				itRow.value().command = value.toString();
+			if (itRow->command != value.toString()) {
+				itRow->command = value.toString();
 				emit edited();
 			}
 			return true;
@@ -160,6 +162,42 @@ bool DefinitionModel::setData(const QModelIndex & index, const QVariant & value,
 	return false;
 }
 
+bool DefinitionModel::dropMimeData(const QMimeData * data, Qt::DropAction action, int row, int column, const QModelIndex & parent)
+{
+	ALL_UNUSED(column, parent);
+
+	if (action != Qt::MoveAction) return false;
+
+	QByteArray encoded = data->data(mimeTypes().first());
+	QDataStream stream(&encoded, QIODevice::ReadOnly);
+
+	if (stream.atEnd()) return false; // no data
+
+	int srcRow, srcCol;
+	QMap<int,  QVariant> roleDataMap;
+	stream >> srcRow >> srcCol >> roleDataMap;
+
+	// too much data? there should be only one single cell selectable
+	if (!stream.atEnd()) return false;
+
+	// do the move
+	const QModelIndex srcIndex = createIndex(srcRow, srcCol);
+	if (row == srcRow || row == srcRow + 1) {
+		showError(printStr("Cannot move definition %1: target and destination are identical", getRow(srcIndex)->literal));
+		return false;
+	}
+	definitions.insert(row, *getRow(srcIndex));
+	if (srcRow > row) { // delete below insertion
+		++srcRow;
+	} else { // delete above insertion
+		--row;
+	}
+	definitions.removeAt(srcRow);
+	dataChanged(createIndex(qMin(row, srcRow), 0), createIndex(qMax(row, srcRow), columnCount() - 1));
+	checkForNewStartSymbol();
+	return true;
+}
+
 void DefinitionModel::selectionChanged(const QItemSelection & selected, const QItemSelection & deselected)
 {
 	Q_UNUSED(deselected);
@@ -170,8 +208,8 @@ void DefinitionModel::selectionChanged(const QItemSelection & selected, const QI
 	bool ok;
 	QColorDialog diag;
 	const QRgb newColor = QColorDialog::getRgba(row->color, &ok, parent);
-	if (newColor != row.value().color) {
-		row.value().color = newColor;
+	if (newColor != row->color) {
+		row->color = newColor;
 	}
 	emit deselect();
 }
@@ -181,14 +219,19 @@ bool DefinitionModel::add()
 	if (definitions.size() < MaxNumDefinitions) {
 		const int addRowNum = definitions.size();
 
-		const QSet<char> currentKeys = definitions.keys().toSet();
-		char nextChar = definitions.lastKey();
+		QSet<char> currentLiterals;
+		for (const Definition & def : definitions) currentLiterals << def.literal;
+		char nextChar = definitions.last().literal;
 		while (true) {
 			nextChar++;
 			if (nextChar == 'Z') nextChar = 'A';
-			if (!currentKeys.contains(nextChar)) break;
+			if (!currentLiterals.contains(nextChar)) break;
 		}
-		definitions[nextChar].color = qRgb(0, 0, 0);
+		Definition newDefinition;
+		newDefinition.literal = nextChar;
+		newDefinition.color = qRgb(0, 0, 0);
+		newDefinition.paint = true;
+		definitions << newDefinition;
 		insertRow(addRowNum);
 		return true;
 	}

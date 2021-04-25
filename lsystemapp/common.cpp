@@ -20,10 +20,9 @@ ConfigSet::ConfigSet(const QJsonObject & obj)
 	  numIter(obj["numIter"].toInt()),
 	  stepSize(obj["stepSize"].toDouble())
 {
-	QVariantMap tmpMap = obj["definitions"].toObject().toVariantMap();
-	for (const auto & [key, value] : KeyVal(tmpMap)) {
-		if (key.size() != 1) return;
-		definitions[key[0].toLatin1()] = Definition(value.toJsonObject());
+	QJsonArray tmpMap = obj["definitions"].toArray();
+	for (const auto & jsonDef : obj["definitions"].toArray()) {
+		definitions << Definition(jsonDef.toObject());
 	}
 }
 
@@ -38,9 +37,9 @@ QJsonObject ConfigSet::toJson() const
 	rv["stepSize"]   = stepSize;
 	rv["numIter"]    = (int)numIter;
 
-	QJsonObject jsonDefinitions;
-	for (const auto & [key, value] : KeyVal(definitions)) {
-		jsonDefinitions[QString(1, key)] = value.toJson();
+	QJsonArray jsonDefinitions;
+	for (const Definition & def : definitions) {
+		jsonDefinitions << def.toJson();
 	}
 	rv["definitions"] = jsonDefinitions;
 
@@ -51,13 +50,16 @@ QJsonObject ConfigSet::toJson() const
 
 Definition::Definition(const QJsonObject & obj)
 {
-	color = obj["color"].toInt();
+	const QByteArray literalStr = obj["literal"].toString().toLatin1();
+	literal = literalStr.size() == 1 ? literalStr.data()[0] : '\0';
 	command = obj["command"].toString();
-	paint = obj["paint"].toBool();
+	color   = obj["color"].toInt();
+	paint   = obj["paint"].toBool();
 }
 
-Definition::Definition(const QString & command)
-	: command(command),
+Definition::Definition(char literal, const QString & command)
+	: literal(literal),
+	  command(command),
 	  paint(true)
 {
 }
@@ -65,8 +67,9 @@ Definition::Definition(const QString & command)
 QJsonObject Definition::toJson() const
 {
 	QJsonObject rv;
-	rv["color"]   = (int)color;
+	rv["literal"] = QString(literal);
 	rv["command"] = command;
+	rv["color"]   = (int)color;
 	rv["paint"]   = paint;
 	return rv;
 }

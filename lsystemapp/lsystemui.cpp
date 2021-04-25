@@ -47,6 +47,7 @@ LSystemUi::LSystemUi(QWidget *parent)
 	ui->tblDefinitions->setColumnWidth(1, 200);
 	ui->tblDefinitions->setColumnWidth(2, 20);
 	ui->tblDefinitions->setColumnWidth(3, 15);
+	ui->tblDefinitions->setAcceptDrops(true);
 
 	connect(ui->tblDefinitions->selectionModel(), &QItemSelectionModel::selectionChanged,
 			&defModel, &DefinitionModel::selectionChanged);

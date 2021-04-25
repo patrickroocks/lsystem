@@ -172,6 +172,7 @@ private:
 	quint32 lastIterNum = 0;
 
 	QMap<char, impl::DynProcessLiteralAction> mainActions;
+	impl::DynProcessLiteralAction startAction;
 };
 
 }
