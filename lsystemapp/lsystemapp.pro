@@ -16,6 +16,7 @@ SOURCES += \
 	configstore.cpp \
 	definitionmodel.cpp \
 	drawarea.cpp \
+	drawingcollection.cpp \
 	main.cpp \
 	lsystemui.cpp \
 	simulator.cpp \
@@ -28,11 +29,13 @@ HEADERS += \
 	configstore.h \
 	definitionmodel.h \
 	drawarea.h \
+	drawingcollection.h \
 	lsystemui.h \
 	simulator.h \
 	util/compareutils.h \
 	util/div-utils.h \
 	util/print.h \
+	util/qpointenhance.h \
 	util/qt-cont-utils.h \
 	version.h
 

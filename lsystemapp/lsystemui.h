@@ -54,9 +54,9 @@ private slots:
 
 private:
 	// Draw Area
-	void drawAreaClick(int x, int y, Qt::MouseButton button);
+	void drawAreaClick(int x, int y, Qt::MouseButton button, bool drawingMarked);
 	void startPaint(int x, int y);
-	void setBgColorClear();
+	void setBgColor();
 	void enableUndoRedo(bool undoOrRedo);
 
 	void processResult(lsystem::Simulator::ExecResult execResult, int x, int y, bool clear);
@@ -74,7 +74,7 @@ private:
 
 private:
 	Ui::LSystemUi * ui;
-	QScopedPointer<DrawArea> drawArea;
+	QScopedPointer<lsystem::ui::DrawArea> drawArea;
 
 	lsystem::DefinitionModel defModel;
 	lsystem::ConfigStore configStore;
@@ -82,14 +82,19 @@ private:
 
 	QTimer errorDecayTimer;
 
-	struct DrawAreaMenu {
+	class DrawAreaMenu {
+	public:
 		DrawAreaMenu(LSystemUi * parent);
 		QMenu menu;
 		QAction * undoAction;
 		QAction * redoAction;
 		QAction * autoClearToggle;
 		QAction * autoPaintToggle;
-		QMenu clipboardMenu;
+
+		void setDrawingActionsVisible(bool visible);
+
+	private:
+		QList<QAction *> drawingActions;
 	};
 	QScopedPointer<DrawAreaMenu> drawAreaMenu;
 

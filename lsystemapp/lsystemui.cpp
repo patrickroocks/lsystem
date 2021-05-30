@@ -13,6 +13,7 @@
 
 using namespace lsystem;
 using namespace lsystem::common;
+using namespace lsystem::ui;
 using namespace util;
 
 namespace  {
@@ -58,6 +59,7 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(&defModel, &DefinitionModel::edited, this, &LSystemUi::configLiveEdit);
 
 	drawArea.reset(new DrawArea(ui->wdgOut));
+	drawArea->setMouseTracking(true); // for mouse move event
 	connect(drawArea.data(), &DrawArea::mouseClick, this, &LSystemUi::drawAreaClick);
 	connect(drawArea.data(), &DrawArea::enableUndoRedu, this, &LSystemUi::enableUndoRedo);
 
@@ -104,11 +106,11 @@ void LSystemUi::startPaint(int x, int y)
 			drawAreaMenu->autoClearToggle->isChecked() || drawAreaMenu->autoPaintToggle->isChecked());
 }
 
-void LSystemUi::setBgColorClear()
+void LSystemUi::setBgColor()
 {
 	bool ok;
-	drawArea->backColor = QColorDialog::getRgba(drawArea->backColor, &ok, this);
-	if (ok) drawArea->clear();
+	QRgb col = QColorDialog::getRgba(drawArea->getBgColor(), &ok, this);
+	if (ok) drawArea->setBgColor(col);
 }
 
 void LSystemUi::showMessage(const QString & errorStr, MsgType msgType)
@@ -198,14 +200,15 @@ void LSystemUi::on_lstConfigs_doubleClicked(const QModelIndex & index)
 	loadConfigByLstIndex(index);
 }
 
-void LSystemUi::drawAreaClick(int x, int y, Qt::MouseButton button)
+void LSystemUi::drawAreaClick(int x, int y, Qt::MouseButton button, bool drawingMarked)
 {
 	ui->tblDefinitions->setFocus(); // removes focus from text fields
 	ui->tblDefinitions->setCurrentIndex(QModelIndex()); // finishes editing
 
-	if (button == Qt::MouseButton::LeftButton) {
+	if (button == Qt::MouseButton::LeftButton && !drawingMarked) {
 		startPaint(x, y);
 	} else if (button == Qt::MouseButton::RightButton) {
+		drawAreaMenu->setDrawingActionsVisible(drawingMarked);
 		drawAreaMenu->menu.exec(drawArea->mapToGlobal(QPoint(x, y)));
 	};
 }
@@ -344,31 +347,45 @@ void LSystemUi::on_cmdAbout_clicked()
 // ------------------------------------------------------
 
 LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
-	: menu(parent),
-	  clipboardMenu("Copy to clipboard", parent)
+	: menu(parent)
 {
+	drawingActions
+		<< menu.addAction("Delete drawing", &*parent->drawArea, &DrawArea::deleteMarked, Qt::Key_Delete)
+		<< menu.addAction("Copy drawing", &*parent->drawArea, &DrawArea::copyToClipboardMarked, Qt::CTRL + Qt::SHIFT + Qt::Key_C)
+		<< menu.addAction("Send to front", &*parent->drawArea, &DrawArea::sendToFrontMarked)
+		<< menu.addAction("Send to back", &*parent->drawArea, &DrawArea::sendToBackMarked)
+		<< menu.addSeparator();
+
+	setDrawingActionsVisible(false);
+
 	undoAction = menu.addAction("Undo", &*parent->drawArea, &DrawArea::restoreLastImage, Qt::CTRL + Qt::Key_Z);
 	undoAction->setEnabled(false);
 	redoAction = menu.addAction("Redo", &*parent->drawArea, &DrawArea::restoreLastImage, Qt::CTRL + Qt::Key_Y);
 	redoAction->setEnabled(false);
+	menu.addSeparator();
 
 	autoClearToggle = menu.addAction("Auto clear");
 	autoClearToggle->setCheckable(true);
-	autoClearToggle->setChecked(true);
-
 	autoPaintToggle = menu.addAction("Auto paint");
 	autoPaintToggle->setCheckable(true);
+	menu.addSeparator();
 
 	menu.addAction("Clear", &*parent->drawArea, &DrawArea::clear, Qt::CTRL + Qt::Key_C);
-	menu.addAction("Set Bg-Color && Clear", parent, &LSystemUi::setBgColorClear, Qt::CTRL + Qt::Key_B);
+	menu.addAction("Set Bg-Color", parent, &LSystemUi::setBgColor, Qt::CTRL + Qt::Key_B);
+	menu.addSeparator();
 
-	menu.addMenu(&clipboardMenu);
-	clipboardMenu.addAction("Copy full area", &*parent->drawArea, &DrawArea::copyToClipboardFull);
-	clipboardMenu.addAction("Copy last drawing", &*parent->drawArea, &DrawArea::copyToClipboardLastDrawing);
+	menu.addAction("Copy canvas", &*parent->drawArea, &DrawArea::copyToClipboardFull);
 
 	// to get the shortcurts working
 	parent->ui->menubar->addMenu(&menu);
 	parent->ui->menubar->setNativeMenuBar(true);
+}
+
+void LSystemUi::DrawAreaMenu::setDrawingActionsVisible(bool visible)
+{
+	for (QAction * action : drawingActions) {
+		action->setVisible(visible);
+	}
 }
 
 LSystemUi::StatusMenu::StatusMenu(LSystemUi * parent)

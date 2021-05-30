@@ -9,56 +9,37 @@
 
 using namespace lsystem::common;
 
+namespace lsystem::ui {
+
 DrawArea::DrawArea(QWidget * parent) : QWidget(parent)
 {
 }
 
 void DrawArea::clear()
 {
-	lastDrawing = drawing;
+	lastDrawings = drawings;
 
-	drawing.image.fill(backColor);
+	drawings.clear();
 	update();
 	setNextUndoRedo(true);
 }
 
-void DrawArea::draw(const LineSegs & segs, int offX, int offY, bool clear)
+void DrawArea::draw(const LineSegs & segs, int offX, int offY, bool clearBefore)
 {
-	lastDrawing = drawing;
+	lastDrawings = drawings;
 
-	QImage & image = drawing.image;
-	if (clear) image.fill(backColor);
-
-	QPen pen;
-	QPainter painter(&image);
-
-	QPointF off(offX, offY);
-
-	drawing.rectValid = false;
-	drawing.topLeft  = QPoint(image.width(), image.height());
-	drawing.botRight = QPoint(0, 0);
-
-	for (const LineSeg & seg : segs) {
-		pen.setColor(seg.color);
-		painter.setPen(pen);
-		const QPoint start = (seg.start + off).toPoint();
-		const QPoint end   = (seg.end   + off).toPoint();
-		painter.drawLine(start, end);
-
-		drawing.updateRect(qMin(start.x(), end.x()), qMin(start.y(), end.y()),
-						   qMax(start.x(), end.x()), qMax(start.y(), end.y()));
-	}
-
-	if (!segs.isEmpty()) drawing.rectValid = true;
+	if (clearBefore) drawings.clear();
+	drawings.addDrawing(segs, QPoint(offX, offY));
 
 	update();
-
 	setNextUndoRedo(true);
 }
 
 void DrawArea::restoreLastImage()
 {
-	qSwap(drawing, lastDrawing);
+	qSwap(drawings, lastDrawings);
+	drawings.setMarkedDrawing(0);
+	markedDrawing = 0;
 	update();
 	setNextUndoRedo(!nextUndoOrRedo);
 }
@@ -66,42 +47,81 @@ void DrawArea::restoreLastImage()
 void DrawArea::copyToClipboardFull()
 {
 	QClipboard * clipboard = QGuiApplication::clipboard();
-	clipboard->setImage(drawing.image);
+	clipboard->setImage(drawings.image);
 }
 
-void DrawArea::copyToClipboardLastDrawing()
+void DrawArea::copyToClipboardMarked()
 {
-	if (!drawing.rectValid) return;
+	const QPoint drawingSize = drawings.getDrawingSize(markedDrawing);
+	if (drawingSize.isNull()) return;
 
 	QClipboard * clipboard = QGuiApplication::clipboard();
-	const QPoint size = drawing.botRight - drawing.topLeft + QPoint(1, 1);
-	QImage newImage(QSize(size.x(), size.y()), QImage::Format_RGB32);
+	const QPoint size = drawingSize + QPoint(1, 1);
+	QImage newImage(QSize(size.x(), size.y()), QImage::Format_ARGB32);
 	QPainter painter(&newImage);
-	painter.drawImage(QPoint(0, 0), drawing.image, QRect(drawing.topLeft, drawing.botRight + QPoint(1, 1)));
+	painter.drawImage(QPoint(0, 0), drawings.getImage(markedDrawing));
 	clipboard->setImage(newImage);
+}
+
+void DrawArea::deleteMarked()
+{
+	lastDrawings = drawings;
+	drawings.deleteImage(markedDrawing);
+	update();
+	setNextUndoRedo(true);
+}
+
+void DrawArea::sendToFrontMarked()
+{
+	lastDrawings = drawings;
+	drawings.sendToFront(markedDrawing);
+	update();
+}
+
+void DrawArea::sendToBackMarked()
+{
+	lastDrawings = drawings;
+	drawings.sendToBack(markedDrawing);
+	update();
 }
 
 QPoint DrawArea::getLastSize() const
 {
-	if (!drawing.rectValid) return QPoint();
-	return drawing.botRight - drawing.topLeft;
+	return drawings.getLastSize();
+}
+
+void DrawArea::setBgColor(const QRgb & col)
+{
+	drawings.backColor = col;
+	drawings.redraw();
+	update();
+
+	lastDrawings.backColor = col;
+	lastDrawings.dirty = true;
+}
+
+QRgb DrawArea::getBgColor() const
+{
+	return drawings.backColor;
 }
 
 void DrawArea::paintEvent(QPaintEvent * event)
 {
 	QPainter painter(this);
 	QRect dirtyRect = event->rect();
-	painter.drawImage(dirtyRect, drawing.image, dirtyRect);
+	painter.drawImage(dirtyRect, drawings.image, dirtyRect);
 }
 
 void DrawArea::resizeEvent(QResizeEvent * event)
 {
-	QImage & image = drawing.image;
+	QImage & image = drawings.image;
 	if (width() > image.width() || height() > image.height()) {
 		// avoid always resizing, wehen the window size is changed
 		int newWidth = qMax(width() + 128, image.width());
 		int newHeight = qMax(height() + 128, image.height());
-		resizeImage(&image, QSize(newWidth, newHeight));
+		const QSize newSize(newWidth, newHeight);
+		drawings.resize(newSize);
+		lastDrawings.resize(newSize);
 		update();
 	}
 	QWidget::resizeEvent(event);
@@ -109,22 +129,60 @@ void DrawArea::resizeEvent(QResizeEvent * event)
 
 void DrawArea::mousePressEvent(QMouseEvent * event)
 {
-	emit mouseClick(event->x(), event->y(), event->button());
+	const qint64 clickedDrawing = drawings.getDrawingByPos(event->pos());
+
+	bool cancelEvent = false;
+
+	if (clickedDrawing > 0 && clickedDrawing == markedDrawing && event->button() == Qt::MouseButton::LeftButton) {
+		moveMode = MoveState::ReadyForMove;
+		moveStartOffset = drawings.getDrawingOffset(markedDrawing) - QPoint(event->x(), event->y());
+		setCursor(Qt::SizeAllCursor);
+		cancelEvent = true;
+	} else if (markedDrawing > 0 && clickedDrawing == 0) {
+		cancelEvent = true;
+	}
+
+	markedDrawing = clickedDrawing;
+	if (drawings.setMarkedDrawing(markedDrawing)) update();
+
+	if (!cancelEvent) {
+		emit mouseClick(event->x(), event->y(), event->button(), markedDrawing > 0);
+	}
 }
 
-void DrawArea::resizeImage(QImage * image, const QSize & newSize)
+void DrawArea::mouseReleaseEvent(QMouseEvent * event)
 {
-	if (image->size() == newSize) return;
+	Q_UNUSED(event);
 
-	QImage newImage(newSize, QImage::Format_RGB32);
-	newImage.fill(backColor);
-	QPainter painter(&newImage);
-	painter.drawImage(QPoint(0, 0), *image);
-	*image = newImage;
+	if (moveMode != MoveState::NoMove) {
+		setCursor(Qt::ArrowCursor);
+		moveMode = MoveState::NoMove;
+	}
+}
 
-	newImage.fill(backColor);
-	painter.drawImage(QPoint(0, 0), lastDrawing.image);
-	lastDrawing.image = newImage;
+void DrawArea::mouseMoveEvent(QMouseEvent * event)
+{
+	if (moveMode != MoveState::NoMove) {
+
+		if (moveMode == MoveState::ReadyForMove) {
+			lastDrawings = drawings;
+			setNextUndoRedo(true);
+			moveMode = MoveState::MoveStarted;
+		}
+		QPoint newOffset = moveStartOffset + QPoint(event->x(), event->y());
+		if (drawings.moveDrawing(markedDrawing, newOffset)) update();
+
+	} else {
+
+		const qint64 mouseOverDrawing = drawings.getDrawingByPos(event->pos());
+		if (markedDrawing == 0) {
+			if (mouseOverDrawing > 0) {
+				setCursor(Qt::ArrowCursor);
+			} else {
+				setCursor(Qt::CrossCursor);
+			}
+		}
+	}
 }
 
 void DrawArea::setNextUndoRedo(bool undoOrRedo)
@@ -133,12 +191,4 @@ void DrawArea::setNextUndoRedo(bool undoOrRedo)
 	emit enableUndoRedu(nextUndoOrRedo);
 }
 
-// ------------------------------------------------------------------------------------------
-
-void DrawArea::Drawing::updateRect(double minX, double minY, double maxX, double maxY)
-{
-	if (minX < topLeft .x()) topLeft .setX(minX);
-	if (minY < topLeft .y()) topLeft .setY(minY);
-	if (maxX > botRight.x()) botRight.setX(maxX);
-	if (maxY > botRight.y()) botRight.setY(maxY);
 }
