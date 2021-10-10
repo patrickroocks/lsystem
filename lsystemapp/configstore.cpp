@@ -7,7 +7,7 @@
 using namespace lsystem::common;
 using namespace util;
 
-namespace  {
+namespace {
 
 const QString UserConfigPrefix = "[user] ";
 const QString UserConfigFile = "userconfigs.json";

@@ -114,7 +114,7 @@ void DrawingCollection::redraw()
 	dirty = false;
 	image.fill(backColor);
 
-	for (qint64 drawNum : zIndexToDrawing) {
+	for (qint64 drawNum : qAsConst(zIndexToDrawing)) {
 		drawings[drawNum].drawToImage(image, drawNum == markedDrawing);
 	}
 }

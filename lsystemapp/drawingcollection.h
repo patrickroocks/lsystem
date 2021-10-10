@@ -51,7 +51,7 @@ public:
 
 public:
 	QImage image;
-	QRgb backColor = qRgb(255, 255, 255);
+	QColor backColor = QColor(255, 255, 255);
 	bool dirty = false;
 
 private:

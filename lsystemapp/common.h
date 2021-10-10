@@ -16,7 +16,7 @@ struct Definition
 
 	char literal = '\0';
 	QString command;
-	QRgb color;
+	QColor color;
 	bool paint = false;
 };
 
@@ -40,7 +40,7 @@ struct LineSeg
 {
 	QPointF start;
 	QPointF end;
-	QRgb color;
+	QColor color;
 
 	QString toString() const;
 };

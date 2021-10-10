@@ -5,7 +5,7 @@
 #include <QBrush>
 #include <QColorDialog>
 
-namespace  {
+namespace {
 
 const int MaxNumDefinitions = 5;
 
@@ -22,7 +22,7 @@ DefinitionModel::DefinitionModel(QWidget * parent)
 	Definition defaultDef;
 	defaultDef.literal = 'A';
 	defaultDef.command = "A+A";
-	defaultDef.color = qRgb(0, 0, 0);
+	defaultDef.color = QColor(0, 0, 0);
 	defaultDef.paint = true;
 	definitions << defaultDef;
 	checkForNewStartSymbol();
@@ -168,8 +168,10 @@ bool DefinitionModel::dropMimeData(const QMimeData * data, Qt::DropAction action
 
 	if (action != Qt::MoveAction) return false;
 
-	QByteArray encoded = data->data(mimeTypes().first());
-	QDataStream stream(&encoded, QIODevice::ReadOnly);
+	const QStringList & mimeTypesRef = mimeTypes();
+	if (mimeTypesRef.isEmpty()) return false;
+	const QByteArray encoded = data->data(mimeTypesRef.first());
+	QDataStream stream(encoded);
 
 	if (stream.atEnd()) return false; // no data
 
@@ -183,7 +185,7 @@ bool DefinitionModel::dropMimeData(const QMimeData * data, Qt::DropAction action
 	// do the move
 	const QModelIndex srcIndex = createIndex(srcRow, srcCol);
 	if (row == srcRow || row == srcRow + 1) {
-		showError(printStr("Cannot move definition %1: target and destination are identical", getRow(srcIndex)->literal));
+		emit showError(printStr("Cannot move definition %1: target and destination are identical", getRow(srcIndex)->literal));
 		return false;
 	}
 	definitions.insert(row, *getRow(srcIndex));
@@ -193,7 +195,7 @@ bool DefinitionModel::dropMimeData(const QMimeData * data, Qt::DropAction action
 		--row;
 	}
 	definitions.removeAt(srcRow);
-	dataChanged(createIndex(qMin(row, srcRow), 0), createIndex(qMax(row, srcRow), columnCount() - 1));
+	emit dataChanged(createIndex(qMin(row, srcRow), 0), createIndex(qMax(row, srcRow), columnCount() - 1));
 	checkForNewStartSymbol();
 	return true;
 }
@@ -205,10 +207,9 @@ void DefinitionModel::selectionChanged(const QItemSelection & selected, const QI
 	QModelIndex ind = selected.indexes().first();
 	if (ind.column() != 2) return;
 	auto row = getRow(ind);
-	bool ok;
 	QColorDialog diag;
-	const QRgb newColor = QColorDialog::getRgba(row->color, &ok, parent);
-	if (newColor != row->color) {
+	const QColor newColor = QColorDialog::getColor(row->color, parent);
+	if (newColor.isValid() && newColor != row->color) {
 		row->color = newColor;
 	}
 	emit deselect();
@@ -220,7 +221,7 @@ bool DefinitionModel::add()
 		const int addRowNum = definitions.size();
 
 		QSet<char> currentLiterals;
-		for (const Definition & def : definitions) currentLiterals << def.literal;
+		for (const Definition & def : qAsConst(definitions)) currentLiterals << def.literal;
 		char nextChar = definitions.last().literal;
 		while (true) {
 			nextChar++;
@@ -229,7 +230,7 @@ bool DefinitionModel::add()
 		}
 		Definition newDefinition;
 		newDefinition.literal = nextChar;
-		newDefinition.color = qRgb(0, 0, 0);
+		newDefinition.color = QColor(0, 0, 0);
 		newDefinition.paint = true;
 		definitions << newDefinition;
 		insertRow(addRowNum);
@@ -257,7 +258,7 @@ void DefinitionModel::setDefinitions(const Definitions & newDefinitions)
 
 	if (sizeDiff < 0) removeRows(0, -sizeDiff);
 	else if (sizeDiff > 0) insertRows(0, sizeDiff);
-	dataChanged(createIndex(0, 0), createIndex(rowCount() - 1, columnCount() - 1));
+	emit dataChanged(createIndex(0, 0), createIndex(rowCount() - 1, columnCount() - 1));
 	checkForNewStartSymbol();
 }
 

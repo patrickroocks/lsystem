@@ -25,12 +25,13 @@ public:
 	void sendToBackMarked();
 
 	QPoint getLastSize() const;
-	void setBgColor(const QRgb & col);
-	QRgb getBgColor() const;
+	void setBgColor(const QColor & col);
+	QColor getBgColor() const;
 
 signals:
+	void markingChanged(bool drawingMarked);
 	void mouseClick(int x, int y, Qt::MouseButton button, bool drawingMarked);
-	void enableUndoRedu(bool undoOrRedo);
+	void enableUndoRedo(bool undoOrRedo);
 
 protected:
 	void paintEvent(QPaintEvent * event) override;
@@ -38,9 +39,6 @@ protected:
 	void mousePressEvent(QMouseEvent * event) override;
 	void mouseReleaseEvent(QMouseEvent * event) override;
 	void mouseMoveEvent(QMouseEvent * event) override;
-
-private:
-
 
 private:
 	void resizeImage(QImage * image, const QSize & newSize);

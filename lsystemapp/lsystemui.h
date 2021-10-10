@@ -10,6 +10,7 @@
 #include <QMainWindow>
 #include <QTimer>
 #include <QMenu>
+#include <QShortcut>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class LSystemUi; }

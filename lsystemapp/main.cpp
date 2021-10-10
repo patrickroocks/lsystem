@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
 	QApplication a(argc, argv);
 
 	if (a.arguments().contains("--version")) {
-		QTextStream(stdout) << "lsystem version " << lsystem::common::Version << endl;
+		QTextStream(stdout) << "lsystem version " << lsystem::common::Version << Qt::endl;
 		return 0;
 	}
 

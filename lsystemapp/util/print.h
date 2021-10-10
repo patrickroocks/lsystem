@@ -55,7 +55,7 @@ template<typename K,  typename V>  QString printImpl(const QHash     <K, V> & ha
 template<typename K,  typename V>  QString printImpl(const QMultiHash<K, V> & hash);
 template<typename T>               QString printImpl(const QVector<T>       & vec);
 template<typename T>               QString printImpl(const QList<T>         & lst);
-template<typename T>               QString printImpl(const QLinkedList<T>   & lst);
+template<typename T>               QString printImpl(const std::list<T>     & lst);
 template<typename T>               QString printImpl(const QSet<T>          & set);
 template<typename... T>            QString printImpl(const std::tuple<T...> & tup);
 template<typename T, typename A>   QString printImpl(const std::deque<T, A> & deq);
@@ -135,7 +135,7 @@ QString printCollection(const Container & cont)
 }
 
 template<typename T>             QString printImpl(const QList      <T>    & lst) { return "[" + printCollection(lst) + "]"; }
-template<typename T>             QString printImpl(const QLinkedList<T>    & lst) { return "[" + printCollection(lst) + "]"; }
+template<typename T>             QString printImpl(const std::list  <T>    & lst) { return "[" + printCollection(lst) + "]"; }
 template<typename T>             QString printImpl(const QVector    <T>    & vec) { return "(" + printCollection(vec) + ")"; }
 template<typename T>             QString printImpl(const QSet       <T>    & set) { return "{" + printCollection(set) + "}"; }
 template<typename T, typename A> QString printImpl(const std::deque <T, A> & deq) { return "[" + printCollection(deq) + "]"; }
@@ -192,14 +192,15 @@ static QString printStr(const char * str, const Params & ... params)
 		constexpr const size_t ts = std::tuple_size<TupleType>::value;
 		static_assert(ts <= 19, "currently only 19 parameters for printStr(...) are allowed");
 
-		QByteArray msg;
+		QString msg;
 		msg.reserve(128);
+
 		const char * p = str;
 		while (*p) {
 			if (*p == '%') {
 				const qint8 i = *(p+1) - '0';
 				if (ts > 9 && i == 1) {
-					msg.append(str, (int)(p - str));
+					msg += QByteArray(str, (int)(p - str));
 					const qint8 j = *(p+2) - '0';
 					if (j >= 0 && j <= 9 && 10 + j <= (qint8)ts) {
 						switch (j) {
@@ -222,7 +223,7 @@ static QString printStr(const char * str, const Params & ... params)
 						continue;
 					}
 				} else if (i >= 1 && i <= (qint8)ts) {
-					msg.append(str, (int)(p - str));
+					msg += QByteArray(str, (int)(p - str));
 					switch (i) {
 						case 1: msg += print(std::get<0             >(t)); break;
 						case 2: msg += print(std::get<1 < ts ? 1 : 0>(t)); break;
@@ -240,7 +241,7 @@ static QString printStr(const char * str, const Params & ... params)
 			}
 			++p;
 		}
-		if (str != p) msg.append(str, (int)(p - str));
+		if (str != p) msg += QByteArray(str, (int)(p - str));
 
 		return msg;
 	}

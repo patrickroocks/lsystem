@@ -69,7 +69,7 @@ QJsonObject Definition::toJson() const
 	QJsonObject rv;
 	rv["literal"] = QString(literal);
 	rv["command"] = command;
-	rv["color"]   = (int)color;
+	rv["color"]   = color.value();
 	rv["paint"]   = paint;
 	return rv;
 }

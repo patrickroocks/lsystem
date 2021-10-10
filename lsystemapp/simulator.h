@@ -60,7 +60,7 @@ private:
 class ProcessLiteralAction : public Action
 {
 public:
-	ProcessLiteralAction(ActionInterface & actInt, char literal, QRgb color, bool paint)
+	ProcessLiteralAction(ActionInterface & actInt, char literal, QColor color, bool paint)
 		: Action(actInt, literal),
 		  color(color),
 		  paint(paint)
@@ -73,7 +73,7 @@ public:
 	DynActionList subActions;
 
 private:
-	QRgb color;
+	QColor color;
 	bool paint = false;
 };
 

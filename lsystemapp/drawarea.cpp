@@ -90,7 +90,7 @@ QPoint DrawArea::getLastSize() const
 	return drawings.getLastSize();
 }
 
-void DrawArea::setBgColor(const QRgb & col)
+void DrawArea::setBgColor(const QColor & col)
 {
 	drawings.backColor = col;
 	drawings.redraw();
@@ -100,7 +100,7 @@ void DrawArea::setBgColor(const QRgb & col)
 	lastDrawings.dirty = true;
 }
 
-QRgb DrawArea::getBgColor() const
+QColor DrawArea::getBgColor() const
 {
 	return drawings.backColor;
 }
@@ -143,7 +143,10 @@ void DrawArea::mousePressEvent(QMouseEvent * event)
 	}
 
 	markedDrawing = clickedDrawing;
-	if (drawings.setMarkedDrawing(markedDrawing)) update();
+	if (drawings.setMarkedDrawing(markedDrawing)) {
+		emit markingChanged(markedDrawing > 0);
+		update();
+	}
 
 	if (!cancelEvent) {
 		emit mouseClick(event->x(), event->y(), event->button(), markedDrawing > 0);
@@ -188,7 +191,7 @@ void DrawArea::mouseMoveEvent(QMouseEvent * event)
 void DrawArea::setNextUndoRedo(bool undoOrRedo)
 {
 	nextUndoOrRedo = undoOrRedo;
-	emit enableUndoRedu(nextUndoOrRedo);
+	emit enableUndoRedo(nextUndoOrRedo);
 }
 
 }

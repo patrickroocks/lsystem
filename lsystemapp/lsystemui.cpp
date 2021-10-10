@@ -16,7 +16,7 @@ using namespace lsystem::common;
 using namespace lsystem::ui;
 using namespace util;
 
-namespace  {
+namespace {
 
 	const char * StatusDefaultStyle = "background-color: rgb(211, 215, 207); border: 1px solid black; margin: 2px 10px 2px 0px;";
 	const char * StatusErrorStyle = "background-color: red; color: white; border: 1px solid black; margin: 2px 10px 2px 0px;";
@@ -49,6 +49,7 @@ LSystemUi::LSystemUi(QWidget *parent)
 	ui->tblDefinitions->setColumnWidth(2, 20);
 	ui->tblDefinitions->setColumnWidth(3, 15);
 	ui->tblDefinitions->setAcceptDrops(true);
+	ui->tblDefinitions->setStyleSheet("QHeaderView::section { background-color: #CCCCCC }");
 
 	connect(ui->tblDefinitions->selectionModel(), &QItemSelectionModel::selectionChanged,
 			&defModel, &DefinitionModel::selectionChanged);
@@ -61,10 +62,13 @@ LSystemUi::LSystemUi(QWidget *parent)
 	drawArea.reset(new DrawArea(ui->wdgOut));
 	drawArea->setMouseTracking(true); // for mouse move event
 	connect(drawArea.data(), &DrawArea::mouseClick, this, &LSystemUi::drawAreaClick);
-	connect(drawArea.data(), &DrawArea::enableUndoRedu, this, &LSystemUi::enableUndoRedo);
+	connect(drawArea.data(), &DrawArea::enableUndoRedo, this, &LSystemUi::enableUndoRedo);
 
 	drawAreaMenu.reset(new DrawAreaMenu(this)); // needs drawArea
 	statusMenu.reset(new StatusMenu(this));
+
+	connect(drawArea.data(), &DrawArea::markingChanged,
+			[&](bool drawingMarked) { drawAreaMenu->setDrawingActionsVisible(drawingMarked); });
 
 	ui->lstConfigs->setModel(&configStore);
 }
@@ -108,9 +112,8 @@ void LSystemUi::startPaint(int x, int y)
 
 void LSystemUi::setBgColor()
 {
-	bool ok;
-	QRgb col = QColorDialog::getRgba(drawArea->getBgColor(), &ok, this);
-	if (ok) drawArea->setBgColor(col);
+	QColor col = QColorDialog::getColor(drawArea->getBgColor(), this);
+	if (col.isValid()) drawArea->setBgColor(col);
 }
 
 void LSystemUi::showMessage(const QString & errorStr, MsgType msgType)
@@ -139,8 +142,9 @@ ConfigSet LSystemUi::getConfigSet()
 	ConfigSet configSet;
 
 	auto showVarError = [&](const QString & errorVar, const QString & extraInfo = QString()) {
-		showMessage(QString("Invalid value for variable '%1'%2").arg(errorVar)
-				.arg(extraInfo.isEmpty() ? "" : (" (" + extraInfo + ")")), MsgType::Error);
+		showMessage(QString("Invalid value for variable '%1'%2").arg(
+				errorVar,
+				extraInfo.isEmpty() ? "" : (" (" + extraInfo + ")")), MsgType::Error);
 	};
 
 	configSet.definitions = defModel.getDefinitions();
@@ -208,7 +212,6 @@ void LSystemUi::drawAreaClick(int x, int y, Qt::MouseButton button, bool drawing
 	if (button == Qt::MouseButton::LeftButton && !drawingMarked) {
 		startPaint(x, y);
 	} else if (button == Qt::MouseButton::RightButton) {
-		drawAreaMenu->setDrawingActionsVisible(drawingMarked);
 		drawAreaMenu->menu.exec(drawArea->mapToGlobal(QPoint(x, y)));
 	};
 }
@@ -383,7 +386,8 @@ LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
 
 void LSystemUi::DrawAreaMenu::setDrawingActionsVisible(bool visible)
 {
-	for (QAction * action : drawingActions) {
+	// shortcuts become enabled/disabled with making the actions (un)visible
+	for (QAction * action : qAsConst(drawingActions)) {
 		action->setVisible(visible);
 	}
 }
