@@ -131,24 +131,17 @@ class Simulator : public QObject, public impl::ActionInterface
 	Q_OBJECT
 
 public:
-	enum class ExecResult {
-		Ok,
-		InvalidConfig,
-		ExceedStackSize
-	};
-	Q_ENUM(ExecResult)
+	void setMaxStackSize(int newMaxStackSize);
 
-	ExecResult execAndExpand(const common::ConfigSet & newConfig);
-	ExecResult execWithDoubleStackSize();
+signals:
+	void showError(const QString & errStr);
+	void execResult(const common::ExecResult & execResult, const QSharedPointer<common::MetaData> & metaData);
+	void actionStrResult(const QString & actionStr);
 
-	bool isValid();
-	QString getLastError() const { return lastError; }
-	common::LineSegs getSegments();
-	QString getActionStr() const;
-	quint32 getLastIterNum() const { return lastIterNum; }
-
-public:
-	static const constexpr int DefaultMaxStackSize = 100000;
+public slots:
+	void execAndExpand(const common::ConfigSet & newConfig, const QSharedPointer<common::MetaData> & metaData);
+	void execWithDoubleStackSize(const QSharedPointer<common::MetaData> & metaData);
+	void execActionStr();
 
 private:
 	void addAction(const impl::Action * action) override;
@@ -156,20 +149,20 @@ private:
 
 	bool parseActions(const common::ConfigSet & newConfig);
 	bool expansionEqual(const common::ConfigSet & newConfig) const;
-	ExecResult execIterations();
+	void execIterations(const QSharedPointer<common::MetaData> & metaData);
 	bool execIter();
+	common::LineSegs getSegments();
 
 private:
-	bool valid = false;
+	bool validConfig = false;
 	common::ConfigSet config;
 	common::LineSegs segments;
 
 	QList<const impl::Action *> currentActions;
 	QList<const impl::Action *> nextActions;
 
-	int curMaxStackSize = DefaultMaxStackSize;
-	QString lastError;
-	quint32 lastIterNum = 0;
+	int maxStackSize = 0;
+	int curMaxStackSize = 0;
 
 	QMap<char, impl::DynProcessLiteralAction> mainActions;
 	impl::DynProcessLiteralAction startAction;

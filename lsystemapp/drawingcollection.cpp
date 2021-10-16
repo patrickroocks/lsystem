@@ -75,12 +75,8 @@ void Drawing::updateRect(double minX, double minY, double maxX, double maxY)
 
 // ----------------------------------------------------------------------------------------------------------------
 
-void DrawingCollection::addDrawing(const LineSegs & segs, const QPoint & off)
+void DrawingCollection::addDrawing(Drawing newDrawing, const QPoint & off)
 {
-	if (segs.isEmpty()) return;
-
-	Drawing newDrawing = Drawing::fromSegments(segs);
-
 	newDrawing.zIndex = zIndexToDrawing.isEmpty() ? 1 : (zIndexToDrawing.lastKey() + 1);
 	newDrawing.num    = drawings       .isEmpty() ? 1 : (drawings       .lastKey() + 1);
 	newDrawing.offset = off;

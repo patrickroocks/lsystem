@@ -1,4 +1,4 @@
-QT += testlib gui
+QT += core testlib gui
 
 CONFIG += c++17
 

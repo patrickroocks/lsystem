@@ -3,7 +3,7 @@
 
 namespace lsystem::common {
 
-static const constexpr char * Version = "0.1.1";
+static const constexpr char * Version = "0.2.0-dev";
 
 }
 

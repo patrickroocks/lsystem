@@ -15,7 +15,7 @@ public:
 	explicit DrawArea(QWidget * parent = nullptr);
 
 	void clear();
-	void draw(const lsystem::common::LineSegs & segs, int offX, int offY, bool clearBefore);
+	void draw(const Drawing & drawing, int offX, int offY, bool clearBefore);
 	void restoreLastImage();
 	void copyToClipboardFull();
 

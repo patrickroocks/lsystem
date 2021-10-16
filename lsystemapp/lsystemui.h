@@ -1,11 +1,13 @@
 #ifndef LSYSTEMUI_H
 #define LSYSTEMUI_H
 
-#include <definitionmodel.h>
-#include <configstore.h>
-#include <drawarea.h>
-#include <simulator.h>
 #include <aboutdialog.h>
+#include <configfilestore.h>
+#include <configlist.h>
+#include <definitionmodel.h>
+#include <drawarea.h>
+#include <segmentdrawer.h>
+#include <simulator.h>
 
 #include <QMainWindow>
 #include <QTimer>
@@ -34,6 +36,12 @@ private:
 		Error
 	};
 
+	struct DrawMetaData : public lsystem::common::MetaData {
+		int x = 0;
+		int y = 0;
+		bool clear = false;
+	};
+
 private slots:
 	void on_cmdAdd_clicked();
 	void on_cmdRemove_clicked();
@@ -51,16 +59,33 @@ private slots:
 	void on_txtRight_textChanged(const QString & arg1);
 	void on_txtIter_textChanged(const QString & arg1);
 	void on_txtLeft_textChanged(const QString & arg1);
-	void on_txtStep_textChanged(const QString  &arg1);
+	void on_txtStep_textChanged(const QString & arg1);
+
+signals:
+	void simulatorExecActionStr();
+	void simulatorExec(const lsystem::common::ConfigSet & newConfig, const QSharedPointer<lsystem::common::MetaData> & metaData);
+	void simulatorExecDoubleStackSize(const QSharedPointer<lsystem::common::MetaData> & metaData);
+	void startDraw(const lsystem::common::LineSegs & segs, const QSharedPointer<lsystem::common::MetaData> & metaData);
+
+private slots:
+
+	// from simulator
+	void processSimulatorResult(const lsystem::common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData);
+	void processActionStr(const QString & actionStr);
+
+	// from segdrawer
+	void drawDone(const lsystem::ui::Drawing & drawing, const QSharedPointer<lsystem::common::MetaData> & metaData);
+
+	// from drawarea
+	void enableUndoRedo(bool undoOrRedo);
 
 private:
+
 	// Draw Area
 	void drawAreaClick(int x, int y, Qt::MouseButton button, bool drawingMarked);
 	void startPaint(int x, int y);
 	void setBgColor();
-	void enableUndoRedo(bool undoOrRedo);
 
-	void processResult(lsystem::Simulator::ExecResult execResult, int x, int y, bool clear);
 	void configLiveEdit();
 	void copyStatus();
 
@@ -76,10 +101,15 @@ private:
 private:
 	Ui::LSystemUi * ui;
 	QScopedPointer<lsystem::ui::DrawArea> drawArea;
+	QThread drawAreaThread;
 
 	lsystem::DefinitionModel defModel;
-	lsystem::ConfigStore configStore;
+	lsystem::ConfigList configList;
+	lsystem::ConfigFileStore configFileStore;
 	lsystem::Simulator simulator;
+	QThread simulatorThread;
+	lsystem::SegmentDrawer segDrawer;
+	QThread segDrawerThread;
 
 	QTimer errorDecayTimer;
 

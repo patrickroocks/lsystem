@@ -12,12 +12,14 @@ SOURCES += \
 	aboutdialog.cpp \
 	clickablelabel.cpp \
 	common.cpp \
-	configstore.cpp \
+	configfilestore.cpp \
+	configlist.cpp \
 	definitionmodel.cpp \
 	drawarea.cpp \
 	drawingcollection.cpp \
 	main.cpp \
 	lsystemui.cpp \
+	segmentdrawer.cpp \
 	simulator.cpp \
 	util/compareutils.cpp
 
@@ -25,11 +27,13 @@ HEADERS += \
 	aboutdialog.h \
 	clickablelabel.h \
 	common.h \
-	configstore.h \
+	configfilestore.h \
+	configlist.h \
 	definitionmodel.h \
 	drawarea.h \
 	drawingcollection.h \
 	lsystemui.h \
+	segmentdrawer.h \
 	simulator.h \
 	util/compareutils.h \
 	util/div-utils.h \
@@ -48,4 +52,4 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 RESOURCES += \
-	data/configs.qrc
+    data/config.qrc

@@ -24,12 +24,12 @@ void DrawArea::clear()
 	setNextUndoRedo(true);
 }
 
-void DrawArea::draw(const LineSegs & segs, int offX, int offY, bool clearBefore)
+void DrawArea::draw(const ui::Drawing & drawing, int offX, int offY, bool clearBefore)
 {
 	lastDrawings = drawings;
 
 	if (clearBefore) drawings.clear();
-	drawings.addDrawing(segs, QPoint(offX, offY));
+	drawings.addDrawing(drawing, QPoint(offX, offY));
 
 	update();
 	setNextUndoRedo(true);

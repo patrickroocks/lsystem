@@ -65,11 +65,55 @@ struct ConfigSet
 	bool valid = false;
 };
 
+struct ConfigMap : public QMap<QString, common::ConfigSet>
+{
+	using QMap<QString, common::ConfigSet>::QMap;
+	ConfigMap(const QJsonObject & obj);
+	QJsonObject toJson() const;
+};
+
 inline bool operator==(const ConfigSet::TurnDegree & lhs, const ConfigSet::TurnDegree & rhs)
 {
 	return     lhs.left  == rhs.left
 			&& lhs.right == rhs.right;
 }
+
+class ExecResultStructs : public QObject {
+	Q_OBJECT
+public:
+	enum class ExecResultKind {
+		Null,
+		Ok,
+		InvalidConfig,
+		ExceedStackSize
+	};
+	Q_ENUM(ExecResultKind)
+};
+
+struct ExecResult
+{
+	using ExecResultKind = ExecResultStructs::ExecResultKind;
+
+	ExecResult() = default;
+		ExecResult(ExecResultKind resultKind)
+			: resultKind(resultKind) {}
+		ExecResultKind resultKind = ExecResultKind::Null;
+		common::LineSegs segments;
+		quint32 iterNum = 0;
+	};
+
+struct AppSettings
+{
+	quint32 maxStackSize = 0;
+	AppSettings() = default;
+	AppSettings(const QJsonObject & obj);
+	QJsonObject toJson() const;
+};
+
+struct MetaData
+{
+	virtual ~MetaData() {}
+};
 
 }
 

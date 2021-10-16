@@ -31,7 +31,7 @@ private:
 class DrawingCollection
 {
 public:
-	void addDrawing(const lsystem::common::LineSegs & segs, const QPoint & off);
+	void addDrawing(Drawing newDrawing, const QPoint & off);
 
 	void resize(const QSize & newSize);
 	void clear();

@@ -1,5 +1,5 @@
-#ifndef CONFIGSTORE_H
-#define CONFIGSTORE_H
+#ifndef CONFIGLIST_H
+#define CONFIGLIST_H
 
 #include <common.h>
 
@@ -13,14 +13,12 @@ struct ConfigNameKind
 	bool fromUser = false;
 };
 
-class ConfigStore : public QAbstractListModel
+class ConfigList : public QAbstractListModel
 {
 	Q_OBJECT
 public:
-	ConfigStore(QWidget * parentWidget = nullptr);
-	~ConfigStore() {}
-
-	bool loadConfig();
+	ConfigList(QWidget * parentWidget = nullptr);
+	~ConfigList() {}
 
 	int rowCount(const QModelIndex & parent = QModelIndex()) const override;
 	QVariant data(const QModelIndex & index, int role) const override;
@@ -35,20 +33,22 @@ public:
 	ConfigNameKind getConfigNameKindByIndex(const QModelIndex & index);
 	common::ConfigSet getConfigByIndex(const QModelIndex & index);
 
+public slots:
+	void newPreAndUserConfigs(const common::ConfigMap & preConfigs, const common::ConfigMap & userConfigs);
+
+signals:
+	void configMapUpdated(const common::ConfigMap & configMap);
+
 private:
 	void updateConfigNames();
-	void storeUserConfigsInFile();
-
-	using ConfigMap = QMap<QString, common::ConfigSet>;
-	ConfigMap getConfigsFromFile(const QString & filePath, bool & ok);
 
 	auto getRow(const QModelIndex & index) const;
 	auto getRow(const QModelIndex & index);
 	void allDataChanged();
 
 private:
-	ConfigMap preConfigs;
-	ConfigMap userConfigs;
+	common::ConfigMap preConfigs;
+	common::ConfigMap userConfigs;
 	QStringList configNames;
 
 	QWidget * parentWidget;
@@ -56,4 +56,4 @@ private:
 
 }
 
-#endif // CONFIGSTORE_H
+#endif // CONFIGLIST_H

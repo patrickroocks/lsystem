@@ -62,7 +62,6 @@ int DefinitionModel::columnCount(const QModelIndex & parent) const
 QVariant DefinitionModel::data(const QModelIndex & index, int role) const
 {
 	if (role == Qt::DisplayRole || role == Qt::EditRole) {
-
 		if (index.column() == 0) return QString(getRow(index)->literal);
 		else if (index.column() == 1) return getRow(index)->command;
 
@@ -73,7 +72,6 @@ QVariant DefinitionModel::data(const QModelIndex & index, int role) const
 		if (index.column() == 3) return getRow(index)->paint ? Qt::Checked : Qt::Unchecked;
 
 	}
-
 
 	return QVariant();
 }
@@ -261,6 +259,5 @@ void DefinitionModel::setDefinitions(const Definitions & newDefinitions)
 	emit dataChanged(createIndex(0, 0), createIndex(rowCount() - 1, columnCount() - 1));
 	checkForNewStartSymbol();
 }
-
 
 }

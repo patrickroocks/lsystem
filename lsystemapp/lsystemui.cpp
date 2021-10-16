@@ -31,7 +31,7 @@ LSystemUi::LSystemUi(QWidget *parent)
 	: QMainWindow(parent),
 	  ui(new Ui::LSystemUi),
 	  defModel(this),
-	  configStore(this)
+	  configList(this)
 {
 	ui->setupUi(this);
 
@@ -39,9 +39,24 @@ LSystemUi::LSystemUi(QWidget *parent)
 	errorDecayTimer.setInterval(StatusIntervalMs);
 	connect(&errorDecayTimer, &QTimer::timeout, this, &LSystemUi::resetStatus);
 
-	if (!configStore.loadConfig()) {
-		showMessage("config file could not be parsed", MsgType::Error);
-	}
+	auto showErrorInUi = [&](const QString & errMsg) { showMessage(errMsg, MsgType::Error); };
+
+	connect(&configList, &ConfigList::configMapUpdated, &configFileStore, &ConfigFileStore::newConfigMap);
+	connect(&configFileStore, &ConfigFileStore::loadedPreAndUserConfigs, &configList, &ConfigList::newPreAndUserConfigs);
+	connect(&configFileStore, &ConfigFileStore::showError, showErrorInUi);
+	connect(&configFileStore, &ConfigFileStore::loadedAppSettings,
+			[&](const AppSettings & settings) { simulator.setMaxStackSize(settings.maxStackSize); });
+
+	simulator.moveToThread(&simulatorThread);
+	connect(this, &LSystemUi::simulatorExecActionStr, &simulator, &Simulator::execActionStr);
+	connect(this, &LSystemUi::simulatorExec, &simulator, &Simulator::execAndExpand);
+	connect(this, &LSystemUi::simulatorExecDoubleStackSize, &simulator, &Simulator::execWithDoubleStackSize);
+	connect(&simulator, &Simulator::execResult, this, &LSystemUi::processSimulatorResult);
+	connect(&simulator, &Simulator::actionStrResult, this, &LSystemUi::processActionStr);
+	connect(&simulator, &Simulator::showError, showErrorInUi);
+	simulatorThread.start();
+
+	configFileStore.loadConfig();
 
 	ui->tblDefinitions->setModel(&defModel);
 	ui->tblDefinitions->setColumnWidth(0, 20);
@@ -56,7 +71,7 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(&defModel, &DefinitionModel::deselect,
 			[&]() { ui->tblDefinitions->setCurrentIndex(QModelIndex()); });
 	connect(&defModel, &DefinitionModel::newStartSymbol, ui->lblStartSymbol, &QLabel::setText);
-	connect(&defModel, &DefinitionModel::showError, [&](const QString & errMsg) { showMessage(errMsg, MsgType::Error); });
+	connect(&defModel, &DefinitionModel::showError, showErrorInUi);
 	connect(&defModel, &DefinitionModel::edited, this, &LSystemUi::configLiveEdit);
 
 	drawArea.reset(new DrawArea(ui->wdgOut));
@@ -70,11 +85,18 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(drawArea.data(), &DrawArea::markingChanged,
 			[&](bool drawingMarked) { drawAreaMenu->setDrawingActionsVisible(drawingMarked); });
 
-	ui->lstConfigs->setModel(&configStore);
+	ui->lstConfigs->setModel(&configList);
+
+	segDrawer.moveToThread(&segDrawerThread);
+	connect(this, &LSystemUi::startDraw, &segDrawer, &SegmentDrawer::startDraw);
+	connect(&segDrawer, &SegmentDrawer::drawDone, this, &LSystemUi::drawDone);
+	segDrawerThread.start();
 }
 
 LSystemUi::~LSystemUi()
 {
+	simulatorThread.quit();
+	segDrawerThread.quit();
 	delete ui;
 }
 
@@ -106,8 +128,15 @@ void LSystemUi::startPaint(int x, int y)
 	const ConfigSet configSet = getConfigSet();
 	if (!configSet.valid) return;
 
-	processResult(simulator.execAndExpand(configSet), x, y,
-			drawAreaMenu->autoClearToggle->isChecked() || drawAreaMenu->autoPaintToggle->isChecked());
+	lastX = x;
+	lastY = y;
+
+	QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
+	execMeta->x = x;
+	execMeta->y = y;
+	execMeta->clear = drawAreaMenu->autoClearToggle->isChecked() || drawAreaMenu->autoPaintToggle->isChecked();
+
+	emit simulatorExec(configSet, execMeta);
 }
 
 void LSystemUi::setBgColor()
@@ -183,7 +212,7 @@ void LSystemUi::on_cmdStore_clicked()
 	const ConfigSet c = getConfigSet();
 	if (!c.valid) return;
 
-	ConfigNameKind currentConfig = configStore.getConfigNameKindByIndex(ui->lstConfigs->currentIndex());
+	ConfigNameKind currentConfig = configList.getConfigNameKindByIndex(ui->lstConfigs->currentIndex());
 	bool ok;
 	QString configName = QInputDialog::getText(this, "Config name",
 			"Enter a name for the config:", QLineEdit::Normal,
@@ -191,7 +220,7 @@ void LSystemUi::on_cmdStore_clicked()
 
 	if (!ok) return;
 
-	configStore.storeConfig(configName, c);
+	configList.storeConfig(configName, c);
 }
 
 void LSystemUi::on_cmdLoad_clicked()
@@ -218,7 +247,7 @@ void LSystemUi::drawAreaClick(int x, int y, Qt::MouseButton button, bool drawing
 
 void LSystemUi::loadConfigByLstIndex(const QModelIndex & index)
 {
-	ConfigSet config = configStore.getConfigByIndex(index);
+	ConfigSet config = configList.getConfigByIndex(index);
 	if (config.valid) {
 		setConfigSet(config);
 	} else {
@@ -228,10 +257,10 @@ void LSystemUi::loadConfigByLstIndex(const QModelIndex & index)
 
 void LSystemUi::on_cmdDelete_clicked()
 {
-	ConfigNameKind currentConfig = configStore.getConfigNameKindByIndex(ui->lstConfigs->currentIndex());
+	ConfigNameKind currentConfig = configList.getConfigNameKindByIndex(ui->lstConfigs->currentIndex());
 
 	if (currentConfig.fromUser) {
-		configStore.deleteConfig(currentConfig.configName);
+		configList.deleteConfig(currentConfig.configName);
 	} else {
 		showMessage("predefined config can't be deleted", MsgType::Error);
 	}
@@ -243,27 +272,35 @@ void LSystemUi::enableUndoRedo(bool undoOrRedo)
 	drawAreaMenu->redoAction->setEnabled(!undoOrRedo);
 }
 
-void LSystemUi::processResult(Simulator::ExecResult execResult, int x, int y, bool clear)
+void LSystemUi::processSimulatorResult(const common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData)
 {
-	lastX = x;
-	lastY = y;
+	if (execResult.resultKind == common::ExecResult::ExecResultKind::InvalidConfig) {
+		return;
+	}
+	emit startDraw(execResult.segments, metaData);
 
-	if (execResult == Simulator::ExecResult::InvalidConfig) {
-		showMessage(simulator.getLastError(), MsgType::Error);
+	const QString msgPainted = printStr("Painted %1 segments, size is %2 px, <a href=\"%3\">Show symbols</a>",
+			execResult.segments.size(), drawArea->getLastSize(), Links::ShowSymbols);
+
+	if (execResult.resultKind == ExecResult::ExecResultKind::Ok) {
+		showMessage(msgPainted, MsgType::Info);
+	}
+}
+
+void LSystemUi::processActionStr(const QString & actionStr)
+{
+	showMessage(actionStr, MsgType::Info);
+}
+
+void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPointer<MetaData> & metaData)
+{
+	QSharedPointer<DrawMetaData> drawMetaData = qSharedPointerDynamicCast<DrawMetaData>(metaData);
+	if (drawMetaData.isNull()) {
+		showMessage("got wrong meta data", MsgType::Error);
 		return;
 	}
 
-	LineSegs segs = simulator.getSegments();
-	drawArea->draw(segs, x, y, clear);
-
-	const QString msgPainted = printStr("Painted %1 segments, size is %2 px, <a href=\"%3\">Show symbols</a>",
-			segs.size(), drawArea->getLastSize(), Links::ShowSymbols);
-
-	if (execResult == Simulator::ExecResult::Ok) {
-		showMessage(msgPainted, MsgType::Info);
-	} else if (execResult == Simulator::ExecResult::ExceedStackSize) {
-		showMessage(simulator.getLastError() + " | " + msgPainted, MsgType::Warning);
-	}
+	drawArea->draw(drawing, drawMetaData->x, drawMetaData->y, drawMetaData->clear);
 }
 
 void LSystemUi::configLiveEdit()
@@ -277,7 +314,13 @@ void LSystemUi::configLiveEdit()
 
 	ConfigSet configSet = getConfigSet();
 	if (!configSet.valid) return;
-	processResult(simulator.execAndExpand(configSet), lastX, lastY, true);
+
+	QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
+	execMeta->x = lastX;
+	execMeta->y = lastY;
+	execMeta->clear = true;
+
+	emit simulatorExec(configSet, execMeta);
 }
 
 void LSystemUi::copyStatus()
@@ -289,9 +332,13 @@ void LSystemUi::copyStatus()
 void LSystemUi::on_lblStatus_linkActivated(const QString & link)
 {
 	if (link == Links::NextIterations) {
-		processResult(simulator.execWithDoubleStackSize(), lastX, lastY, true);
+		QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
+		execMeta->x = lastX;
+		execMeta->y = lastY;
+		execMeta->clear = true;
+		emit simulatorExecDoubleStackSize(execMeta);
 	} else if (link == Links::ShowSymbols) {
-		showMessage(simulator.getActionStr(), MsgType::Info);
+		emit simulatorExecActionStr();
 	} else {
 		QMessageBox::critical(this, "Unknown link action", QString("Link action '%1' was not found").arg(link));
 	}

@@ -24,7 +24,6 @@ public:
 	Qt::DropActions supportedDropActions() const override { return Qt::MoveAction; }
 	bool dropMimeData(const QMimeData * data, Qt::DropAction action, int row, int column, const QModelIndex & parent) override;
 
-	void selectionChanged(const QItemSelection & selected, const QItemSelection & deselected);
 	bool add();
 	bool remove();
 
@@ -36,6 +35,9 @@ signals:
 	void newStartSymbol(const QString & startSymbol);
 	void showError(const QString & errorText);
 	void edited();
+
+public slots:
+	void selectionChanged(const QItemSelection & selected, const QItemSelection & deselected);
 
 private:
 	auto getRow(const QModelIndex & index) const;
