@@ -100,11 +100,12 @@ struct ExecResult
 		ExecResultKind resultKind = ExecResultKind::Null;
 		common::LineSegs segments;
 		quint32 iterNum = 0;
-	};
+};
 
 struct AppSettings
 {
 	quint32 maxStackSize = 0;
+
 	AppSettings() = default;
 	AppSettings(const QJsonObject & obj);
 	QJsonObject toJson() const;

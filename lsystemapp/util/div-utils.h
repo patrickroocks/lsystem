@@ -58,5 +58,12 @@ T & ref(const QSharedPointer<T> & val) { return *val; }
 template<typename T>
 T & ref(QSharedPointer<T> & val) { return *val; }
 
+inline void quitAndWait(const QList<QThread *> threads)
+{
+	for (QThread * thread : threads) thread->quit();
+	for (QThread * thread : threads) thread->wait();
 }
+
+}
+
 

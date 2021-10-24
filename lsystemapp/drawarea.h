@@ -19,7 +19,7 @@ public:
 	void restoreLastImage();
 	void copyToClipboardFull();
 
-	void copyToClipboardMarked();
+	void copyToClipboardMarked(bool transparent);
 	void deleteMarked();
 	void sendToFrontMarked();
 	void sendToBackMarked();

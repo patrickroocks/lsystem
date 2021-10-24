@@ -13,6 +13,7 @@
 #include <QTimer>
 #include <QMenu>
 #include <QShortcut>
+#include <QCheckBox>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class LSystemUi; }
@@ -79,6 +80,8 @@ private slots:
 	// from drawarea
 	void enableUndoRedo(bool undoOrRedo);
 
+	void copyToClipboardMarked();
+
 private:
 
 	// Draw Area
@@ -137,6 +140,12 @@ private:
 
 	int lastX = -1;
 	int lastY = -1;
+
+	enum class TransparencyOpt {
+		Ask = 0,
+		NoTransparency = 1,
+		Transparency = 2
+	} transparencyOpt = TransparencyOpt::Ask;
 
 };
 #endif // LSYSTEMUI_H

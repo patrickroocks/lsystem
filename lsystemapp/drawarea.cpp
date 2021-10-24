@@ -1,11 +1,11 @@
 #include "drawarea.h"
 
-#include <QPainter>
-#include <QMouseEvent>
-#include <QPointF>
-#include <QRectF>
 #include <QClipboard>
 #include <QGuiApplication>
+#include <QMouseEvent>
+#include <QPainter>
+#include <QPointF>
+#include <QRectF>
 
 using namespace lsystem::common;
 
@@ -50,7 +50,7 @@ void DrawArea::copyToClipboardFull()
 	clipboard->setImage(drawings.image);
 }
 
-void DrawArea::copyToClipboardMarked()
+void DrawArea::copyToClipboardMarked(bool transparent)
 {
 	const QPoint drawingSize = drawings.getDrawingSize(markedDrawing);
 	if (drawingSize.isNull()) return;
@@ -59,6 +59,12 @@ void DrawArea::copyToClipboardMarked()
 	const QPoint size = drawingSize + QPoint(1, 1);
 	QImage newImage(QSize(size.x(), size.y()), QImage::Format_ARGB32);
 	QPainter painter(&newImage);
+
+	if (transparent) {
+		newImage.fill(qRgba(0, 0, 0, 0)); // transparent
+	} else {
+		newImage.fill(drawings.backColor);
+	}
 	painter.drawImage(QPoint(0, 0), drawings.getImage(markedDrawing));
 	clipboard->setImage(newImage);
 }

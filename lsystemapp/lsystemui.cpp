@@ -3,13 +3,13 @@
 
 #include <util/print.h>
 
-#include <QResizeEvent>
-#include <QDebug>
-#include <QMessageBox>
-#include <QInputDialog>
-#include <QColorDialog>
 #include <QClipboard>
+#include <QColorDialog>
+#include <QDebug>
 #include <QGuiApplication>
+#include <QInputDialog>
+#include <QMessageBox>
+#include <QResizeEvent>
 
 using namespace lsystem;
 using namespace lsystem::common;
@@ -95,8 +95,7 @@ LSystemUi::LSystemUi(QWidget *parent)
 
 LSystemUi::~LSystemUi()
 {
-	simulatorThread.quit();
-	segDrawerThread.quit();
+	quitAndWait({&simulatorThread, &segDrawerThread});
 	delete ui;
 }
 
@@ -272,6 +271,32 @@ void LSystemUi::enableUndoRedo(bool undoOrRedo)
 	drawAreaMenu->redoAction->setEnabled(!undoOrRedo);
 }
 
+void LSystemUi::copyToClipboardMarked()
+{
+	bool transparent;
+	if (transparencyOpt != TransparencyOpt::Ask) {
+		transparent = (transparencyOpt == TransparencyOpt::Transparency);
+	} else {
+		bool doNotAskAnymore = false;
+		// QMessageBox will take ownership (will delete the checkbox)
+		QCheckBox * chkTransparency = new QCheckBox("Don't ask anymore until restart of lsystem");
+		connect(chkTransparency, &QCheckBox::stateChanged, [&doNotAskAnymore](int state) { doNotAskAnymore = (Qt::CheckState)(state); });
+
+		QMessageBox msgBox(QMessageBox::Icon::Question, "Transparency", "Do you want to export the drawing with transparent background (will not work in all programs)?",
+						QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, parentWidget());
+		msgBox.setDefaultButton(QMessageBox::Yes);
+		msgBox.setCheckBox(chkTransparency);
+		QMessageBox::StandardButton res = (QMessageBox::StandardButton)msgBox.exec();
+		if (res == QMessageBox::Cancel) return;
+		transparent = (res == QMessageBox::Yes);
+		if (doNotAskAnymore) {
+			transparencyOpt = (transparent ? TransparencyOpt::Transparency : TransparencyOpt::NoTransparency);
+		}
+	}
+
+	drawArea->copyToClipboardMarked(transparent);
+}
+
 void LSystemUi::processSimulatorResult(const common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData)
 {
 	if (execResult.resultKind == common::ExecResult::ExecResultKind::InvalidConfig) {
@@ -401,7 +426,7 @@ LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
 {
 	drawingActions
 		<< menu.addAction("Delete drawing", &*parent->drawArea, &DrawArea::deleteMarked, Qt::Key_Delete)
-		<< menu.addAction("Copy drawing", &*parent->drawArea, &DrawArea::copyToClipboardMarked, Qt::CTRL + Qt::SHIFT + Qt::Key_C)
+		<< menu.addAction("Copy drawing", parent, &LSystemUi::copyToClipboardMarked, Qt::CTRL + Qt::SHIFT + Qt::Key_C)
 		<< menu.addAction("Send to front", &*parent->drawArea, &DrawArea::sendToFrontMarked)
 		<< menu.addAction("Send to back", &*parent->drawArea, &DrawArea::sendToBackMarked)
 		<< menu.addSeparator();
