@@ -28,10 +28,10 @@ namespace {
 }
 
 LSystemUi::LSystemUi(QWidget *parent)
-	: QMainWindow(parent),
-	  ui(new Ui::LSystemUi),
-	  defModel(this),
-	  configList(this)
+	: QMainWindow(parent)
+	, ui(new Ui::LSystemUi)
+	, defModel(this)
+	, configList(this)
 {
 	ui->setupUi(this);
 
@@ -51,9 +51,9 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(this, &LSystemUi::simulatorExecActionStr, &simulator, &Simulator::execActionStr);
 	connect(this, &LSystemUi::simulatorExec, &simulator, &Simulator::execAndExpand);
 	connect(this, &LSystemUi::simulatorExecDoubleStackSize, &simulator, &Simulator::execWithDoubleStackSize);
-	connect(&simulator, &Simulator::execResult, this, &LSystemUi::processSimulatorResult);
-	connect(&simulator, &Simulator::actionStrResult, this, &LSystemUi::processActionStr);
-	connect(&simulator, &Simulator::showError, showErrorInUi);
+	connect(&simulator, &Simulator::resultReceived, this, &LSystemUi::processSimulatorResult);
+	connect(&simulator, &Simulator::actionStrReceived, this, &LSystemUi::processActionStr);
+	connect(&simulator, &Simulator::errorReceived, showErrorInUi);
 	simulatorThread.start();
 
 	configFileStore.loadConfig();
@@ -468,4 +468,11 @@ LSystemUi::StatusMenu::StatusMenu(LSystemUi * parent)
 	: menu(parent)
 {
 	menu.addAction("Copy to clipboard", &*parent, &LSystemUi::copyStatus);
+}
+
+// ------------------------------------------------------
+
+QString LSystemUi::DrawMetaData::toString() const
+{
+	return printStr("DrawMetaData(x: %1, y: %2, clear: %3)", x, y, clear);
 }

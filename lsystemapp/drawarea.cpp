@@ -11,7 +11,8 @@ using namespace lsystem::common;
 
 namespace lsystem::ui {
 
-DrawArea::DrawArea(QWidget * parent) : QWidget(parent)
+DrawArea::DrawArea(QWidget * parent)
+	: QWidget(parent)
 {
 }
 

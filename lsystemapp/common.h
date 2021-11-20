@@ -78,7 +78,8 @@ inline bool operator==(const ConfigSet::TurnDegree & lhs, const ConfigSet::TurnD
 			&& lhs.right == rhs.right;
 }
 
-class ExecResultStructs : public QObject {
+class ExecResultStructs : public QObject
+{
 	Q_OBJECT
 public:
 	enum class ExecResultKind {
@@ -100,6 +101,8 @@ struct ExecResult
 		ExecResultKind resultKind = ExecResultKind::Null;
 		common::LineSegs segments;
 		quint32 iterNum = 0;
+
+	QString toString() const;
 };
 
 struct AppSettings
@@ -114,7 +117,20 @@ struct AppSettings
 struct MetaData
 {
 	virtual ~MetaData() {}
+	virtual QString toString() const { return "<MetaDataNull>"; }
 };
+
+inline void registerCommonTypes()
+{
+	qRegisterMetaType<ConfigSet>("lsystem::common::ConfigSet");
+	qRegisterMetaType<ConfigSet>("common::ConfigSet");
+	qRegisterMetaType<QSharedPointer<MetaData>>("QSharedPointer<lsystem::common::MetaData>");
+	qRegisterMetaType<QSharedPointer<MetaData>>("QSharedPointer<common::MetaData>");
+	qRegisterMetaType<ExecResult>("lsystem::common::ExecResult");
+	qRegisterMetaType<ExecResult>("common::ExecResult");
+	qRegisterMetaType<LineSegs>("lsystem::common::LineSegs");
+	qRegisterMetaType<LineSegs>("common::LineSegs");
+}
 
 }
 

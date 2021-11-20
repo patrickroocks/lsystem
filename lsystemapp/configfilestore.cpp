@@ -12,9 +12,9 @@ const constexpr char * PredefinedConfigFile = ":/data/predefined-config.json";
 namespace lsystem {
 
 AppConfig::AppConfig(const QJsonObject & obj)
-	: isNull(obj.find("settings") == obj.end() || obj.find("configs") == obj.end()),
-	  settings(obj["settings"].toObject()),
-	  configMap(obj["configs"].toObject())
+	: isNull(obj.find("settings") == obj.end() || obj.find("configs") == obj.end())
+	, settings(obj["settings"].toObject())
+	, configMap(obj["configs"].toObject())
 {
 }
 

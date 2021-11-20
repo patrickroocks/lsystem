@@ -1,4 +1,4 @@
-QT += core gui testlib
+QT += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -20,8 +20,7 @@ SOURCES += \
 	main.cpp \
 	lsystemui.cpp \
 	segmentdrawer.cpp \
-	simulator.cpp \
-	util/compareutils.cpp
+	simulator.cpp
 
 HEADERS += \
 	aboutdialog.h \
@@ -35,16 +34,20 @@ HEADERS += \
 	lsystemui.h \
 	segmentdrawer.h \
 	simulator.h \
-	util/compareutils.h \
-	util/div-utils.h \
-	util/print.h \
 	util/qpointenhance.h \
-	util/qt-cont-utils.h \
 	version.h
 
 FORMS += \
 	aboutdialog.ui \
 	lsystemui.ui
+
+# include lib for utils&tests
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../utiltestlib/release/ -lutiltestlib
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../utiltestlib/debug/ -lutiltestlib
+else:unix: LIBS += -L$$OUT_PWD/../utiltestlib/ -lutiltestlib
+
+INCLUDEPATH += $$PWD/../utiltestlib
+DEPENDPATH += $$PWD/../utiltestlib
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

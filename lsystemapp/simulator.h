@@ -134,9 +134,9 @@ public:
 	void setMaxStackSize(int newMaxStackSize);
 
 signals:
-	void showError(const QString & errStr);
-	void execResult(const common::ExecResult & execResult, const QSharedPointer<common::MetaData> & metaData);
-	void actionStrResult(const QString & actionStr);
+	void errorReceived(const QString & errStr);
+	void resultReceived(const common::ExecResult & execResult, const QSharedPointer<common::MetaData> & metaData);
+	void actionStrReceived(const QString & actionStr);
 
 public slots:
 	void execAndExpand(const common::ConfigSet & newConfig, const QSharedPointer<common::MetaData> & metaData);

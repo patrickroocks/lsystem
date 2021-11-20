@@ -41,6 +41,7 @@ private:
 		int x = 0;
 		int y = 0;
 		bool clear = false;
+		QString toString() const override;
 	};
 
 private slots:

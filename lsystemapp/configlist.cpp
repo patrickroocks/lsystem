@@ -1,6 +1,6 @@
 #include "configlist.h"
 
-#include <util/qt-cont-utils.h>
+#include <util/qtcontutils.h>
 
 #include <QMessageBox>
 
@@ -9,7 +9,7 @@ using namespace util;
 
 namespace {
 
-const constexpr char * UserConfigPrefix = "[user] ";
+constexpr const char * UserConfigPrefix = "[user] ";
 
 }
 
@@ -85,7 +85,7 @@ bool ConfigList::storeConfig(const QString & configName, const common::ConfigSet
 
 	bool overwritten = false;
 	if (userConfigs.contains(configName)) {
-		QMessageBox::StandardButton result = QMessageBox::question(parentWidget, "Overwrite?",
+		const QMessageBox::StandardButton result = QMessageBox::question(parentWidget, "Overwrite?",
 				QString("Overwrite existing config with name '%1'?").arg(configName));
 		if (result == QMessageBox::No) return false;
 		overwritten = true;
@@ -134,24 +134,22 @@ common::ConfigSet ConfigList::getConfigByIndex(const QModelIndex & index)
 {
 	ConfigNameKind configNameKind = getConfigNameKindByIndex(index);
 
+	bool found = false;
 	common::ConfigSet rv;
-
-	auto checkValid = [&]() {
-		rv.valid = !rv.definitions.isEmpty();
-	};
 
 	if (configNameKind.fromUser) {
 		if (userConfigs.contains(configNameKind.configName)) {
 			rv = userConfigs[configNameKind.configName];
-			checkValid();
+			found = true;
 		}
 	} else {
 		if (preConfigs.contains(configNameKind.configName)) {
 			rv = preConfigs[configNameKind.configName];
-			checkValid();
+			found = true;
 		}
 	}
 
+	if (found) rv.valid = !rv.definitions.isEmpty();
 	return rv;
 }
 

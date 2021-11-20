@@ -1,6 +1,6 @@
 #include "simulator.h"
 
-#include <util/qt-cont-utils.h>
+#include <util/qtcontutils.h>
 #include <util/print.h>
 
 #include <math.h>
@@ -70,7 +70,7 @@ void Simulator::execAndExpand(const common::ConfigSet & newConfig, const QShared
 	if (!(validConfig && expansionEqual(newConfig))) {
 		validConfig = parseActions(newConfig);
 		if (!validConfig) {
-			emit execResult(ExecResult::ExecResultKind::InvalidConfig, metaData);
+			emit resultReceived(ExecResult::ExecResultKind::InvalidConfig, metaData);
 			return;
 		}
 	}
@@ -89,7 +89,7 @@ void Simulator::execActionStr()
 {
 	QString actionStr;
 	for (const Action * action : qAsConst(currentActions)) actionStr += print(action);
-	emit actionStrResult(actionStr);
+	emit actionStrReceived(actionStr);
 }
 
 void Simulator::execIterations(const QSharedPointer<MetaData> & metaData)
@@ -104,9 +104,9 @@ void Simulator::execIterations(const QSharedPointer<MetaData> & metaData)
 			res.resultKind = ExecResult::ExecResultKind::ExceedStackSize;
 			res.segments = getSegments();
 			res.iterNum = i + 1;
-			emit showError(QString("Exceeded maximum stack size (%1) at iteration %2, <a href=\"%3\">Paint with stack size %4</a>")
+			emit errorReceived(QString("Exceeded maximum stack size (%1) at iteration %2, <a href=\"%3\">Paint with stack size %4</a>")
 					.arg(curMaxStackSize).arg(res.iterNum).arg(Links::NextIterations).arg(2 * curMaxStackSize));
-			emit execResult(res, metaData);
+			emit resultReceived(res, metaData);
 			return;
 		}
 	}
@@ -114,7 +114,7 @@ void Simulator::execIterations(const QSharedPointer<MetaData> & metaData)
 	res.resultKind = ExecResult::ExecResultKind::Ok;
 	res.iterNum = config.numIter;
 	res.segments = getSegments();
-	emit execResult(res, metaData);
+	emit resultReceived(res, metaData);
 }
 
 bool Simulator::execIter()
@@ -195,7 +195,7 @@ bool Simulator::parseActions(const ConfigSet & newConfig)
 	// * main actions
 	for (const Definition & def : newConfig.definitions) {
 		if (mainActions.contains(def.literal)) {
-			emit showError(printStr("Found duplicate definition for literal '%1'", def.literal));
+			emit errorReceived(printStr("Found duplicate definition for literal '%1'", def.literal));
 			return false;
 		}
 		DynProcessLiteralAction & mainAction = mainActions[def.literal];
@@ -214,7 +214,7 @@ bool Simulator::parseActions(const ConfigSet & newConfig)
 			char c = qc.toLatin1();
 
 			if (!allActions.contains(c)) {
-				emit showError(printStr("Unexpected literal '%1' in actions for literal '%2'", qc, def.literal));
+				emit errorReceived(printStr("Unexpected literal '%1' in actions for literal '%2'", qc, def.literal));
 				return false;
 			}
 
@@ -224,7 +224,7 @@ bool Simulator::parseActions(const ConfigSet & newConfig)
 		}
 
 		if (scaleLevel != 0) {
-			emit showError(printStr("Scale down/up, i.e., '[' and ']' symbols do not match in actions for literal '%1': %2",
+			emit errorReceived(printStr("Scale down/up, i.e., '[' and ']' symbols do not match in actions for literal '%1': %2",
 					def.literal, def.command));
 			return false;
 		}

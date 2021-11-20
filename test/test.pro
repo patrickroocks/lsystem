@@ -15,12 +15,16 @@ SOURCES +=  \
 HEADERS += \
 	../lsystemapp/simulator.h \
 	../lsystemapp/common.h \
-	../lsystemapp/util/compareutils.h \
-	../lsystemapp/util/div-utils.h \
-	../lsystemapp/util/print.h \
-	../lsystemapp/util/qt-cont-utils.h \
 
 SOURCES +=  \
 	../lsystemapp/simulator.cpp \
 	../lsystemapp/common.cpp \
-	../lsystemapp/util/compareutils.cpp \
+
+
+# include lib for utils&tests
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../utiltestlib/release/ -lutiltestlib
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../utiltestlib/debug/ -lutiltestlib
+else:unix: LIBS += -L$$OUT_PWD/../utiltestlib/ -lutiltestlib
+
+INCLUDEPATH += $$PWD/../utiltestlib
+DEPENDPATH += $$PWD/../utiltestlib

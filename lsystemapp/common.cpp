@@ -1,6 +1,6 @@
 #include "common.h"
 
-#include <util/qt-cont-utils.h>
+#include <util/qtcontutils.h>
 #include <util/print.h>
 
 using namespace util;
@@ -44,11 +44,11 @@ QString LineSeg::toString() const
 
 ConfigSet::ConfigSet(const QJsonObject & obj)
 	: turn({     obj["turnLeft"]  .toDouble(),
-				 obj["turnRight"] .toDouble()}),
-	  scaling(   obj["scaling"]   .toDouble()),
-	  startAngle(obj["startAngle"].toDouble()),
-	  numIter(   obj["numIter"]   .toInt()),
-	  stepSize(  obj["stepSize"]  .toDouble())
+				 obj["turnRight"] .toDouble()})
+	, scaling(   obj["scaling"]   .toDouble())
+	, startAngle(obj["startAngle"].toDouble())
+	, numIter(   obj["numIter"]   .toInt())
+	, stepSize(  obj["stepSize"]  .toDouble())
 {
 	for (const auto & jsonDef : obj["definitions"].toArray()) {
 		definitions << Definition(jsonDef.toObject());
@@ -96,6 +96,13 @@ QJsonObject ConfigMap::toJson() const
 
 // ----------------------------------------------------------------------------
 
+QString ExecResult::toString() const
+{
+	return printStr("ExecResult(%1, segments: %2, iterations: %3)", resultKind, segments, iterNum);
+}
+
+// ----------------------------------------------------------------------------
+
 AppSettings::AppSettings(const QJsonObject & obj)
 	: maxStackSize(obj["maxStackSize"].toInt())
 {
@@ -107,5 +114,6 @@ QJsonObject AppSettings::toJson() const
 	rv["maxStackSize"] = (int)maxStackSize;
 	return rv;
 }
+
 
 }
