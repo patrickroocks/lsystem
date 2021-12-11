@@ -25,15 +25,18 @@ public:
 
 public slots:
 	void newConfigMap(const common::ConfigMap & configMap);
+	common::AppSettings getSettings() const;
+	void saveSettings(const common::AppSettings& settings);
 
 signals:
 	void loadedPreAndUserConfigs(const common::ConfigMap & preConfigs, const common::ConfigMap & userConfigs);
-	void loadedAppSettings(const common::AppSettings & settings);
+	void newStackSize(int newMaxStackSize);
 	void showError(const QString & errorText);
 
 private:
 	void saveCurrentConfig();
 	static AppConfig getConfigFromFile(const QString & filePath);
+	void settingsUpdated();
 
 private:
 	AppConfig currentConfig;

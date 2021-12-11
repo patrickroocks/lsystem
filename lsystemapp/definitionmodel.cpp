@@ -209,6 +209,7 @@ void DefinitionModel::selectionChanged(const QItemSelection & selected, const QI
 	const QColor newColor = QColorDialog::getColor(row->color, parent);
 	if (newColor.isValid() && newColor != row->color) {
 		row->color = newColor;
+		emit edited();
 	}
 	emit deselect();
 }

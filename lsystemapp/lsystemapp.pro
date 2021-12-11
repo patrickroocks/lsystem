@@ -1,6 +1,4 @@
-QT += core gui
-
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+QT += core widgets gui quick quickcontrols2 quickwidgets
 
 CONFIG += c++17
 
@@ -10,21 +8,24 @@ CONFIG += c++17
 
 SOURCES += \
 	aboutdialog.cpp \
-	clickablelabel.cpp \
 	common.cpp \
 	configfilestore.cpp \
 	configlist.cpp \
 	definitionmodel.cpp \
 	drawarea.cpp \
 	drawingcollection.cpp \
-	main.cpp \
 	lsystemui.cpp \
+	main.cpp \
 	segmentdrawer.cpp \
-	simulator.cpp
+	settingsdialog.cpp \
+	simulator.cpp \
+	util/clickablelabel.cpp \
+	util/focusablelineedit.cpp \
+	util/quickangle.cpp \
+	util/tableitemdelegate.cpp
 
 HEADERS += \
 	aboutdialog.h \
-	clickablelabel.h \
 	common.h \
 	configfilestore.h \
 	configlist.h \
@@ -33,13 +34,20 @@ HEADERS += \
 	drawingcollection.h \
 	lsystemui.h \
 	segmentdrawer.h \
+	settingsdialog.h \
 	simulator.h \
+	util/clickablelabel.h \
+	util/focusablelineedit.h \
 	util/qpointenhance.h \
+	util/quickangle.h \
+	util/tableitemdelegate.h \
+	util/valuerestriction.h \
 	version.h
 
 FORMS += \
 	aboutdialog.ui \
-	lsystemui.ui
+	lsystemui.ui \
+	settingsdialog.ui
 
 # include lib for utils&tests
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../utiltestlib/release/ -lutiltestlib
@@ -55,4 +63,5 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 RESOURCES += \
-    data/config.qrc
+    data/config.qrc \
+    util/util.qrc

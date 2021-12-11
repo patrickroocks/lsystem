@@ -130,9 +130,6 @@ class Simulator : public QObject, public impl::ActionInterface
 {
 	Q_OBJECT
 
-public:
-	void setMaxStackSize(int newMaxStackSize);
-
 signals:
 	void errorReceived(const QString & errStr);
 	void resultReceived(const common::ExecResult & execResult, const QSharedPointer<common::MetaData> & metaData);
@@ -142,6 +139,7 @@ public slots:
 	void execAndExpand(const common::ConfigSet & newConfig, const QSharedPointer<common::MetaData> & metaData);
 	void execWithDoubleStackSize(const QSharedPointer<common::MetaData> & metaData);
 	void execActionStr();
+	void setMaxStackSize(int newMaxStackSize);
 
 private:
 	void addAction(const impl::Action * action) override;

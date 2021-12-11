@@ -29,7 +29,9 @@ void DrawArea::draw(const ui::Drawing & drawing, int offX, int offY, bool clearB
 {
 	lastDrawings = drawings;
 
-	if (clearBefore) drawings.clear();
+	if (clearBefore) {
+		drawings.clear();
+	}
 	drawings.addDrawing(drawing, QPoint(offX, offY));
 
 	update();
@@ -40,7 +42,6 @@ void DrawArea::restoreLastImage()
 {
 	qSwap(drawings, lastDrawings);
 	drawings.setMarkedDrawing(0);
-	markedDrawing = 0;
 	update();
 	setNextUndoRedo(!nextUndoOrRedo);
 }
@@ -53,7 +54,7 @@ void DrawArea::copyToClipboardFull()
 
 void DrawArea::copyToClipboardMarked(bool transparent)
 {
-	const QPoint drawingSize = drawings.getDrawingSize(markedDrawing);
+	const QPoint drawingSize = drawings.getDrawingSize(drawings.getMarkedDrawing());
 	if (drawingSize.isNull()) return;
 
 	QClipboard * clipboard = QGuiApplication::clipboard();
@@ -66,14 +67,15 @@ void DrawArea::copyToClipboardMarked(bool transparent)
 	} else {
 		newImage.fill(drawings.backColor);
 	}
-	painter.drawImage(QPoint(0, 0), drawings.getImage(markedDrawing));
+	painter.drawImage(QPoint(0, 0), drawings.getImage(drawings.getMarkedDrawing()));
 	clipboard->setImage(newImage);
 }
 
 void DrawArea::deleteMarked()
 {
 	lastDrawings = drawings;
-	drawings.deleteImage(markedDrawing);
+	drawings.deleteImage(drawings.getMarkedDrawing());
+	drawings.setMarkedDrawing(0);
 	update();
 	setNextUndoRedo(true);
 }
@@ -81,20 +83,15 @@ void DrawArea::deleteMarked()
 void DrawArea::sendToFrontMarked()
 {
 	lastDrawings = drawings;
-	drawings.sendToFront(markedDrawing);
+	drawings.sendToFront(drawings.getMarkedDrawing());
 	update();
 }
 
 void DrawArea::sendToBackMarked()
 {
 	lastDrawings = drawings;
-	drawings.sendToBack(markedDrawing);
+	drawings.sendToBack(drawings.getMarkedDrawing());
 	update();
-}
-
-QPoint DrawArea::getLastSize() const
-{
-	return drawings.getLastSize();
 }
 
 void DrawArea::setBgColor(const QColor & col)
@@ -140,23 +137,23 @@ void DrawArea::mousePressEvent(QMouseEvent * event)
 
 	bool cancelEvent = false;
 
-	if (clickedDrawing > 0 && clickedDrawing == markedDrawing && event->button() == Qt::MouseButton::LeftButton) {
+	if (clickedDrawing > 0 && clickedDrawing == drawings.getMarkedDrawing() && event->button() == Qt::MouseButton::LeftButton) {
 		moveMode = MoveState::ReadyForMove;
-		moveStartOffset = drawings.getDrawingOffset(markedDrawing) - QPoint(event->x(), event->y());
+		moveStart = QPoint(event->x(), event->y());
+		moveStartOffset = drawings.getDrawingOffset(drawings.getMarkedDrawing()) - QPoint(event->x(), event->y());
 		setCursor(Qt::SizeAllCursor);
 		cancelEvent = true;
-	} else if (markedDrawing > 0 && clickedDrawing == 0) {
+	} else if (drawings.getMarkedDrawing() > 0 && clickedDrawing == 0) {
 		cancelEvent = true;
 	}
 
-	markedDrawing = clickedDrawing;
-	if (drawings.setMarkedDrawing(markedDrawing)) {
-		emit markingChanged(markedDrawing > 0);
+	if (drawings.setMarkedDrawing(clickedDrawing)) {
+		emit markingChanged(drawings.getMarkedDrawing() > 0);
 		update();
 	}
 
 	if (!cancelEvent) {
-		emit mouseClick(event->x(), event->y(), event->button(), markedDrawing > 0);
+		emit mouseClick(event->x(), event->y(), event->button(), drawings.getMarkedDrawing() > 0);
 	}
 }
 
@@ -166,6 +163,10 @@ void DrawArea::mouseReleaseEvent(QMouseEvent * event)
 
 	if (moveMode != MoveState::NoMove) {
 		setCursor(Qt::ArrowCursor);
+		if (moveMode == MoveState::MoveStarted) {
+			const QPoint transPt = QPoint(event->x(), event->y()) - moveStart;
+			emit translation(transPt.x(), transPt.y());
+		}
 		moveMode = MoveState::NoMove;
 	}
 }
@@ -180,12 +181,12 @@ void DrawArea::mouseMoveEvent(QMouseEvent * event)
 			moveMode = MoveState::MoveStarted;
 		}
 		QPoint newOffset = moveStartOffset + QPoint(event->x(), event->y());
-		if (drawings.moveDrawing(markedDrawing, newOffset)) update();
+		if (drawings.moveDrawing(drawings.getMarkedDrawing(), newOffset)) update();
 
 	} else {
 
 		const qint64 mouseOverDrawing = drawings.getDrawingByPos(event->pos());
-		if (markedDrawing == 0) {
+		if (drawings.getMarkedDrawing() == 0) {
 			if (mouseOverDrawing > 0) {
 				setCursor(Qt::ArrowCursor);
 			} else {

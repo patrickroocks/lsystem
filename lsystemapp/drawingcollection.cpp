@@ -9,6 +9,7 @@ namespace lsystem::ui {
 Drawing Drawing::fromSegments(const LineSegs & segs)
 {
 	Drawing rv;
+	rv.numSegments = segs.size();
 
 	// determine size
 	for (const LineSeg & seg : segs) {
@@ -100,6 +101,7 @@ void DrawingCollection::resize(const QSize & newSize)
 
 void DrawingCollection::clear()
 {
+	markedDrawing = 0;
 	drawings.clear();
 	zIndexToDrawing.clear();
 	image.fill(backColor);

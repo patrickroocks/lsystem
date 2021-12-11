@@ -24,7 +24,6 @@ public:
 	void sendToFrontMarked();
 	void sendToBackMarked();
 
-	QPoint getLastSize() const;
 	void setBgColor(const QColor & col);
 	QColor getBgColor() const;
 
@@ -32,6 +31,7 @@ signals:
 	void markingChanged(bool drawingMarked);
 	void mouseClick(int x, int y, Qt::MouseButton button, bool drawingMarked);
 	void enableUndoRedo(bool undoOrRedo);
+	void translation(int x, int y);
 
 protected:
 	void paintEvent(QPaintEvent * event) override;
@@ -57,8 +57,8 @@ private:
 	};
 
 	MoveState moveMode = MoveState::NoMove;
+	QPoint moveStart;
 	QPoint moveStartOffset;
-	qint64 markedDrawing = 0;
 };
 
 }

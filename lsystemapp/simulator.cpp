@@ -104,8 +104,8 @@ void Simulator::execIterations(const QSharedPointer<MetaData> & metaData)
 			res.resultKind = ExecResult::ExecResultKind::ExceedStackSize;
 			res.segments = getSegments();
 			res.iterNum = i + 1;
-			emit errorReceived(QString("Exceeded maximum stack size (%1) at iteration %2, <a href=\"%3\">Paint with stack size %4</a>")
-					.arg(curMaxStackSize).arg(res.iterNum).arg(Links::NextIterations).arg(2 * curMaxStackSize));
+			emit errorReceived(QString("Exceeded maximum stack size (%1) at iteration %2, <a href=\"%3\">Paint with stack size %4</a>, <a href=\"%5\">Edit settings</a>")
+					.arg(curMaxStackSize).arg(res.iterNum).arg(Links::NextIterations).arg(2 * curMaxStackSize).arg(Links::EditSettings));
 			emit resultReceived(res, metaData);
 			return;
 		}

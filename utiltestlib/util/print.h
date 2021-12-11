@@ -33,6 +33,7 @@ inline QString printImpl(const QDateTime & dateTime) { return dateTime.isNull() 
 inline QString printImpl(const QUrl      & url)      { return url.toString(); }
 inline QString printImpl(const QPoint    & point)    { return QString("(%1,%2)").arg(point.x()).arg(point.y()); }
 inline QString printImpl(const QPointF   & point)    { return QString("(%1,%2)").arg(point.x()).arg(point.y()); }
+inline QString printImpl(const QFileInfo & fileInfo) { return fileInfo.absoluteFilePath(); }
 
 // for flags we use binary encoding as there we see the flags which are set quite easy
 template<typename T>

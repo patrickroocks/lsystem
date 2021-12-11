@@ -1,6 +1,9 @@
 #include "configfilestore.h"
 
+#include <util/print.h>
+
 using namespace lsystem::common;
+using namespace util;
 
 namespace {
 
@@ -38,8 +41,7 @@ void ConfigFileStore::loadConfig()
 			preConfigs = appConfig.configMap;
 			currentConfig.settings = appConfig.settings;
 		} else {
-			showError(QString("predefined config file %1 could not be loaded")
-					.arg(QFileInfo(PredefinedConfigFile).absoluteFilePath()));
+			showError(printStr("predefined config file %1 could not be loaded", QFileInfo(PredefinedConfigFile)));
 		}
 	}
 
@@ -48,21 +50,21 @@ void ConfigFileStore::loadConfig()
 		if (!appConfig.isNull) {
 			currentConfig = appConfig;
 		} else {
-			showError(QString("user config file %1 could not be loaded").arg(QFileInfo(UserConfigFile).absoluteFilePath()));
+			showError(printStr("user config file %1 could not be loaded", QFileInfo(UserConfigFile)));
 		}
 	} else {
 		saveCurrentConfig();
 	}
 
 	emit loadedPreAndUserConfigs(preConfigs, currentConfig.configMap);
-	emit loadedAppSettings(currentConfig.settings);
+	settingsUpdated();
 }
 
 void ConfigFileStore::saveCurrentConfig()
 {
 	QFile file(UserConfigFile);
 	if (!file.open(QFile::WriteOnly)) {
-		emit showError(QString("could not write to config file %1").arg(QFileInfo(file).absoluteFilePath()));
+		emit showError(printStr("could not write to config file %1", QFileInfo(file)));
 		return;
 	}
 	QJsonDocument doc(currentConfig.toJson());
@@ -74,6 +76,18 @@ void ConfigFileStore::newConfigMap(const common::ConfigMap & configMap)
 {
 	currentConfig.configMap = configMap;
 	saveCurrentConfig();
+}
+
+AppSettings ConfigFileStore::getSettings() const
+{
+	return currentConfig.settings;
+}
+
+void ConfigFileStore::saveSettings(const common::AppSettings & settings)
+{
+	currentConfig.settings = settings;
+	saveCurrentConfig();
+	settingsUpdated();
 }
 
 AppConfig ConfigFileStore::getConfigFromFile(const QString & filePath)
@@ -94,6 +108,11 @@ AppConfig ConfigFileStore::getConfigFromFile(const QString & filePath)
 
 	return AppConfig(doc.object());
 
+}
+
+void ConfigFileStore::settingsUpdated()
+{
+	emit newStackSize(currentConfig.settings.maxStackSize);
 }
 
 

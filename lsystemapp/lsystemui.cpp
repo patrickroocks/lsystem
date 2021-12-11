@@ -1,5 +1,9 @@
 #include "lsystemui.h"
 #include "ui_lsystemui.h"
+#include "util/tableitemdelegate.h"
+
+#include "aboutdialog.h"
+#include "settingsdialog.h"
 
 #include <util/print.h>
 
@@ -18,13 +22,15 @@ using namespace util;
 
 namespace {
 
-	const char * StatusDefaultStyle = "background-color: rgb(211, 215, 207); border: 1px solid black; margin: 2px 10px 2px 0px;";
-	const char * StatusErrorStyle = "background-color: red; color: white; border: 1px solid black; margin: 2px 10px 2px 0px;";
-	const char * StatusWarningStyle = "background-color: orange; color: white; border: 1px solid black; margin: 2px 10px 2px 0px;";
+const char * StatusDefaultStyle = "background-color: rgb(211, 215, 207); border: 1px solid black;";
+const char * StatusErrorStyle = "background-color: red; color: white; border: 1px solid black;";
+const char * StatusWarningStyle = "background-color: orange; color: white; border: 1px solid black;";
 
-	const char * StatusDefaultText = "Left click into the drawing area to draw the figure, right click for options";
+const char * StatusDefaultText = "Left click into the drawing area to draw the figure, right click for options";
+const char * SelAngleHintText = "Use up&down keys to modify the angle or drag by mouse. Shift restricts to multiple of 5.";
 
-	const int StatusIntervalMs = 8000;
+const int StatusIntervalMs = 8000;
+
 }
 
 LSystemUi::LSystemUi(QWidget *parent)
@@ -39,13 +45,10 @@ LSystemUi::LSystemUi(QWidget *parent)
 	errorDecayTimer.setInterval(StatusIntervalMs);
 	connect(&errorDecayTimer, &QTimer::timeout, this, &LSystemUi::resetStatus);
 
-	auto showErrorInUi = [&](const QString & errMsg) { showMessage(errMsg, MsgType::Error); };
-
 	connect(&configList, &ConfigList::configMapUpdated, &configFileStore, &ConfigFileStore::newConfigMap);
 	connect(&configFileStore, &ConfigFileStore::loadedPreAndUserConfigs, &configList, &ConfigList::newPreAndUserConfigs);
-	connect(&configFileStore, &ConfigFileStore::showError, showErrorInUi);
-	connect(&configFileStore, &ConfigFileStore::loadedAppSettings,
-			[&](const AppSettings & settings) { simulator.setMaxStackSize(settings.maxStackSize); });
+	connect(&configFileStore, &ConfigFileStore::showError, this, &LSystemUi::showErrorInUi);
+	connect(&configFileStore, &ConfigFileStore::newStackSize, &simulator, &Simulator::setMaxStackSize);
 
 	simulator.moveToThread(&simulatorThread);
 	connect(this, &LSystemUi::simulatorExecActionStr, &simulator, &Simulator::execActionStr);
@@ -53,7 +56,7 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(this, &LSystemUi::simulatorExecDoubleStackSize, &simulator, &Simulator::execWithDoubleStackSize);
 	connect(&simulator, &Simulator::resultReceived, this, &LSystemUi::processSimulatorResult);
 	connect(&simulator, &Simulator::actionStrReceived, this, &LSystemUi::processActionStr);
-	connect(&simulator, &Simulator::errorReceived, showErrorInUi);
+	connect(&simulator, &Simulator::errorReceived, this, &LSystemUi::showErrorInUi);
 	simulatorThread.start();
 
 	configFileStore.loadConfig();
@@ -65,19 +68,22 @@ LSystemUi::LSystemUi(QWidget *parent)
 	ui->tblDefinitions->setColumnWidth(3, 15);
 	ui->tblDefinitions->setAcceptDrops(true);
 	ui->tblDefinitions->setStyleSheet("QHeaderView::section { background-color: #CCCCCC }");
+	tableItemDelegate.reset(new TableItemDelegateAutoUpdate);
+	ui->tblDefinitions->setItemDelegate(tableItemDelegate.data());
 
 	connect(ui->tblDefinitions->selectionModel(), &QItemSelectionModel::selectionChanged,
 			&defModel, &DefinitionModel::selectionChanged);
 	connect(&defModel, &DefinitionModel::deselect,
 			[&]() { ui->tblDefinitions->setCurrentIndex(QModelIndex()); });
 	connect(&defModel, &DefinitionModel::newStartSymbol, ui->lblStartSymbol, &QLabel::setText);
-	connect(&defModel, &DefinitionModel::showError, showErrorInUi);
+	connect(&defModel, &DefinitionModel::showError, this, &LSystemUi::showErrorInUi);
 	connect(&defModel, &DefinitionModel::edited, this, &LSystemUi::configLiveEdit);
 
 	drawArea.reset(new DrawArea(ui->wdgOut));
 	drawArea->setMouseTracking(true); // for mouse move event
 	connect(drawArea.data(), &DrawArea::mouseClick, this, &LSystemUi::drawAreaClick);
 	connect(drawArea.data(), &DrawArea::enableUndoRedo, this, &LSystemUi::enableUndoRedo);
+	connect(drawArea.data(), &DrawArea::translation, this, &LSystemUi::translateActiveDrawing);
 
 	drawAreaMenu.reset(new DrawAreaMenu(this)); // needs drawArea
 	statusMenu.reset(new StatusMenu(this));
@@ -86,6 +92,18 @@ LSystemUi::LSystemUi(QWidget *parent)
 			[&](bool drawingMarked) { drawAreaMenu->setDrawingActionsVisible(drawingMarked); });
 
 	ui->lstConfigs->setModel(&configList);
+
+	quickAngle.reset(new QuickAngle(ui->centralwidget));
+	quickAngle->setVisible(false);
+	connect(quickAngle.data(), &QuickAngle::focusOut, this, &LSystemUi::unfocusAngleEdit);
+
+	ui->txtStartAngle->setValueRestriction(ValueRestriction::Numbers);
+	ui->txtLeft->setValueRestriction(ValueRestriction::PositiveNumbers);
+	ui->txtRight->setValueRestriction(ValueRestriction::NegativeNumbers);
+
+	connect(ui->txtStartAngle, &FocusableLineEdit::gotFocus, this, &LSystemUi::focusAngleEdit);
+	connect(ui->txtLeft,       &FocusableLineEdit::gotFocus, this, &LSystemUi::focusAngleEdit);
+	connect(ui->txtRight,      &FocusableLineEdit::gotFocus, this, &LSystemUi::focusAngleEdit);
 
 	segDrawer.moveToThread(&segDrawerThread);
 	connect(this, &LSystemUi::startDraw, &segDrawer, &SegmentDrawer::startDraw);
@@ -110,6 +128,11 @@ void LSystemUi::resizeEvent(QResizeEvent * event)
 
 	// size of wdgOut is not available at start
 	drawArea->resize(ui->layPaintFrameWidget->size().width() - 20, ui->layPaintFrameWidget->size().height() - 30);
+
+	if (quickAngle->isVisible()) {
+		// repaint during resize will fail!
+		unfocusAngleEdit();
+	}
 }
 
 void LSystemUi::on_cmdAdd_clicked()
@@ -133,20 +156,20 @@ void LSystemUi::startPaint(int x, int y)
 	QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
 	execMeta->x = x;
 	execMeta->y = y;
-	execMeta->clear = drawAreaMenu->autoClearToggle->isChecked() || drawAreaMenu->autoPaintToggle->isChecked();
+	execMeta->clear = drawAreaMenu->autoClearToggle->isChecked() || ui->chkAutoPaint->isChecked();
 
 	emit simulatorExec(configSet, execMeta);
 }
 
 void LSystemUi::setBgColor()
 {
-	QColor col = QColorDialog::getColor(drawArea->getBgColor(), this);
+	const QColor col = QColorDialog::getColor(drawArea->getBgColor(), this);
 	if (col.isValid()) drawArea->setBgColor(col);
 }
 
-void LSystemUi::showMessage(const QString & errorStr, MsgType msgType)
+void LSystemUi::showMessage(const QString & msg, MsgType msgType)
 {
-	ui->lblStatus->setText(errorStr);
+	ui->lblStatus->setText(msg);
 	ui->lblStatus->setStyleSheet([&msgType]() {
 			switch (msgType) {
 			case MsgType::Info:    return StatusDefaultStyle;
@@ -163,6 +186,13 @@ void LSystemUi::resetStatus()
 {
 	ui->lblStatus->setStyleSheet(StatusDefaultStyle);
 	ui->lblStatus->setText(StatusDefaultText);
+}
+
+void LSystemUi::showSettings()
+{
+	SettingsDialog dia(this, configFileStore);
+	dia.setModal(true);
+	dia.exec();
 }
 
 ConfigSet LSystemUi::getConfigSet()
@@ -271,6 +301,19 @@ void LSystemUi::enableUndoRedo(bool undoOrRedo)
 	drawAreaMenu->redoAction->setEnabled(!undoOrRedo);
 }
 
+void LSystemUi::translateActiveDrawing(int diffX, int diffY)
+{
+	if (ui->chkAutoPaint->isChecked()) {
+		lastX += diffX;
+		lastY += diffY;
+	}
+}
+
+void LSystemUi::showErrorInUi(const QString & errString)
+{
+	showMessage(errString, MsgType::Error);
+}
+
 void LSystemUi::copyToClipboardMarked()
 {
 	bool transparent;
@@ -302,14 +345,9 @@ void LSystemUi::processSimulatorResult(const common::ExecResult & execResult, co
 	if (execResult.resultKind == common::ExecResult::ExecResultKind::InvalidConfig) {
 		return;
 	}
+	QSharedPointer<DrawMetaData> drawMetaData = qSharedPointerDynamicCast<DrawMetaData>(metaData);
+	drawMetaData->resultOk = (execResult.resultKind == ExecResult::ExecResultKind::Ok);
 	emit startDraw(execResult.segments, metaData);
-
-	const QString msgPainted = printStr("Painted %1 segments, size is %2 px, <a href=\"%3\">Show symbols</a>",
-			execResult.segments.size(), drawArea->getLastSize(), Links::ShowSymbols);
-
-	if (execResult.resultKind == ExecResult::ExecResultKind::Ok) {
-		showMessage(msgPainted, MsgType::Info);
-	}
 }
 
 void LSystemUi::processActionStr(const QString & actionStr)
@@ -326,11 +364,18 @@ void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPoin
 	}
 
 	drawArea->draw(drawing, drawMetaData->x, drawMetaData->y, drawMetaData->clear);
+
+	if (drawMetaData->resultOk) {
+		const QString msgPainted = printStr("Painted %1 segments, size is %2 px, <a href=\"%3\">Show symbols</a>",
+				drawing.numSegments, drawing.size(), Links::ShowSymbols);
+
+		showMessage(msgPainted, MsgType::Info);
+	}
 }
 
 void LSystemUi::configLiveEdit()
 {
-	if (!drawAreaMenu->autoPaintToggle->isChecked()) return;
+	if (!ui->chkAutoPaint->isChecked()) return;
 
 	if (lastX == -1 && lastY == -1) {
 		showMessage("No start position given. Click on the drawing area first.", MsgType::Error);
@@ -346,6 +391,31 @@ void LSystemUi::configLiveEdit()
 	execMeta->clear = true;
 
 	emit simulatorExec(configSet, execMeta);
+}
+
+void LSystemUi::focusAngleEdit(FocusableLineEdit * lineEdit)
+{
+	if (ui->chkAutoPaint->isChecked()) {
+		const QPoint lineditTopLeft = ui->wdgAdditionalSettings->mapTo(ui->centralwidget, lineEdit->geometry().topLeft());
+		const int x = lineditTopLeft.x() - 2;
+		const int y = lineditTopLeft.y() - quickAngle->geometry().height() / 2 + lineEdit->geometry().height() / 2;
+		quickAngle->placeAt(x, y);
+		quickAngle->setVisible(true);
+		quickAngle->setLineEdit(lineEdit);
+		quickAngle->setValue(lineEdit->text().toInt());
+		quickAngle->setFocus();
+		quickAngle->setValueRestriction(lineEdit->valueRestriction()); // positive/negative
+
+		lineEdit->clearFocus();
+		lineEdit->setSelection(0, 0);
+
+		showMessage(SelAngleHintText, MsgType::Info);
+	}
+}
+
+void LSystemUi::unfocusAngleEdit()
+{
+	quickAngle->setVisible(false);
 }
 
 void LSystemUi::copyStatus()
@@ -364,6 +434,8 @@ void LSystemUi::on_lblStatus_linkActivated(const QString & link)
 		emit simulatorExecDoubleStackSize(execMeta);
 	} else if (link == Links::ShowSymbols) {
 		emit simulatorExecActionStr();
+	} else if (link == Links::EditSettings) {
+		showSettings();
 	} else {
 		QMessageBox::critical(this, "Unknown link action", QString("Link action '%1' was not found").arg(link));
 	}
@@ -419,6 +491,13 @@ void LSystemUi::on_cmdAbout_clicked()
 	dia.exec();
 }
 
+
+void LSystemUi::on_cmdSettings_clicked()
+{
+	showSettings();
+}
+
+
 // ------------------------------------------------------
 
 LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
@@ -441,8 +520,6 @@ LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
 
 	autoClearToggle = menu.addAction("Auto clear");
 	autoClearToggle->setCheckable(true);
-	autoPaintToggle = menu.addAction("Auto paint");
-	autoPaintToggle->setCheckable(true);
 	menu.addSeparator();
 
 	menu.addAction("Clear", &*parent->drawArea, &DrawArea::clear, Qt::CTRL + Qt::Key_C);
@@ -474,5 +551,5 @@ LSystemUi::StatusMenu::StatusMenu(LSystemUi * parent)
 
 QString LSystemUi::DrawMetaData::toString() const
 {
-	return printStr("DrawMetaData(x: %1, y: %2, clear: %3)", x, y, clear);
+	return printStr("DrawMetaData(x: %1, y: %2, clear: %3, resultOk: %4)", x, y, clear, resultOk);
 }

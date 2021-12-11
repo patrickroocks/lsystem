@@ -34,6 +34,7 @@ struct Links
 {
 	static const constexpr char * NextIterations = "next_iter";
 	static const constexpr char * ShowSymbols = "show_symbols";
+	static const constexpr char * EditSettings = "show_settings";
 };
 
 struct LineSeg

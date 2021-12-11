@@ -1,19 +1,22 @@
 #ifndef LSYSTEMUI_H
 #define LSYSTEMUI_H
 
-#include <aboutdialog.h>
 #include <configfilestore.h>
 #include <configlist.h>
 #include <definitionmodel.h>
 #include <drawarea.h>
 #include <segmentdrawer.h>
 #include <simulator.h>
+#include "util/tableitemdelegate.h"
+#include "util/quickangle.h"
+#include "util/focusablelineedit.h"
 
 #include <QMainWindow>
 #include <QTimer>
 #include <QMenu>
 #include <QShortcut>
 #include <QCheckBox>
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class LSystemUi; }
@@ -41,6 +44,7 @@ private:
 		int x = 0;
 		int y = 0;
 		bool clear = false;
+		bool resultOk = false;
 		QString toString() const override;
 	};
 
@@ -80,8 +84,15 @@ private slots:
 
 	// from drawarea
 	void enableUndoRedo(bool undoOrRedo);
+	void translateActiveDrawing(int diffX, int diffY);
 
+	// from different other components
+	void showErrorInUi(const QString& errString);
+
+	// from myself (menu)
 	void copyToClipboardMarked();
+
+	void on_cmdSettings_clicked();
 
 private:
 
@@ -90,22 +101,31 @@ private:
 	void startPaint(int x, int y);
 	void setBgColor();
 
+	// current Config
 	void configLiveEdit();
+	void focusAngleEdit(FocusableLineEdit * lineEdit);
+	void unfocusAngleEdit();
+
+	// Status
 	void copyStatus();
 
-	// Configs
+	// Config-List
 	lsystem::common::ConfigSet getConfigSet();
 	void setConfigSet(const lsystem::common::ConfigSet & configSet);
 	void loadConfigByLstIndex(const QModelIndex & index);
 
 	// Common helpers
-	void showMessage(const QString & errorStr, MsgType msgType);
+	void showMessage(const QString & msg, MsgType msgType);
 	void resetStatus();
+	void showSettings();
 
 private:
 	Ui::LSystemUi * ui;
 	QScopedPointer<lsystem::ui::DrawArea> drawArea;
 	QThread drawAreaThread;
+
+	QScopedPointer<TableItemDelegateAutoUpdate> tableItemDelegate;
+	QScopedPointer<QuickAngle> quickAngle;
 
 	lsystem::DefinitionModel defModel;
 	lsystem::ConfigList configList;
@@ -124,7 +144,6 @@ private:
 		QAction * undoAction;
 		QAction * redoAction;
 		QAction * autoClearToggle;
-		QAction * autoPaintToggle;
 
 		void setDrawingActionsVisible(bool visible);
 

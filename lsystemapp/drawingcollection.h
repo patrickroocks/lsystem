@@ -19,6 +19,7 @@ public:
 	qint64 zIndex = 0;
 	qint64 num = 0;
 	QPoint offset;
+	qint64 numSegments = 0;
 	QImage image;
 private:
 	void updateRect(double minX, double minY, double maxX, double maxY);
@@ -43,6 +44,7 @@ public:
 	QPoint getDrawingOffset(qint64 drawingNum);
 	QPoint getDrawingSize(qint64 drawingNum);
 	QImage & getImage(qint64 drawingNum);
+	int getMarkedDrawing() const { return markedDrawing; }
 	bool setMarkedDrawing(qint64 newMarkedDrawing);
 	bool moveDrawing(qint64 drawingNum, const QPoint & newOffset);
 	bool deleteImage(qint64 drawingNum);
