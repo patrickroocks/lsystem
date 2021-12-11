@@ -9,10 +9,6 @@
 #define CONCAT(a, b) _CONCAT2(a, b)
 #define _CONCAT2(a, b) a ## b
 
-#define UNIQUE_NAME(base) CONCAT(base, __LINE__)
-
-#define TRUE(cmd) [&](){ cmd; return true; }()
-
 #define TRUE_FUNC [](){ return true; }
 
 #define METHOD_CHECKER(name, returnType, methodName, useConst) \
