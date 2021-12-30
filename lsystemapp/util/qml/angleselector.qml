@@ -1,6 +1,4 @@
 import QtQuick 2.11
-import QtQuick.Controls 2.12
-import QtQuick.Layouts 1.12
 import QtQuick.Shapes 1.15
 import QtQuick.Controls 1.4
 import QtQuick.Controls.Private 1.0
@@ -21,7 +19,7 @@ Rectangle {
     // used to filter for negative values (-1) or positive values (+1)
     property int valueFilter: 0
 
-    // key handling
+    // for keyboard input handling
     property bool textHasFocus: false;
 
     // step size is modified externally with KeyShift

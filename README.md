@@ -2,28 +2,32 @@
 
 The **lsystem** application is an interactive fractal generator for Lindenmayer systems (also called ["L-systems", Wikipedia](https://en.wikipedia.org/wiki/L-system)). 
 
-It supports Lindenmayer systems with arbitrary many variables (including helper variables which do not result in painted segments), different angles for left/right rotations and scaling down drawings within the recursive call. The user interface is written in Qt5.
+It supports Lindenmayer systems with arbitrary many variables (including helper variables which do not result in painted segments), different angles for left/right rotations and scaling down drawings within the recursive call. The user interface is written in Qt5/QML.
 
-## Build and run
+## Download Binaries
 
-To build lsystem, you will first need to [install the Qt Library](https://wiki.qt.io/Install_Qt_5_on_Ubuntu). To build and start lystem, run:
+**Screenshots and prebuild binaries (Ubuntu and Windows):** https://www.p-roocks.de/wordpress2/lsystem-simulator
+
+## Build and run (Ubuntu)
+
+To build lsystem on Ubuntu, you will first need to [install Qt 5.x, x >= 15](https://www.qt.io/download-open-source). To build and start lystem, run (assuming that Qt was installed to `/opt/Qt/5.15.2`):
 
     git clone https://github.com/patrickroocks/lsystem lsystem
     cd lsystem
-    qmake
-    make
+    /opt/Qt/5.15.2/gcc_64/bin/qmake CONFIG+=qtquickcompiler
+    make qmake_all
+    make -j8
     ./lsystemapp/lsystemapp
 
-Your user-defined configs will be stored in a json file located in the working directory. Additionally there are some unit tests which can be run by `./test/test`.
+Your user-defined configs will be stored in a `config.json` located in the working directory. Additionally there are some unit tests which can be run by `./test/test`.
 
-## Prebuild binary
+## Build and run (Windows)
 
-On the [lsystem page on my personal web page](https://www.p-roocks.de/wordpress2/lsystem-simulator) I provide some screenshots and a [prebuild binary for Linux](https://www.p-roocks.de/files/lsystemapp). Download it and run 
+Have a look at the PowerShell Scripts in in `build` directory.
 
-    chmod +x lsystemapp
-    ./lsystemapp
-	
-to start it. Run `./lsystemapp --version` to check if you have the newest version, i.e., the same version as in the [version file](https://github.com/patrickroocks/lsystem/blob/main/lsystemapp/version.h) on this repository. 
+## License
+
+lsystem is licensed under the MIT Licence, see `LICENSE` file for details.
 
 ## Bugs, comments, suggestions?
 
