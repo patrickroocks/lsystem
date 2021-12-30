@@ -22,7 +22,7 @@ function main {
 	copy "lsystem/build/deployed-readme.txt" "$deploy_dir\README.txt"
 	
 	Remove-Item $out_file -Recurse -ErrorAction Ignore
-	Compress-Archive -Path $deploy_dir\* -DestinationPath $out_file
+	Compress-Archive -Path $deploy_dir -DestinationPath $out_file
 	
 	Remove-Item $deploy_dir -Recurse -ErrorAction Ignore
 	
