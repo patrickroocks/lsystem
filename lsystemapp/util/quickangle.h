@@ -32,10 +32,13 @@ private slots:
 
 private:
 	int currentValue = 0;
-	static const int size = 150;
-	static const char * qmlSource;
 	QQuickItem * selector = nullptr;
 	QLineEdit * lineEdit = nullptr;
+
+	static const int size = 150;
+	static const char * qmlSource;
+	static const int smallStep = 1;
+	static const int bigStep = 5;
 };
 
 #endif // QUICKANGLE_H

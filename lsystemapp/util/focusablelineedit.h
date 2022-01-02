@@ -21,7 +21,7 @@ public Q_SLOTS:
 
 signals:
 	void gotFocus(FocusableLineEdit * self);
-	void lostFocus(FocusableLineEdit * self); // todo: not needed?
+	void lostFocus(FocusableLineEdit * self);
 
 protected:
 	void focusInEvent(QFocusEvent * event) override;
@@ -29,6 +29,7 @@ protected:
 
 private:
 	ValueRestriction valueRestriction_ = ValueRestriction::None;
+
 };
 
 #endif // FOCUSABLELINEEDIT_H

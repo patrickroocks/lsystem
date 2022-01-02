@@ -28,6 +28,7 @@ const char * StatusWarningStyle = "background-color: orange; color: white; borde
 
 const char * StatusDefaultText = "Left click into the drawing area to draw the figure, right click for options";
 const char * SelAngleHintText = "Use up&down keys to modify the angle or drag by mouse. Shift restricts to multiple of 5.";
+const char * SelLinearHintText = "Use up&down keys to modify the value or drag by mouse. Shift restricts to step size %1.";
 
 const int StatusIntervalMs = 8000;
 
@@ -97,6 +98,10 @@ LSystemUi::LSystemUi(QWidget *parent)
 	quickAngle->setVisible(false);
 	connect(quickAngle.data(), &QuickAngle::focusOut, this, &LSystemUi::unfocusAngleEdit);
 
+	quickLinear.reset(new QuickLinear(ui->centralwidget));
+	quickLinear->setVisible(false);
+	connect(quickLinear.data(), &QuickLinear::focusOut, this, &LSystemUi::unfocusLinearEdit);
+
 	ui->txtStartAngle->setValueRestriction(ValueRestriction::Numbers);
 	ui->txtLeft->setValueRestriction(ValueRestriction::PositiveNumbers);
 	ui->txtRight->setValueRestriction(ValueRestriction::NegativeNumbers);
@@ -104,6 +109,12 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(ui->txtStartAngle, &FocusableLineEdit::gotFocus, this, &LSystemUi::focusAngleEdit);
 	connect(ui->txtLeft,       &FocusableLineEdit::gotFocus, this, &LSystemUi::focusAngleEdit);
 	connect(ui->txtRight,      &FocusableLineEdit::gotFocus, this, &LSystemUi::focusAngleEdit);
+
+	connect(ui->txtIter,      &FocusableLineEdit::gotFocus, this, &LSystemUi::focusLinearEdit);
+	connect(ui->txtStep,      &FocusableLineEdit::gotFocus, this, &LSystemUi::focusLinearEdit);
+	connect(ui->txtScaleDown, &FocusableLineEdit::gotFocus, this, &LSystemUi::focusLinearEdit);
+
+	connect(ui->chkAutoPaint, &QCheckBox::stateChanged, this, &LSystemUi::checkAutoPaintChanged);
 
 	segDrawer.moveToThread(&segDrawerThread);
 	connect(this, &LSystemUi::startDraw, &segDrawer, &SegmentDrawer::startDraw);
@@ -129,10 +140,9 @@ void LSystemUi::resizeEvent(QResizeEvent * event)
 	// size of wdgOut is not available at start
 	drawArea->resize(ui->layPaintFrameWidget->size().width() - 20, ui->layPaintFrameWidget->size().height() - 30);
 
-	if (quickAngle->isVisible()) {
-		// repaint during resize will fail!
-		unfocusAngleEdit();
-	}
+	// repaint during resize will fail!
+	if (quickAngle->isVisible()) unfocusAngleEdit();
+	if (quickLinear->isVisible()) unfocusLinearEdit();
 }
 
 void LSystemUi::on_cmdAdd_clicked()
@@ -149,6 +159,7 @@ void LSystemUi::startPaint(int x, int y)
 {
 	const ConfigSet configSet = getConfigSet();
 	if (!configSet.valid) return;
+	lastValidConfigSet = configSet;
 
 	lastX = x;
 	lastY = y;
@@ -377,13 +388,14 @@ void LSystemUi::configLiveEdit()
 {
 	if (!ui->chkAutoPaint->isChecked()) return;
 
+	ConfigSet configSet = getConfigSet();
+	if (!configSet.valid) return;
+	lastValidConfigSet = configSet;
+
 	if (lastX == -1 && lastY == -1) {
 		showMessage("No start position given. Click on the drawing area first.", MsgType::Error);
 		return;
 	}
-
-	ConfigSet configSet = getConfigSet();
-	if (!configSet.valid) return;
 
 	QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
 	execMeta->x = lastX;
@@ -395,27 +407,100 @@ void LSystemUi::configLiveEdit()
 
 void LSystemUi::focusAngleEdit(FocusableLineEdit * lineEdit)
 {
-	if (ui->chkAutoPaint->isChecked()) {
-		const QPoint lineditTopLeft = ui->wdgAdditionalSettings->mapTo(ui->centralwidget, lineEdit->geometry().topLeft());
-		const int x = lineditTopLeft.x() - 2;
-		const int y = lineditTopLeft.y() - quickAngle->geometry().height() / 2 + lineEdit->geometry().height() / 2;
-		quickAngle->placeAt(x, y);
-		quickAngle->setVisible(true);
-		quickAngle->setLineEdit(lineEdit);
-		quickAngle->setValue(lineEdit->text().toInt());
-		quickAngle->setFocus();
-		quickAngle->setValueRestriction(lineEdit->valueRestriction()); // positive/negative
+	if (!ui->chkAutoPaint->isChecked()) return;
 
-		lineEdit->clearFocus();
-		lineEdit->setSelection(0, 0);
+	const QPoint lineditTopLeft = ui->wdgAdditionalSettings->mapTo(ui->centralwidget, lineEdit->geometry().topLeft());
+	const int x = lineditTopLeft.x() - 2;
+	const int y = lineditTopLeft.y() - quickAngle->geometry().height() / 2 + lineEdit->geometry().height() / 2;
 
-		showMessage(SelAngleHintText, MsgType::Info);
+	// data
+	quickAngle->setLineEdit(nullptr);
+	quickAngle->setValueRestriction(lineEdit->valueRestriction()); // positive/negative
+	quickAngle->setValue(lineEdit->text().toInt());
+
+	// control
+	quickAngle->setLineEdit(lineEdit);
+	quickAngle->placeAt(x, y);
+	quickAngle->setVisible(true);
+	quickAngle->setFocus();
+
+	lineEdit->clearFocus();
+	lineEdit->setSelection(0, 0);
+
+	showMessage(SelAngleHintText, MsgType::Info);
+}
+
+void LSystemUi::focusLinearEdit(FocusableLineEdit * lineEdit)
+{
+	if (!ui->chkAutoPaint->isChecked()) return;
+
+	const QPoint lineditTopLeft = ui->wdgAdditionalSettings->mapTo(ui->centralwidget, lineEdit->geometry().topLeft());
+	const int x = lineditTopLeft.x() - 2;
+	const int y = lineditTopLeft.y() - quickLinear->geometry().height() / 2 + lineEdit->geometry().height() / 2;
+
+	double bigStep;
+	double smallStep;
+	double minValue;
+	double maxValue;
+	double extFactor = 0;
+	if (lineEdit == ui->txtStep) {
+		smallStep = 1;
+		bigStep = 3;
+		minValue = 1;
+		maxValue = qMax(lastValidConfigSet.stepSize, 30.);
+		extFactor = 2;
+	} else if (lineEdit == ui->txtIter) {
+		smallStep = 1;
+		bigStep = 3;
+		minValue = 1;
+		maxValue = qMax(lastValidConfigSet.numIter, 20u);
+		extFactor = 1.5;
+	} else if (lineEdit == ui->txtScaleDown) {
+		smallStep = 0.05;
+		bigStep = 0.15;
+		minValue = 0;
+		maxValue = 1;
+	} else {
+		// should not happen
+		return;
 	}
+
+	// data
+	quickLinear->setLineEdit(nullptr);
+	quickLinear->setSmallBigStep(smallStep, bigStep);
+	quickLinear->setMinMaxValue(minValue, maxValue);
+	quickLinear->setExtensionFactor(extFactor);
+	quickLinear->setValue(lineEdit->text().toDouble());
+
+	// control
+	quickLinear->setLineEdit(lineEdit);
+	quickLinear->placeAt(x, y);
+	quickLinear->setVisible(true);
+	quickLinear->setFocus();
+
+	lineEdit->clearFocus();
+	lineEdit->setSelection(0, 0);
+
+	showMessage(printStr(SelLinearHintText, bigStep), MsgType::Info);
 }
 
 void LSystemUi::unfocusAngleEdit()
 {
 	quickAngle->setVisible(false);
+	quickAngle->setLineEdit(nullptr);
+}
+
+void LSystemUi::unfocusLinearEdit()
+{
+	quickLinear->setVisible(false);
+	quickLinear->setLineEdit(nullptr);
+}
+
+void LSystemUi::checkAutoPaintChanged(int state)
+{
+	if (state == Qt::CheckState::Checked) {
+		configLiveEdit();
+	}
 }
 
 void LSystemUi::copyStatus()

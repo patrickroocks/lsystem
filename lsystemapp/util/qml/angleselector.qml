@@ -5,11 +5,8 @@ import QtQuick.Controls.Private 1.0
 
 // Selector for an angle
 
-Rectangle {
-    width: size
-    height: size
-    color: "#00FFFFFF" // transparent
-
+Rectangle
+{
     // the geometrical size of the control
     property int size: 100
 
@@ -20,26 +17,30 @@ Rectangle {
     property int valueFilter: 0
 
     // for keyboard input handling
-    property bool textHasFocus: false;
+    property bool textHasFocus: false
 
-    // step size is modified externally with KeyShift
     property int rangeStepSize: 1
 
     // internal properties (coloring while hover / error handling)
-    property string circleColor: "white"
-    property bool mousePressed: false;
-    property bool mouseOverCircle: false;
-    property bool isErr: false;
+    property bool mousePressed: false
+    property bool mouseOverCircle: false
+    property bool isErr: false
 
-    RangeModel {
+    width: size
+    height: size
+    color: "#00FFFFFF" // transparent
+
+    RangeModel
+    {
         id: range
         minimumValue: -180
         maximumValue: 180
-        stepSize: rangeStepSize
+        stepSize: 1
         value: 0
     }
 
-    Shape {
+    Shape
+    {
         width: size
         height: size
         anchors.top: parent.top
@@ -48,8 +49,10 @@ Rectangle {
         layer.enabled: true
         layer.samples: 4
 
+        // circle
         ShapePath {
-            fillColor: circleColor
+            id: shapeCircle
+            fillColor: "white"
             strokeColor: "darkGrey"
             strokeWidth: 2
             capStyle: ShapePath.FlatCap
@@ -64,22 +67,22 @@ Rectangle {
             }
         }
 
-        Item {
-            // arrow
-            Shape {
-                layer.enabled: true
-                layer.samples: 4
-                width: 100
-                height: 100
-                ShapePath {
-                    strokeColor: "grey"
-                    strokeWidth: 3
-                    startX: size/2;
-                    startY: size/4 - 5;
-                    PathLine { x: size/2; y: size/8 - 5 }
-                }
-                transform: Rotation { origin.x: size/2; origin.y: size/2; angle: value}
+        // arrow
+        Shape
+        {
+            layer.enabled: true
+            layer.samples: 4
+            width: 100
+            height: 100
+            ShapePath
+            {
+                strokeColor: "grey"
+                strokeWidth: 3
+                startX: size/2;
+                startY: size/4 - 5;
+                PathLine { x: size/2; y: size/8 - 5 }
             }
+            transform: Rotation { origin.x: size/2; origin.y: size/2; angle: value}
         }
     }
 
@@ -125,6 +128,7 @@ Rectangle {
         }
     }
 
+    // manual text input
     TextInput
     {
         id: textEdit
@@ -195,11 +199,11 @@ Rectangle {
     function updateCircleColor()
     {
         if (isErr) {
-            circleColor = "#fc5c00"; // light red
+            shapeCircle.fillColor = "#fc5c00"; // light red
         } else if (mouseOverCircle || mousePressed) {
-            circleColor = "#aadcf7" // light blue
+            shapeCircle.fillColor = "#aadcf7" // light blue
         } else {
-            circleColor = "white";
+            shapeCircle.fillColor = "white";
         }
     }
 }

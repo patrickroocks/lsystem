@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/util">
         <file alias="angleselector.qml">qml/angleselector.qml</file>
+        <file alias="linearselector.qml">qml/linearselector.qml</file>
     </qresource>
 </RCC>

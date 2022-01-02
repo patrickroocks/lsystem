@@ -9,6 +9,7 @@
 #include <simulator.h>
 #include "util/tableitemdelegate.h"
 #include "util/quickangle.h"
+#include "util/quicklinear.h"
 #include "util/focusablelineedit.h"
 
 #include <QMainWindow>
@@ -104,7 +105,10 @@ private:
 	// current Config
 	void configLiveEdit();
 	void focusAngleEdit(FocusableLineEdit * lineEdit);
+	void focusLinearEdit(FocusableLineEdit * lineEdit);
 	void unfocusAngleEdit();
+	void unfocusLinearEdit();
+	void checkAutoPaintChanged(int state);
 
 	// Status
 	void copyStatus();
@@ -126,6 +130,7 @@ private:
 
 	QScopedPointer<TableItemDelegateAutoUpdate> tableItemDelegate;
 	QScopedPointer<QuickAngle> quickAngle;
+	QScopedPointer<QuickLinear> quickLinear;
 
 	lsystem::DefinitionModel defModel;
 	lsystem::ConfigList configList;
@@ -160,6 +165,7 @@ private:
 
 	int lastX = -1;
 	int lastY = -1;
+	lsystem::common::ConfigSet lastValidConfigSet;
 
 	enum class TransparencyOpt {
 		Ask = 0,
