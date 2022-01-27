@@ -13,10 +13,9 @@ Drawing Drawing::fromSegments(const LineSegs & segs)
 
 	// determine size
 	for (const LineSeg & seg : segs) {
-		const QPoint start = seg.start.toPoint();
-		const QPoint end   = seg.end.toPoint();
-		rv.updateRect(qMin(start.x(), end.x()), qMin(start.y(), end.y()),
-					  qMax(start.x(), end.x()), qMax(start.y(), end.y()));
+		const QLine ln = seg.lineNegY();
+		rv.updateRect(qMin(ln.x1(), ln.x2()), qMin(ln.y1(), ln.y2()),
+					  qMax(ln.x1(), ln.x2()), qMax(ln.y1(), ln.y2()));
 	}
 
 	// draw the segments
@@ -29,9 +28,7 @@ Drawing Drawing::fromSegments(const LineSegs & segs)
 	for (const LineSeg & seg : segs) {
 		pen.setColor(seg.color);
 		painter.setPen(pen);
-		const QPoint start = seg.start.toPoint() - rv.topLeft;
-		const QPoint end   = seg.end  .toPoint() - rv.topLeft;
-		painter.drawLine(start, end);
+		painter.drawLine(seg.lineNegY() - rv.topLeft);
 	}
 
 	return rv;

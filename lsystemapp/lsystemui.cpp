@@ -120,6 +120,8 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(this, &LSystemUi::startDraw, &segDrawer, &SegmentDrawer::startDraw);
 	connect(&segDrawer, &SegmentDrawer::drawDone, this, &LSystemUi::drawDone);
 	segDrawerThread.start();
+
+	loadConfigByLstIndex(configList.index(0, 0));
 }
 
 LSystemUi::~LSystemUi()
@@ -314,7 +316,7 @@ void LSystemUi::enableUndoRedo(bool undoOrRedo)
 
 void LSystemUi::translateActiveDrawing(int diffX, int diffY)
 {
-	if (ui->chkAutoPaint->isChecked()) {
+	if (lastX > -1 && lastY > -1) {
 		lastX += diffX;
 		lastY += diffY;
 	}

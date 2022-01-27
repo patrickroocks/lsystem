@@ -44,6 +44,10 @@ struct LineSeg
 	QColor color;
 
 	QString toString() const;
+
+	// start/end with negated Y; when painting, the positive y-axis points downward
+	// but mathematically positive y-values point upward
+	QLine lineNegY() const;
 };
 
 using LineSegs = QList<LineSeg>;

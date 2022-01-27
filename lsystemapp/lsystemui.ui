@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>lystem - An interactive simulator for Lindenmayer systems</string>
+   <string>lsystem - An interactive simulator for Lindenmayer systems</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QWidget" name="topMainLayoutWidget">
@@ -278,7 +278,7 @@ margin: 2px 5px 2px 0px;</string>
             <height>72</height>
            </size>
           </property>
-		  <widget class="FocusableLineEdit" name="txtIter" native="true">
+          <widget class="FocusableLineEdit" name="txtIter" native="true">
            <property name="geometry">
             <rect>
              <x>310</x>
@@ -290,10 +290,10 @@ margin: 2px 5px 2px 0px;</string>
            <property name="toolTip">
             <string>The recursion depth</string>
            </property>
-		   <property name="styleSheet">
-			<string notr="true">background-color: rgb(255, 255, 255);</string>
-		   </property>
-           <property name="text">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 255, 255);</string>
+           </property>
+           <property name="text" stdset="0">
             <string>3</string>
            </property>
           </widget>
@@ -387,7 +387,7 @@ margin: 2px 5px 2px 0px;</string>
             <string>-30</string>
            </property>
           </widget>
-		  <widget class="FocusableLineEdit" name="txtStep" native="true">
+          <widget class="FocusableLineEdit" name="txtStep" native="true">
            <property name="geometry">
             <rect>
              <x>150</x>
@@ -399,10 +399,10 @@ margin: 2px 5px 2px 0px;</string>
            <property name="toolTip">
             <string>The length of each painted line segment</string>
            </property>
-		   <property name="styleSheet">
-			<string notr="true">background-color: rgb(255, 255, 255);</string>
-		   </property>
-           <property name="text">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 255, 255);</string>
+           </property>
+           <property name="text" stdset="0">
             <string>30</string>
            </property>
           </widget>
@@ -432,7 +432,7 @@ margin: 2px 5px 2px 0px;</string>
             <string>[] Scaling:</string>
            </property>
           </widget>
-		  <widget class="FocusableLineEdit" name="txtScaleDown" native="true">
+          <widget class="FocusableLineEdit" name="txtScaleDown" native="true">
            <property name="geometry">
             <rect>
              <x>470</x>
@@ -444,10 +444,10 @@ margin: 2px 5px 2px 0px;</string>
            <property name="toolTip">
             <string>The step size is multiplied by this factor for each occurrence of &quot;[&quot;</string>
            </property>
-		   <property name="styleSheet">
-			<string notr="true">background-color: rgb(255, 255, 255);</string>
-		   </property>
-           <property name="text">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 255, 255);</string>
+           </property>
+           <property name="text" stdset="0">
             <string>0.8</string>
            </property>
           </widget>

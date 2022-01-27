@@ -2,42 +2,18 @@
 #define QUICKANGLE_H
 
 #include "valuerestriction.h"
+#include "quickbase.h"
 
-#include <QQuickWidget>
-#include <QLineEdit>
-
-class QuickAngle : public QQuickWidget
+class QuickAngle final : public QuickBase
 {
 	Q_OBJECT
 public:
 	explicit QuickAngle(QWidget * parent = nullptr);
-
-	void placeAt(int x, int y);
-	void setValue(int newValue);
-	void setLineEdit(QLineEdit * newLineEdit);
 	void setValueRestriction(ValueRestriction valueRestriction);
 
-signals:
-	void valueChanged(int value);
-	void focusOut();
-
-protected:
-	void focusOutEvent(QFocusEvent * event) override;
-	void keyPressEvent(QKeyEvent * event) override;
-	void keyReleaseEvent(QKeyEvent * event) override;
-
-private slots:
-	void valueChangedInSelector();
-
-
 private:
-	int currentValue = 0;
-	QQuickItem * selector = nullptr;
-	QLineEdit * lineEdit = nullptr;
-
 	static const int size = 150;
 	static const char * qmlSource;
-	static const int smallStep = 1;
 	static const int bigStep = 5;
 };
 

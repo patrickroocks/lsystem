@@ -40,6 +40,11 @@ QString LineSeg::toString() const
 	return printStr("L(%1,%2)", start, end);
 }
 
+QLine LineSeg::lineNegY() const
+{
+	return QLine(start.x(), -start.y(), end.x(), -end.y());
+}
+
 // ---------------------------------------------------------------------------
 
 ConfigSet::ConfigSet(const QJsonObject & obj)

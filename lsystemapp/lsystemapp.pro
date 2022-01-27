@@ -18,6 +18,7 @@ SOURCES += \
 	util/clickablelabel.cpp \
 	util/focusablelineedit.cpp \
 	util/quickangle.cpp \
+	util/quickbase.cpp \
 	util/quicklinear.cpp \
 	util/tableitemdelegate.cpp
 
@@ -37,6 +38,7 @@ HEADERS += \
 	util/focusablelineedit.h \
 	util/qpointenhance.h \
 	util/quickangle.h \
+	util/quickbase.h \
 	util/quicklinear.h \
 	util/tableitemdelegate.h \
 	util/valuerestriction.h \
