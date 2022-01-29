@@ -10,19 +10,25 @@ namespace lsystem::ui {
 class Drawing
 {
 public:
-	static Drawing fromSegments(const common::LineSegs & segs);
+	Drawing() = default;
+	Drawing(const common::ExecResult & execResult, const QSharedPointer<common::MetaData> & metaData);
 	void drawToImage(QImage & dstImage, bool isMarked);
 	QPoint size() const;
 	bool withinArea(const QPoint & pos);
 	void move(const QPoint & newOffset);
+
 public:
 	qint64 zIndex = 0;
 	qint64 num = 0;
 	QPoint offset;
 	qint64 numSegments = 0;
 	QImage image;
+
 private:
+	void expandSizeToSegments(const common::LineSegs & segs, double thickness);
+	void drawSegments(const common::LineSegs & segs, double opacyFactor, double thickness);
 	void updateRect(double minX, double minY, double maxX, double maxY);
+
 private:
 	QPoint topLeft;
 	QPoint botRight;
@@ -43,7 +49,8 @@ public:
 	qint64 getDrawingByPos(const QPoint & pos);
 	QPoint getDrawingOffset(qint64 drawingNum);
 	QPoint getDrawingSize(qint64 drawingNum);
-	QImage & getImage(qint64 drawingNum);
+	QImage & getDrawingImage(qint64 drawingNum);
+	QImage getImage();
 	int getMarkedDrawing() const { return markedDrawing; }
 	bool setMarkedDrawing(qint64 newMarkedDrawing);
 	bool moveDrawing(qint64 drawingNum, const QPoint & newOffset);
@@ -52,7 +59,6 @@ public:
 	bool sendToBack(qint64 drawingNum);
 
 public:
-	QImage image;
 	QColor backColor = QColor(255, 255, 255);
 	bool dirty = false;
 
@@ -60,6 +66,7 @@ private:
 	bool sendToZIndex(qint64 drawingNum, qint64 newZIndex);
 
 private:
+	QImage image;
 	qint64 lastDrawingNum = 0;
 
 	QMap<qint64 /*drawNum*/, Drawing> drawings;

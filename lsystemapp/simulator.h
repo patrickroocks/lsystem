@@ -28,10 +28,10 @@ using States = QList<State>;
 
 // ----------------------------------------------------------------------
 
-class ActionInterface
+class SimlatorInterface
 {
 public:
-	virtual ~ActionInterface() {}
+	virtual ~SimlatorInterface() {}
 	virtual void addAction(const Action * state) = 0;
 	virtual void addSegment(const common::LineSeg & seg) = 0;
 };
@@ -39,8 +39,8 @@ public:
 class Action
 {
 public:
-	Action(ActionInterface & actInt, char literal)
-		: actInt(actInt),
+	Action(SimlatorInterface & simInt, char literal)
+		: simInt(simInt),
 		  literal(literal)
 	{}
 	virtual ~Action() {}
@@ -51,7 +51,7 @@ public:
 	QString toString() const { return QString(1, literal); }
 
 protected:
-	ActionInterface & actInt;
+	SimlatorInterface & simInt;
 
 private:
 	char literal;
@@ -60,7 +60,7 @@ private:
 class ProcessLiteralAction : public Action
 {
 public:
-	ProcessLiteralAction(ActionInterface & actInt, char literal, QColor color, bool paint)
+	ProcessLiteralAction(SimlatorInterface & actInt, char literal, QColor color, bool paint)
 		: Action(actInt, literal),
 		  color(color),
 		  paint(paint)
@@ -80,7 +80,7 @@ private:
 class TurnAction : public Action
 {
 public:
-	TurnAction(ActionInterface & actInt, double tCos, double tSin, char literal)
+	TurnAction(SimlatorInterface & actInt, double tCos, double tSin, char literal)
 		: Action(actInt, literal),
 		  tCos(roundNearWhole(tCos)),
 		  tSin(roundNearWhole(tSin))
@@ -101,9 +101,9 @@ using DynTurnAction = QSharedPointer<TurnAction>;
 class ScaleStartAction : public Action
 {
 public:
-	ScaleStartAction(ActionInterface & actInt, double scaleFct, char literal)
-		: Action(actInt, literal),
-		  scaleFct(scaleFct)
+	ScaleStartAction(SimlatorInterface & actInt, double scaleFct, char literal)
+		: Action(actInt, literal)
+		, scaleFct(scaleFct)
 	{}
 
 	void exec(State & state) const override;
@@ -115,7 +115,7 @@ private:
 class ScaleStopAction : public Action
 {
 public:
-	ScaleStopAction(ActionInterface & actInt, char literal)
+	ScaleStopAction(SimlatorInterface & actInt, char literal)
 		: Action(actInt, literal)
 	{}
 
@@ -126,7 +126,7 @@ public:
 
 // ---------------------------------------------------------------------------------------------------------
 
-class Simulator : public QObject, public impl::ActionInterface
+class Simulator : public QObject, public impl::SimlatorInterface
 {
 	Q_OBJECT
 

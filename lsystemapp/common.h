@@ -101,11 +101,13 @@ struct ExecResult
 	using ExecResultKind = ExecResultStructs::ExecResultKind;
 
 	ExecResult() = default;
-		ExecResult(ExecResultKind resultKind)
-			: resultKind(resultKind) {}
-		ExecResultKind resultKind = ExecResultKind::Null;
-		common::LineSegs segments;
-		quint32 iterNum = 0;
+	ExecResult(ExecResultKind resultKind)
+		: resultKind(resultKind)
+	{}
+	ExecResultKind resultKind = ExecResultKind::Null;
+	common::LineSegs segments;
+	common::LineSegs segmentsLastIter;
+	quint32 iterNum = 0;
 
 	QString toString() const;
 };
@@ -122,7 +124,12 @@ struct AppSettings
 struct MetaData
 {
 	virtual ~MetaData() {}
-	virtual QString toString() const { return "<MetaDataNull>"; }
+	virtual QString toString() const;
+
+	bool showLastIter = false;
+	double lastIterOpacy = 0;
+	double thickness = 0;
+	double opacity = 0;
 };
 
 inline void registerCommonTypes()

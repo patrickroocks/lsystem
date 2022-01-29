@@ -17,9 +17,9 @@ Definition::Definition(const QJsonObject & obj)
 }
 
 Definition::Definition(char literal, const QString & command)
-	: literal(literal),
-	  command(command),
-	  paint(true)
+	: literal(literal)
+	, command(command)
+	, paint(true)
 {
 }
 
@@ -118,6 +118,13 @@ QJsonObject AppSettings::toJson() const
 	QJsonObject rv;
 	rv["maxStackSize"] = (int)maxStackSize;
 	return rv;
+}
+
+// ----------------------------------------------------------------------------
+
+QString MetaData::toString() const
+{
+	return printStr("MetaData(showLastIter: %1, lastIterOpacy: %2, thickness: %3, opacity: %4)", showLastIter, lastIterOpacy, thickness, opacity);
 }
 
 

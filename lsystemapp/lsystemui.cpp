@@ -60,7 +60,9 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(&simulator, &Simulator::errorReceived, this, &LSystemUi::showErrorInUi);
 	simulatorThread.start();
 
+	ui->lstConfigs->setModel(&configList);
 	configFileStore.loadConfig();
+	loadConfigByLstIndex(configList.index(0, 0));
 
 	ui->tblDefinitions->setModel(&defModel);
 	ui->tblDefinitions->setColumnWidth(0, 20);
@@ -92,8 +94,6 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(drawArea.data(), &DrawArea::markingChanged,
 			[&](bool drawingMarked) { drawAreaMenu->setDrawingActionsVisible(drawingMarked); });
 
-	ui->lstConfigs->setModel(&configList);
-
 	quickAngle.reset(new QuickAngle(ui->centralwidget));
 	quickAngle->setVisible(false);
 	connect(quickAngle.data(), &QuickAngle::focusOut, this, &LSystemUi::unfocusAngleEdit);
@@ -106,13 +106,29 @@ LSystemUi::LSystemUi(QWidget *parent)
 	ui->txtLeft->setValueRestriction(ValueRestriction::PositiveNumbers);
 	ui->txtRight->setValueRestriction(ValueRestriction::NegativeNumbers);
 
-	connect(ui->txtStartAngle, &FocusableLineEdit::gotFocus, this, &LSystemUi::focusAngleEdit);
-	connect(ui->txtLeft,       &FocusableLineEdit::gotFocus, this, &LSystemUi::focusAngleEdit);
-	connect(ui->txtRight,      &FocusableLineEdit::gotFocus, this, &LSystemUi::focusAngleEdit);
+	// connection for live edit
+	const std::vector<FocusableLineEdit*> configEditsLinear = {
+			ui->txtIter, ui->txtStep, ui->txtScaleDown,
+			ui->txtLastIterOpacity, ui->txtThickness, ui->txtOpacity};
 
-	connect(ui->txtIter,      &FocusableLineEdit::gotFocus, this, &LSystemUi::focusLinearEdit);
-	connect(ui->txtStep,      &FocusableLineEdit::gotFocus, this, &LSystemUi::focusLinearEdit);
-	connect(ui->txtScaleDown, &FocusableLineEdit::gotFocus, this, &LSystemUi::focusLinearEdit);
+	const std::vector<FocusableLineEdit*> configEditsAngle = {
+			ui->txtStartAngle, ui->txtLeft, ui->txtRight};
+
+	std::vector<FocusableLineEdit*> allEdits = configEditsLinear;
+	allEdits.insert(allEdits.end(), configEditsAngle.begin(), configEditsAngle.end());
+
+	for (FocusableLineEdit* lineEdit : allEdits) {
+		connect(lineEdit, &FocusableLineEdit::textChanged, this, &LSystemUi::configLiveEdit);
+	}
+
+	// connection for interactive sliders
+	for (FocusableLineEdit* lineEdit : configEditsAngle) {
+		connect(lineEdit, &FocusableLineEdit::gotFocus, this, &LSystemUi::focusAngleEdit);
+	}
+
+	for (FocusableLineEdit* lineEdit : configEditsLinear) {
+		connect(lineEdit, &FocusableLineEdit::gotFocus, this, &LSystemUi::focusLinearEdit);
+	}
 
 	connect(ui->chkAutoPaint, &QCheckBox::stateChanged, this, &LSystemUi::checkAutoPaintChanged);
 
@@ -121,7 +137,7 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(&segDrawer, &SegmentDrawer::drawDone, this, &LSystemUi::drawDone);
 	segDrawerThread.start();
 
-	loadConfigByLstIndex(configList.index(0, 0));
+	ui->frmAdditionalOptions->setVisible(false);
 }
 
 LSystemUi::~LSystemUi()
@@ -143,8 +159,7 @@ void LSystemUi::resizeEvent(QResizeEvent * event)
 	drawArea->resize(ui->layPaintFrameWidget->size().width() - 20, ui->layPaintFrameWidget->size().height() - 30);
 
 	// repaint during resize will fail!
-	if (quickAngle->isVisible()) unfocusAngleEdit();
-	if (quickLinear->isVisible()) unfocusLinearEdit();
+	removeAllSliders();
 }
 
 void LSystemUi::on_cmdAdd_clicked()
@@ -170,8 +185,24 @@ void LSystemUi::startPaint(int x, int y)
 	execMeta->x = x;
 	execMeta->y = y;
 	execMeta->clear = drawAreaMenu->autoClearToggle->isChecked() || ui->chkAutoPaint->isChecked();
+	getAdditionalOptions(execMeta);
 
 	emit simulatorExec(configSet, execMeta);
+}
+
+void LSystemUi::getAdditionalOptions(const QSharedPointer<MetaData> & execMeta)
+{
+	execMeta->showLastIter = ui->chkShowLastIter->isChecked();
+
+	bool ok;
+	const double lastIterOpacityPercent = ui->txtLastIterOpacity->text().toDouble(&ok);
+	if (ok) execMeta->lastIterOpacy = lastIterOpacityPercent / 100.;
+
+	const double opacityPercent = ui->txtOpacity->text().toDouble(&ok);
+	if (ok) execMeta->opacity = opacityPercent / 100.;
+
+	const double thickness = ui->txtThickness->text().toDouble(&ok);
+	if (ok) execMeta->thickness = thickness;
 }
 
 void LSystemUi::setBgColor()
@@ -206,6 +237,12 @@ void LSystemUi::showSettings()
 	SettingsDialog dia(this, configFileStore);
 	dia.setModal(true);
 	dia.exec();
+}
+
+void LSystemUi::removeAllSliders()
+{
+	if (quickAngle->isVisible()) unfocusAngleEdit();
+	if (quickLinear->isVisible()) unfocusLinearEdit();
 }
 
 ConfigSet LSystemUi::getConfigSet()
@@ -360,7 +397,7 @@ void LSystemUi::processSimulatorResult(const common::ExecResult & execResult, co
 	}
 	QSharedPointer<DrawMetaData> drawMetaData = qSharedPointerDynamicCast<DrawMetaData>(metaData);
 	drawMetaData->resultOk = (execResult.resultKind == ExecResult::ExecResultKind::Ok);
-	emit startDraw(execResult.segments, metaData);
+	emit startDraw(execResult, metaData);
 }
 
 void LSystemUi::processActionStr(const QString & actionStr)
@@ -403,6 +440,7 @@ void LSystemUi::configLiveEdit()
 	execMeta->x = lastX;
 	execMeta->y = lastY;
 	execMeta->clear = true;
+	getAdditionalOptions(execMeta);
 
 	emit simulatorExec(configSet, execMeta);
 }
@@ -411,7 +449,7 @@ void LSystemUi::focusAngleEdit(FocusableLineEdit * lineEdit)
 {
 	if (!ui->chkAutoPaint->isChecked()) return;
 
-	const QPoint lineditTopLeft = ui->wdgAdditionalSettings->mapTo(ui->centralwidget, lineEdit->geometry().topLeft());
+	const QPoint lineditTopLeft = ui->wdgConfig->mapTo(ui->centralwidget, lineEdit->geometry().topLeft());
 	const int x = lineditTopLeft.x() - 2;
 	const int y = lineditTopLeft.y() - quickAngle->geometry().height() / 2 + lineEdit->geometry().height() / 2;
 
@@ -436,7 +474,8 @@ void LSystemUi::focusLinearEdit(FocusableLineEdit * lineEdit)
 {
 	if (!ui->chkAutoPaint->isChecked()) return;
 
-	const QPoint lineditTopLeft = ui->wdgAdditionalSettings->mapTo(ui->centralwidget, lineEdit->geometry().topLeft());
+	const QPoint lineditTopLeft = lineEdit->parentWidget()->mapTo(ui->centralwidget, lineEdit->geometry().topLeft());
+
 	const int x = lineditTopLeft.x() - 2;
 	const int y = lineditTopLeft.y() - quickLinear->geometry().height() / 2 + lineEdit->geometry().height() / 2;
 
@@ -462,6 +501,17 @@ void LSystemUi::focusLinearEdit(FocusableLineEdit * lineEdit)
 		bigStep = 0.15;
 		minValue = 0;
 		maxValue = 1;
+	} else if (lineEdit == ui->txtLastIterOpacity || lineEdit == ui->txtOpacity) {
+		smallStep = 5;
+		bigStep = 15;
+		minValue = 5;
+		maxValue = 100;
+	} else if (lineEdit == ui->txtThickness) {
+		smallStep = 0.5;
+		bigStep = 1;
+		minValue = 1;
+		maxValue = 5;
+		extFactor = 1.5;
 	} else {
 		// should not happen
 		return;
@@ -535,42 +585,6 @@ void LSystemUi::on_lblStatus_mousePressed(QMouseEvent * event)
 	}
 }
 
-void LSystemUi::on_txtStartAngle_textChanged(const QString & arg1)
-{
-	Q_UNUSED(arg1);
-	configLiveEdit();
-}
-
-void LSystemUi::on_txtScaleDown_textChanged(const QString & arg1)
-{
-	Q_UNUSED(arg1);
-	configLiveEdit();
-}
-
-void LSystemUi::on_txtRight_textChanged(const QString & arg1)
-{
-	Q_UNUSED(arg1);
-	configLiveEdit();
-}
-
-void LSystemUi::on_txtIter_textChanged(const QString & arg1)
-{
-	Q_UNUSED(arg1);
-	configLiveEdit();
-}
-
-void LSystemUi::on_txtLeft_textChanged(const QString & arg1)
-{
-	Q_UNUSED(arg1);
-	configLiveEdit();
-}
-
-void LSystemUi::on_txtStep_textChanged(const QString & arg1)
-{
-	Q_UNUSED(arg1);
-	configLiveEdit();
-}
-
 void LSystemUi::on_cmdAbout_clicked()
 {
 	AboutDialog dia(this);
@@ -638,5 +652,32 @@ LSystemUi::StatusMenu::StatusMenu(LSystemUi * parent)
 
 QString LSystemUi::DrawMetaData::toString() const
 {
-	return printStr("DrawMetaData(x: %1, y: %2, clear: %3, resultOk: %4)", x, y, clear, resultOk);
+	return printStr("[%1,DrawMetaData(x: %2, y: %3, clear: %4, resultOk: %5)]", MetaData::toString(), x, y, clear, resultOk);
 }
+
+void LSystemUi::on_cmdAdditionalOptions_clicked()
+{
+	if (!ui->frmAdditionalOptions->isVisible()) {
+		const auto butBottomLeft = ui->wdgConfig->mapTo(ui->centralwidget, ui->cmdAdditionalOptions->geometry().bottomLeft());
+		const auto & frmGeom = ui->frmAdditionalOptions->geometry();
+		ui->frmAdditionalOptions->setGeometry(butBottomLeft.x() - frmGeom.width(), butBottomLeft.y() - frmGeom.height(), frmGeom.width(), frmGeom.height());
+		ui->frmAdditionalOptions->setVisible(true);
+	} else {
+		ui->frmAdditionalOptions->setVisible(false);
+	}
+}
+
+void LSystemUi::on_chkShowLastIter_stateChanged()
+{
+	configLiveEdit();
+
+	const bool checked = ui->chkShowLastIter->isChecked();
+	ui->txtLastIterOpacity->setEnabled(checked);
+	ui->lblOpacity->setEnabled(checked);
+}
+
+void LSystemUi::on_cmdCloseAdditionalSettings_clicked()
+{
+	ui->frmAdditionalOptions->setVisible(false);
+}
+

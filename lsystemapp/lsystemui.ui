@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>902</width>
+    <width>920</width>
     <height>589</height>
    </rect>
   </property>
@@ -19,8 +19,8 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>761</width>
-      <height>223</height>
+      <width>871</width>
+      <height>202</height>
      </rect>
     </property>
     <property name="maximumSize">
@@ -35,7 +35,7 @@
        <property name="maximumSize">
         <size>
          <width>16777215</width>
-         <height>221</height>
+         <height>195</height>
         </size>
        </property>
        <property name="frameShape">
@@ -197,7 +197,7 @@ margin: 2px 5px 2px 0px;</string>
              <widget class="QPushButton" name="cmdRemove">
               <property name="geometry">
                <rect>
-                <x>44</x>
+                <x>45</x>
                 <y>20</y>
                 <width>40</width>
                 <height>25</height>
@@ -265,7 +265,7 @@ margin: 2px 5px 2px 0px;</string>
          </widget>
         </item>
         <item>
-         <widget class="QWidget" name="wdgAdditionalSettings" native="true">
+         <widget class="QWidget" name="wdgConfig" native="true">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -275,7 +275,7 @@ margin: 2px 5px 2px 0px;</string>
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>72</height>
+            <height>55</height>
            </size>
           </property>
           <widget class="FocusableLineEdit" name="txtIter" native="true">
@@ -483,17 +483,18 @@ margin: 2px 5px 2px 0px;</string>
             <string>-90</string>
            </property>
           </widget>
-          <widget class="QCheckBox" name="chkAutoPaint">
+          <widget class="QPushButton" name="cmdAdditionalOptions">
            <property name="geometry">
             <rect>
-             <x>3</x>
-             <y>52</y>
-             <width>231</width>
-             <height>23</height>
+             <x>540</x>
+             <y>10</y>
+             <width>71</width>
+             <height>41</height>
             </rect>
            </property>
            <property name="text">
-            <string>Auto paint (interactive mode)</string>
+            <string>More
+options</string>
            </property>
           </widget>
          </widget>
@@ -511,14 +512,14 @@ margin: 2px 5px 2px 0px;</string>
        </property>
        <property name="minimumSize">
         <size>
-         <width>230</width>
-         <height>200</height>
+         <width>260</width>
+         <height>195</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
          <width>16777215</width>
-         <height>221</height>
+         <height>195</height>
         </size>
        </property>
        <property name="frameShape">
@@ -527,25 +528,12 @@ margin: 2px 5px 2px 0px;</string>
        <property name="frameShadow">
         <enum>QFrame::Raised</enum>
        </property>
-       <widget class="QLabel" name="label_5">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>10</y>
-          <width>67</width>
-          <height>17</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Configs:</string>
-        </property>
-       </widget>
        <widget class="QPushButton" name="cmdStore">
         <property name="geometry">
          <rect>
-          <x>80</x>
-          <y>190</y>
-          <width>61</width>
+          <x>90</x>
+          <y>164</y>
+          <width>71</width>
           <height>25</height>
          </rect>
         </property>
@@ -559,9 +547,9 @@ margin: 2px 5px 2px 0px;</string>
        <widget class="QPushButton" name="cmdDelete">
         <property name="geometry">
          <rect>
-          <x>150</x>
-          <y>190</y>
-          <width>71</width>
+          <x>170</x>
+          <y>164</y>
+          <width>81</width>
           <height>25</height>
          </rect>
         </property>
@@ -573,8 +561,8 @@ margin: 2px 5px 2px 0px;</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>190</y>
-          <width>61</width>
+          <y>164</y>
+          <width>71</width>
           <height>25</height>
          </rect>
         </property>
@@ -586,8 +574,8 @@ margin: 2px 5px 2px 0px;</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>30</y>
-          <width>211</width>
+          <y>8</y>
+          <width>241</width>
           <height>151</height>
          </rect>
         </property>
@@ -603,8 +591,8 @@ margin: 2px 5px 2px 0px;</string>
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>240</y>
-      <width>761</width>
+      <y>220</y>
+      <width>871</width>
       <height>151</height>
      </rect>
     </property>
@@ -627,6 +615,9 @@ margin: 2px 5px 2px 0px;</string>
            <widget class="QWidget" name="wdgOut" native="true">
             <property name="cursor">
              <cursorShape>CrossCursor</cursorShape>
+            </property>
+            <property name="focusPolicy">
+             <enum>Qt::NoFocus</enum>
             </property>
            </widget>
           </item>
@@ -716,13 +707,197 @@ border: 1px solid black;</string>
      </item>
     </layout>
    </widget>
+   <widget class="QFrame" name="frmAdditionalOptions">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>250</x>
+      <y>370</y>
+      <width>441</width>
+      <height>121</height>
+     </rect>
+    </property>
+    <property name="focusPolicy">
+     <enum>Qt::NoFocus</enum>
+    </property>
+    <property name="autoFillBackground">
+     <bool>true</bool>
+    </property>
+    <property name="styleSheet">
+     <string notr="true"/>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Raised</enum>
+    </property>
+    <widget class="QCheckBox" name="chkShowLastIter">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>58</y>
+       <width>161</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Show last iteration</string>
+     </property>
+    </widget>
+    <widget class="FocusableLineEdit" name="txtThickness" native="true">
+     <property name="geometry">
+      <rect>
+       <x>133</x>
+       <y>84</y>
+       <width>51</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="toolTip">
+      <string>The left turn (mathematically positive) for each occurrence of &quot;+&quot;</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: rgb(255, 255, 255);</string>
+     </property>
+     <property name="text" stdset="0">
+      <string>1</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_3">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>85</y>
+       <width>111</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Line thickness:</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="cmdCloseAdditionalSettings">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>0</y>
+       <width>41</width>
+       <height>25</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>X</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lblOpacity">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>190</x>
+       <y>57</y>
+       <width>131</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Opacity (%):</string>
+     </property>
+    </widget>
+    <widget class="FocusableLineEdit" name="txtLastIterOpacity" native="true">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>290</x>
+       <y>55</y>
+       <width>51</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="toolTip">
+      <string>The left turn (mathematically positive) for each occurrence of &quot;+&quot;</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: rgb(255, 255, 255);</string>
+     </property>
+     <property name="text" stdset="0">
+      <string>50</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="chkAutoPaint">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>4</y>
+       <width>231</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Auto paint (interactive mode)</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lblOpacity_2">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>32</y>
+       <width>131</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Opacity (%):</string>
+     </property>
+    </widget>
+    <widget class="FocusableLineEdit" name="txtOpacity" native="true">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>110</x>
+       <y>30</y>
+       <width>51</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="toolTip">
+      <string>The left turn (mathematically positive) for each occurrence of &quot;+&quot;</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: rgb(255, 255, 255);</string>
+     </property>
+     <property name="text" stdset="0">
+      <string>100</string>
+     </property>
+    </widget>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>902</width>
+     <width>920</width>
      <height>22</height>
     </rect>
    </property>

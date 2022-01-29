@@ -15,7 +15,7 @@ using namespace impl;
 void ProcessLiteralAction::expand() const
 {
 	for (const DynAction & act : qAsConst(subActions)) {
-		actInt.addAction(act.data());
+		simInt.addAction(act.data());
 	}
 }
 
@@ -27,7 +27,7 @@ void ProcessLiteralAction::exec(State & state) const
 	seg.start = state.cur;
 	seg.end   = state.cur += state.d;
 	seg.color = color;
-	actInt.addSegment(seg);
+	simInt.addSegment(seg);
 }
 
 void ScaleStartAction::exec(State & state) const
@@ -99,15 +99,19 @@ void Simulator::execIterations(const QSharedPointer<MetaData> & metaData)
 	currentActions = {startAction.data()};
 	nextActions.clear();
 
-	for (quint32 i = 0 ; i < config.numIter ; ++i) {
+	const bool showLastIter = metaData && metaData->showLastIter;
+
+	for (quint32 curIter = 1 ; curIter <= config.numIter ; ++curIter) {
 		if (!execIter()) {
 			res.resultKind = ExecResult::ExecResultKind::ExceedStackSize;
 			res.segments = getSegments();
-			res.iterNum = i + 1;
+			res.iterNum = curIter;
 			emit errorReceived(QString("Exceeded maximum stack size (%1) at iteration %2, <a href=\"%3\">Paint with stack size %4</a>, <a href=\"%5\">Edit settings</a>")
 					.arg(curMaxStackSize).arg(res.iterNum).arg(Links::NextIterations).arg(2 * curMaxStackSize).arg(Links::EditSettings));
 			emit resultReceived(res, metaData);
 			return;
+		} else if (showLastIter && curIter == config.numIter - 1) {
+			res.segmentsLastIter = getSegments();
 		}
 	}
 
@@ -243,7 +247,7 @@ bool Simulator::expansionEqual(const ConfigSet & newConfig) const
 
 void Action::expand() const
 {
-	actInt.addAction(this);
+	simInt.addAction(this);
 }
 
 }

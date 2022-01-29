@@ -61,18 +61,11 @@ private slots:
 	void on_lblStatus_linkActivated(const QString & link);
 	void on_lblStatus_mousePressed(QMouseEvent * event);
 
-	void on_txtStartAngle_textChanged(const QString & arg1);
-	void on_txtScaleDown_textChanged(const QString & arg1);
-	void on_txtRight_textChanged(const QString & arg1);
-	void on_txtIter_textChanged(const QString & arg1);
-	void on_txtLeft_textChanged(const QString & arg1);
-	void on_txtStep_textChanged(const QString & arg1);
-
 signals:
 	void simulatorExecActionStr();
 	void simulatorExec(const lsystem::common::ConfigSet & newConfig, const QSharedPointer<lsystem::common::MetaData> & metaData);
 	void simulatorExecDoubleStackSize(const QSharedPointer<lsystem::common::MetaData> & metaData);
-	void startDraw(const lsystem::common::LineSegs & segs, const QSharedPointer<lsystem::common::MetaData> & metaData);
+	void startDraw(const lsystem::common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData);
 
 private slots:
 
@@ -93,7 +86,11 @@ private slots:
 	// from myself (menu)
 	void copyToClipboardMarked();
 
+	// controls
 	void on_cmdSettings_clicked();
+	void on_cmdCloseAdditionalSettings_clicked();
+	void on_cmdAdditionalOptions_clicked();
+	void on_chkShowLastIter_stateChanged();
 
 private:
 
@@ -110,6 +107,9 @@ private:
 	void unfocusLinearEdit();
 	void checkAutoPaintChanged(int state);
 
+	// additional options
+	void getAdditionalOptions(const QSharedPointer<lsystem::common::MetaData> & execMeta);
+
 	// Status
 	void copyStatus();
 
@@ -122,6 +122,7 @@ private:
 	void showMessage(const QString & msg, MsgType msgType);
 	void resetStatus();
 	void showSettings();
+	void removeAllSliders();
 
 private:
 	Ui::LSystemUi * ui;
@@ -172,6 +173,5 @@ private:
 		NoTransparency = 1,
 		Transparency = 2
 	} transparencyOpt = TransparencyOpt::Ask;
-
 };
 #endif // LSYSTEMUI_H

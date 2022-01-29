@@ -6,32 +6,49 @@ using namespace lsystem::common;
 
 namespace lsystem::ui {
 
-Drawing Drawing::fromSegments(const LineSegs & segs)
+Drawing::Drawing(const ExecResult & execResult, const QSharedPointer<MetaData> & metaData)
+	: numSegments(execResult.segments.size())
 {
-	Drawing rv;
-	rv.numSegments = segs.size();
+	const bool paintLastIter = !execResult.segmentsLastIter.isEmpty() && metaData->lastIterOpacy > 0;
 
-	// determine size
+	if (paintLastIter) expandSizeToSegments(execResult.segmentsLastIter, metaData->thickness);
+	expandSizeToSegments(execResult.segments, metaData->thickness);
+
+	const QPoint pSize = botRight - topLeft + QPoint(1, 1);
+	image = QImage(QSize(pSize.x(), pSize.y()), QImage::Format_ARGB32);
+	image.fill(qRgba(0, 0, 0, 0)); // transparent
+
+	if (paintLastIter) drawSegments(execResult.segmentsLastIter, metaData->lastIterOpacy, metaData->thickness);
+	drawSegments(execResult.segments, metaData->opacity, metaData->thickness);
+}
+
+void Drawing::expandSizeToSegments(const common::LineSegs & segs, double thickness)
+{
+	const int off = qCeil(thickness / 2.);
 	for (const LineSeg & seg : segs) {
 		const QLine ln = seg.lineNegY();
-		rv.updateRect(qMin(ln.x1(), ln.x2()), qMin(ln.y1(), ln.y2()),
-					  qMax(ln.x1(), ln.x2()), qMax(ln.y1(), ln.y2()));
+		updateRect(qMin(ln.x1(), ln.x2()) - off, qMin(ln.y1(), ln.y2()) - off,
+				   qMax(ln.x1(), ln.x2()) + off, qMax(ln.y1(), ln.y2()) + off);
 	}
+}
 
-	// draw the segments
-	const QPoint pSize = rv.botRight - rv.topLeft + QPoint(1, 1);
-	rv.image = QImage(QSize(pSize.x(), pSize.y()), QImage::Format_ARGB32);
-	rv.image.fill(qRgba(0, 0, 0, 0)); // transparent
-	QPainter painter(&rv.image);
+void Drawing::drawSegments(const LineSegs & segs, double opacyFactor, double thickness)
+{
+	QPainter painter(&image);
+	painter.setRenderHint(QPainter::Antialiasing);
 	QPen pen;
+	pen.setWidthF(thickness);
+	pen.setCapStyle(Qt::RoundCap);
 
+	// todo order segments by color
 	for (const LineSeg & seg : segs) {
-		pen.setColor(seg.color);
-		painter.setPen(pen);
-		painter.drawLine(seg.lineNegY() - rv.topLeft);
-	}
+		QColor colorCopy(seg.color);
+		colorCopy.setAlphaF(opacyFactor);
+		pen.setColor(colorCopy);
 
-	return rv;
+		painter.setPen(pen);
+		painter.drawLine(seg.lineNegY() - topLeft);
+	}
 }
 
 void Drawing::drawToImage(QImage & dstImage, bool isMarked)
@@ -87,8 +104,6 @@ void DrawingCollection::addDrawing(Drawing newDrawing, const QPoint & off)
 
 void DrawingCollection::resize(const QSize & newSize)
 {
-	if (image.size() == newSize) return;
-
 	QImage newImage(newSize, QImage::Format_RGB32);
 	newImage.fill(backColor);
 	QPainter painter(&newImage);
@@ -101,6 +116,7 @@ void DrawingCollection::clear()
 	markedDrawing = 0;
 	drawings.clear();
 	zIndexToDrawing.clear();
+
 	image.fill(backColor);
 }
 
@@ -146,9 +162,14 @@ QPoint DrawingCollection::getDrawingSize(qint64 drawingNum)
 	return drawings[drawingNum].size();
 }
 
-QImage & DrawingCollection::getImage(qint64 drawingNum)
+QImage & DrawingCollection::getDrawingImage(qint64 drawingNum)
 {
 	return drawings[drawingNum].image;
+}
+
+QImage DrawingCollection::getImage()
+{
+	return image;
 }
 
 bool DrawingCollection::setMarkedDrawing(qint64 newMarkedDrawing)

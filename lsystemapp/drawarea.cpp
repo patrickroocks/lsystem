@@ -34,7 +34,12 @@ void DrawArea::draw(const ui::Drawing & drawing, int offX, int offY, bool clearB
 	}
 	drawings.addDrawing(drawing, QPoint(offX, offY));
 
+	// hack to ensure that the image is really painted
+	// todo: find out what happens here, it's all in the same thread
+	QThread::msleep(20);
+
 	update();
+
 	setNextUndoRedo(true);
 }
 
@@ -49,7 +54,7 @@ void DrawArea::restoreLastImage()
 void DrawArea::copyToClipboardFull()
 {
 	QClipboard * clipboard = QGuiApplication::clipboard();
-	clipboard->setImage(drawings.image);
+	clipboard->setImage(drawings.getImage());
 }
 
 void DrawArea::copyToClipboardMarked(bool transparent)
@@ -67,7 +72,7 @@ void DrawArea::copyToClipboardMarked(bool transparent)
 	} else {
 		newImage.fill(drawings.backColor);
 	}
-	painter.drawImage(QPoint(0, 0), drawings.getImage(drawings.getMarkedDrawing()));
+	painter.drawImage(QPoint(0, 0), drawings.getDrawingImage(drawings.getMarkedDrawing()));
 	clipboard->setImage(newImage);
 }
 
@@ -113,12 +118,12 @@ void DrawArea::paintEvent(QPaintEvent * event)
 {
 	QPainter painter(this);
 	QRect dirtyRect = event->rect();
-	painter.drawImage(dirtyRect, drawings.image, dirtyRect);
+	painter.drawImage(dirtyRect, drawings.getImage(), dirtyRect);
 }
 
 void DrawArea::resizeEvent(QResizeEvent * event)
 {
-	QImage & image = drawings.image;
+	QImage image = drawings.getImage();
 	if (width() > image.width() || height() > image.height()) {
 		// avoid always resizing, wehen the window size is changed
 		int newWidth = qMax(width() + 128, image.width());
