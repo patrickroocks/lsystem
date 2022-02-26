@@ -11,7 +11,7 @@ class QuickBase : public QQuickWidget
 public:
 	explicit QuickBase(QWidget * parent, const char * qmlSource);
 	void placeAt(int x, int y);
-	void setValue(int newValue);
+	void setValue(double newValue);
 	void setLineEdit(QLineEdit * newLineEdit);
 
 	void setSmallBigStep(double newSmallStep, double newBigStep);
@@ -33,7 +33,6 @@ protected:
 	double maxValue() { return maxValue_; }
 	double smallStep() { return smallStep_; }
 	double bigStep() { return bigStep_; }
-
 
 private slots:
 	void valueChangedInSelector();

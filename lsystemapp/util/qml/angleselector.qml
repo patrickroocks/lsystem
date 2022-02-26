@@ -10,16 +10,26 @@ Rectangle
     // the geometrical size of the control
     property int size: 100
 
+    property int distButtonY: 40
+    property int distButtonX: 40
+    property int sizeButton: 20
+    property int widthToggleButton: 50
+    property int sizeBorder: 10
+
     // the actual value. induces a signal "valueChanged"
     property alias value: range.value
 
     // used to filter for negative values (-1) or positive values (+1)
-    property int valueFilter: 0
+    property double valueFilter: 0
 
     // for keyboard input handling
     property bool textHasFocus: false
 
-    property int rangeStepSize: 1
+    // current step size is rangeStepSize (might be modified with key shift) * rangeStepFactor
+    property double rangeStepSize: 1
+    property double rangeStepFactor: 1
+    property double rangeStepEffective: rangeStepSize * rangeStepFactor
+    property alias rangeStepSmall: toggleStepButton.checked
 
     // internal properties (coloring while hover / error handling)
     property bool mousePressed: false
@@ -35,7 +45,7 @@ Rectangle
         id: range
         minimumValue: -180
         maximumValue: 180
-        stepSize: 1
+        stepSize: rangeStepEffective
         value: 0
     }
 
@@ -128,6 +138,52 @@ Rectangle
         }
     }
 
+    SmallButton
+    {
+        id: increaseButton
+        x: size/2 + distButtonX
+        y: size/2 - sizeButton / 2
+        text: "↷"
+        toolTipText: "Increase by " + rangeStepEffective + "°"
+        onClicked:
+        {
+            setNewValue(value + rangeStepEffective, true)
+        }
+    }
+
+    SmallButton
+    {
+        id: decreaseButton
+        x: size/2 - distButtonX - width
+        y: size/2 - sizeButton / 2
+        text: "↶"
+        toolTipText: "Decrease by " + rangeStepEffective + "°"
+        onClicked:
+        {
+            setNewValue(value - rangeStepEffective, true)
+        }
+    }
+
+    ToggleButton
+    {
+        id: toggleStepButton
+        x: size/2 - widthToggleButton / 2
+        y: size/2 + distButtonY - sizeButton
+        width: widthToggleButton
+        toolTipText: {
+            if (!checked)
+                "Set step size to ±0.1"
+            else
+                "Set step size to ±1"
+        }
+        text: "±0.1"
+        radius: 5
+        onCheckedChanged: {
+            rangeStepFactor = checked ? 0.1 : 1;
+            updateText();
+        }
+    }
+
     // manual text input
     TextInput
     {
@@ -143,7 +199,7 @@ Rectangle
         onTextChanged:
         {
             if (focus) {
-                var parsed = parseInt(text);
+                var parsed = parseFloat(text);
                 isErr = !setStrValue(text, true);
                 updateCircleColor();
             }
@@ -168,7 +224,7 @@ Rectangle
 
     function setStrValue(strVal, updateText)
     {
-        var parsed = parseInt(strVal);
+        var parsed = parseFloat(strVal);
         return !isNaN(parsed) && setNewValue(parsed, updateText);
     }
 
@@ -193,7 +249,11 @@ Rectangle
 
     function updateText()
     {
-        textEdit.text = value + "°";
+        if (toggleStepButton.checked) {
+            textEdit.text = value.toFixed(1) + "°";
+        } else {
+            textEdit.text = value.toFixed(0) + "°";
+        }
     }
 
     function updateCircleColor()

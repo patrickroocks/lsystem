@@ -10,9 +10,10 @@ class QuickAngle final : public QuickBase
 public:
 	explicit QuickAngle(QWidget * parent = nullptr);
 	void setValueRestriction(ValueRestriction valueRestriction);
+	void setValue(double newValue);
 
 private:
-	static const int size = 150;
+	static const int size = 180;
 	static const char * qmlSource;
 	static const int bigStep = 5;
 };

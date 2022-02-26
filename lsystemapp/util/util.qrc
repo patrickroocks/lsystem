@@ -2,5 +2,7 @@
     <qresource prefix="/util">
         <file alias="angleselector.qml">qml/angleselector.qml</file>
         <file alias="linearselector.qml">qml/linearselector.qml</file>
+        <file alias="ToggleButton.qml">qml/ToggleButton.qml</file>
+        <file alias="SmallButton.qml">qml/SmallButton.qml</file>
     </qresource>
 </RCC>

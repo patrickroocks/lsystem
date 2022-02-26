@@ -13,7 +13,7 @@ public:
 
 private:
 
-	static const int sizeWidth = 150;
+	static const int sizeWidth = 180;
 	static const int sizeHeight = 65;
 	static const char * qmlSource;
 };

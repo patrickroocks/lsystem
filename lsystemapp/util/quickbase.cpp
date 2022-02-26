@@ -25,7 +25,7 @@ void QuickBase::placeAt(int x, int y)
 	setGeometry(QRect(x, y, sizeX, sizeY));
 }
 
-void QuickBase::setValue(int newValue)
+void QuickBase::setValue(double newValue)
 {
 	QMetaObject::invokeMethod(selector_, "setExtValue", Q_ARG(QVariant, newValue), Q_ARG(QVariant, true));
 }
@@ -60,7 +60,7 @@ void QuickBase::focusOutEvent(QFocusEvent * event)
 void QuickBase::keyPressEvent(QKeyEvent * event)
 {
 	if (event->key() == Qt::Key_Shift) {
-		selector_->setProperty("rangeStepSize", 5);
+		selector_->setProperty("rangeStepSize", bigStep_);
 		QMetaObject::invokeMethod(selector_, "updateText");
 	}
 
@@ -82,6 +82,8 @@ void QuickBase::keyPressEvent(QKeyEvent * event)
 void QuickBase::keyReleaseEvent(QKeyEvent * event)
 {
 	if (event->key() == Qt::Key_Shift) {
+		// freeze last value before setting the step back to small value
+		QMetaObject::invokeMethod(selector_, "setExtValue", Q_ARG(QVariant, currentValue), Q_ARG(QVariant, false));
 		selector_->setProperty("rangeStepSize", smallStep_);
 		QMetaObject::invokeMethod(selector_, "updateText");
 	}
@@ -96,7 +98,7 @@ void QuickBase::setSizeXY(int newSizeX, int newSizeY)
 
 void QuickBase::valueChangedInSelector()
 {
-	const int newValue = selector_->property("value").toInt();
+	const auto newValue = selector_->property("value").toDouble();
 	if (newValue != currentValue) {
 		currentValue = newValue;
 

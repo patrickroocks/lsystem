@@ -22,14 +22,16 @@ Rectangle
     property real extensionFactor: 0
 
     // the geometrical size of the control
-    property int sizeWidth: 100
+    property int sizeWidth: 150
     property int sizeHeight: 50
     property int sizeBorder: 10
+    property int sizeButton: 20
+    property int sliderOuterHeight: 20
+    property int sliderInnerHeight: 14
 
     // internal properties
     property bool mousePressed: false
     property bool mouseOverRect: false
-    property bool mouseOverExtButton: false
     property bool isErr: false
 
     width: sizeWidth
@@ -77,13 +79,23 @@ Rectangle
             mouseOverRect = true
             updateRectColors();
         }
+    }
 
-        function valueFromPoint(x, y)
-        {
-            var fct = (x - sizeBorder) / (sizeWidth - 2 * sizeBorder);
-            fct = Math.max(Math.min(fct, 1), 0);
-            return minValue + fct * (maxValue - minValue);
-        }
+    function sliderStart()
+    {
+        return 2 * sizeBorder + sizeButton;
+    }
+
+    function sliderEnd()
+    {
+        return sizeWidth - 2 * sizeBorder - sizeButton;
+    }
+
+    function valueFromPoint(x, y)
+    {
+        var fct = (x - sliderStart()) / (sliderEnd() - sliderStart());
+        fct = Math.max(Math.min(fct, 1), 0);
+        return minValue + fct * (maxValue - minValue);
     }
 
     Rectangle
@@ -108,6 +120,24 @@ Rectangle
             width: 3
         }
 
+        // slider line
+        Shape
+        {
+            layer.enabled: true
+            layer.samples: 4
+            width: sizeWidth
+            height: sizeHeight
+
+            ShapePath
+            {
+                strokeColor: "grey"
+                strokeWidth: 1
+                startX: sliderStart()
+                startY: sizeHeight - sizeBorder - sliderOuterHeight / 2
+                PathLine { x: sliderEnd(); y: sizeHeight - sizeBorder - sliderOuterHeight / 2 }
+            }
+        }
+
         // slider
         Shape
         {
@@ -120,66 +150,49 @@ Rectangle
             {
                 strokeColor: "grey"
                 strokeWidth: 3
-                startX: sizeBorder + (1.0 * (value - minValue) / (maxValue - minValue)) * (sizeWidth - 2 * sizeBorder);
-                startY: sizeHeight - 20;
-                PathLine { relativeX: 0; relativeY: 10 }
+                startX: sliderStart() + (1.0 * (value - minValue) / (maxValue - minValue)) * (sliderEnd() - sliderStart());
+                startY: sizeHeight - sizeBorder - (sliderOuterHeight + sliderInnerHeight) / 2;
+                PathLine { relativeX: 0; relativeY: sliderInnerHeight }
             }
         }
 
-        // extension button
-        Rectangle
+        SmallButton
         {
-            id: rectExtButton
+            id: extButton
             visible: extensionFactor > 0
-            width: 20
-            height: 20
-            radius: 5
-            antialiasing: true
-            x: sizeWidth - 20 - sizeBorder
+            x: sizeWidth - sizeButton - sizeBorder
             y: sizeBorder
-
-            border
+            text: "⨠"
+            toolTipText: "Raise max value"
+            onClicked:
             {
-                color: "grey"
-                width: 2
+                range.maximumValue = Math.round(range.maximumValue * extensionFactor)
             }
+        }
 
-            Label
+        SmallButton
+        {
+            id: decreaseButton
+            x: sizeBorder
+            y: sizeHeight - sizeButton - sizeBorder
+            text: '-'
+            toolTipText: "Decrease by " + rangeStepSize
+            onClicked:
             {
-                anchors.centerIn: parent
-                text: '+'
+                setNewValue(value - rangeStepSize, true)
             }
+        }
 
-            MouseArea
+        SmallButton
+        {
+            id: increaseButton
+            x: sliderEnd() + sizeBorder
+            y: sizeHeight - sizeButton - sizeBorder
+            text: '+'
+            toolTipText: "Increase by " + rangeStepSize
+            onClicked:
             {
-                id: mouseAreaExtButton
-                hoverEnabled: true
-                anchors.fill: parent
-
-                onExited:
-                {
-                    mouseOverExtButton = false;
-                    updateRectColors();
-                }
-
-                onEntered:
-                {
-                    mouseOverExtButton = true
-                    updateRectColors();
-                }
-
-                onClicked:
-                {
-                    range.maximumValue = Math.round(range.maximumValue * extensionFactor)
-                }
-            }
-
-            ToolTip
-            {
-                delay: 1000
-                timeout: 2000
-                visible: mouseOverExtButton
-                text: "Raise max value"
+                setNewValue(value + rangeStepSize, true)
             }
         }
     }
@@ -264,16 +277,10 @@ Rectangle
     {
         if (isErr) {
             rectMain.color = "#fc5c00"; // light red
-        } else if ((mouseOverRect && !mouseOverExtButton) || mousePressed) {
+        } else if (mouseOverRect || mousePressed) {
             rectMain.color = "#aadcf7" // light blue
         } else {
             rectMain.color = "white";
-        }
-
-        if (mouseOverExtButton && !mousePressed) {
-            rectExtButton.color = "#aadcf7"
-        } else {
-            rectExtButton.color = "white";
         }
     }
 }

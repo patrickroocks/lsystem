@@ -456,7 +456,7 @@ void LSystemUi::focusAngleEdit(FocusableLineEdit * lineEdit)
 	// data
 	quickAngle->setLineEdit(nullptr);
 	quickAngle->setValueRestriction(lineEdit->valueRestriction()); // positive/negative
-	quickAngle->setValue(lineEdit->text().toInt());
+	quickAngle->setValue(lineEdit->text().toDouble());
 
 	// control
 	quickAngle->setLineEdit(lineEdit);
