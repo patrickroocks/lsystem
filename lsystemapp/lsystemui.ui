@@ -714,9 +714,9 @@ border: 1px solid black;</string>
     <property name="geometry">
      <rect>
       <x>250</x>
-      <y>370</y>
+      <y>380</y>
       <width>441</width>
-      <height>121</height>
+      <height>141</height>
      </rect>
     </property>
     <property name="focusPolicy">
@@ -888,6 +888,22 @@ border: 1px solid black;</string>
      </property>
      <property name="text" stdset="0">
       <string>100</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="chkAntiAliasing">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>110</y>
+       <width>231</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Anti-aliasing</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
      </property>
     </widget>
    </widget>

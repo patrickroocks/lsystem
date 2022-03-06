@@ -130,6 +130,7 @@ struct MetaData
 	double lastIterOpacy = 0;
 	double thickness = 0;
 	double opacity = 0;
+	bool antiAliasing = false;
 };
 
 inline void registerCommonTypes()

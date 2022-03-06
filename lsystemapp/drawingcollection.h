@@ -26,7 +26,7 @@ public:
 
 private:
 	void expandSizeToSegments(const common::LineSegs & segs, double thickness);
-	void drawSegments(const common::LineSegs & segs, double opacyFactor, double thickness);
+	void drawSegments(const common::LineSegs & segs, double opacyFactor, double thickness, bool antiAliasing);
 	void updateRect(double minX, double minY, double maxX, double maxY);
 
 private:

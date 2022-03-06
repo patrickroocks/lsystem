@@ -124,7 +124,8 @@ QJsonObject AppSettings::toJson() const
 
 QString MetaData::toString() const
 {
-	return printStr("MetaData(showLastIter: %1, lastIterOpacy: %2, thickness: %3, opacity: %4)", showLastIter, lastIterOpacy, thickness, opacity);
+	return printStr("MetaData(showLastIter: %1, lastIterOpacy: %2, thickness: %3, opacity: %4, antiAliasing: %5)",
+			showLastIter, lastIterOpacy, thickness, opacity, antiAliasing);
 }
 
 

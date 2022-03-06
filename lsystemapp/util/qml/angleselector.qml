@@ -166,6 +166,8 @@ Rectangle
 
     ToggleButton
     {
+        property bool internalCheckedChange: false
+
         id: toggleStepButton
         x: size/2 - widthToggleButton / 2
         y: size/2 + distButtonY - sizeButton
@@ -180,7 +182,11 @@ Rectangle
         radius: 5
         onCheckedChanged: {
             rangeStepFactor = checked ? 0.1 : 1;
-            updateText();
+            if (!internalCheckedChange) {
+                updateText();
+            } else {
+                internalCheckedChange = false;
+            }
         }
     }
 
@@ -200,7 +206,11 @@ Rectangle
         {
             if (focus) {
                 var parsed = parseFloat(text);
-                isErr = !setStrValue(text, true);
+                if (parsed != Math.round(parsed)) {
+                    toggleStepButton.internalCheckedChange = true
+                    toggleStepButton.checked = true;
+                }
+                isErr = !setStrValue(text, false);
                 updateCircleColor();
             }
         }

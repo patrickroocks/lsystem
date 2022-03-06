@@ -7,6 +7,7 @@
 #include <drawarea.h>
 #include <segmentdrawer.h>
 #include <simulator.h>
+#include <symbolsdialog.h>
 #include "util/tableitemdelegate.h"
 #include "util/quickangle.h"
 #include "util/quicklinear.h"
@@ -91,6 +92,7 @@ private slots:
 	void on_cmdCloseAdditionalSettings_clicked();
 	void on_cmdAdditionalOptions_clicked();
 	void on_chkShowLastIter_stateChanged();
+	void on_chkAntiAliasing_stateChanged();
 
 private:
 
@@ -107,8 +109,9 @@ private:
 	void unfocusLinearEdit();
 	void checkAutoPaintChanged(int state);
 
-	// additional options
+	// additional options & windows
 	void getAdditionalOptions(const QSharedPointer<lsystem::common::MetaData> & execMeta);
+	void showSymbols();
 
 	// Status
 	void copyStatus();
@@ -123,6 +126,7 @@ private:
 	void resetStatus();
 	void showSettings();
 	void removeAllSliders();
+	void clearAll();
 
 private:
 	Ui::LSystemUi * ui;
@@ -140,6 +144,7 @@ private:
 	QThread simulatorThread;
 	lsystem::SegmentDrawer segDrawer;
 	QThread segDrawerThread;
+	bool resultAvailable = false;
 
 	QTimer errorDecayTimer;
 
@@ -173,5 +178,7 @@ private:
 		NoTransparency = 1,
 		Transparency = 2
 	} transparencyOpt = TransparencyOpt::Ask;
+
+	QScopedPointer<SymbolsDialog> symbolsDialog;
 };
 #endif // LSYSTEMUI_H

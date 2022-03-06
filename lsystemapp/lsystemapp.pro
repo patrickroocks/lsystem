@@ -15,6 +15,7 @@ SOURCES += \
 	segmentdrawer.cpp \
 	settingsdialog.cpp \
 	simulator.cpp \
+	symbolsdialog.cpp \
 	util/clickablelabel.cpp \
 	util/focusablelineedit.cpp \
 	util/quickangle.cpp \
@@ -34,6 +35,7 @@ HEADERS += \
 	segmentdrawer.h \
 	settingsdialog.h \
 	simulator.h \
+	symbolsdialog.h \
 	util/clickablelabel.h \
 	util/focusablelineedit.h \
 	util/qpointenhance.h \
@@ -47,7 +49,8 @@ HEADERS += \
 FORMS += \
 	aboutdialog.ui \
 	lsystemui.ui \
-	settingsdialog.ui
+	settingsdialog.ui \
+	symbolsdialog.ui
 
 # include lib for utils&tests
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../utiltestlib/release/ -lutiltestlib

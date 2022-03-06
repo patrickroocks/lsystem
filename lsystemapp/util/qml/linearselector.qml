@@ -214,7 +214,7 @@ Rectangle
         {
             if (focus) {
                 var parsed = parseInt(text);
-                isErr = !setStrValue(text, true);
+                isErr = !setStrValue(text, false);
                 updateRectColors();
             }
         }

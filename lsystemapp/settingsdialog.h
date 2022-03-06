@@ -14,7 +14,7 @@ class SettingsDialog : public QDialog
 	Q_OBJECT
 
 public:
-	explicit SettingsDialog(QWidget *parent, lsystem::ConfigFileStore & cfgStore);
+	explicit SettingsDialog(QWidget * parent, lsystem::ConfigFileStore & cfgStore);
 	~SettingsDialog();
 
 private slots:

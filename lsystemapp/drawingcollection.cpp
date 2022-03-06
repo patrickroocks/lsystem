@@ -18,8 +18,8 @@ Drawing::Drawing(const ExecResult & execResult, const QSharedPointer<MetaData> &
 	image = QImage(QSize(pSize.x(), pSize.y()), QImage::Format_ARGB32);
 	image.fill(qRgba(0, 0, 0, 0)); // transparent
 
-	if (paintLastIter) drawSegments(execResult.segmentsLastIter, metaData->lastIterOpacy, metaData->thickness);
-	drawSegments(execResult.segments, metaData->opacity, metaData->thickness);
+	if (paintLastIter) drawSegments(execResult.segmentsLastIter, metaData->lastIterOpacy, metaData->thickness, metaData->antiAliasing);
+	drawSegments(execResult.segments, metaData->opacity, metaData->thickness, metaData->antiAliasing);
 }
 
 void Drawing::expandSizeToSegments(const common::LineSegs & segs, double thickness)
@@ -32,10 +32,10 @@ void Drawing::expandSizeToSegments(const common::LineSegs & segs, double thickne
 	}
 }
 
-void Drawing::drawSegments(const LineSegs & segs, double opacyFactor, double thickness)
+void Drawing::drawSegments(const LineSegs & segs, double opacyFactor, double thickness, bool antiAliasing)
 {
 	QPainter painter(&image);
-	painter.setRenderHint(QPainter::Antialiasing);
+	if (antiAliasing) painter.setRenderHint(QPainter::Antialiasing);
 	QPen pen;
 	pen.setWidthF(thickness);
 	pen.setCapStyle(Qt::RoundCap);

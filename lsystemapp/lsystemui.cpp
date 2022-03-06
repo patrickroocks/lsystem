@@ -203,6 +203,24 @@ void LSystemUi::getAdditionalOptions(const QSharedPointer<MetaData> & execMeta)
 
 	const double thickness = ui->txtThickness->text().toDouble(&ok);
 	if (ok) execMeta->thickness = thickness;
+
+	execMeta->antiAliasing = ui->chkAntiAliasing->isChecked();
+}
+
+void LSystemUi::showSymbols()
+{
+	if (!symbolsDialog) {
+		symbolsDialog.reset(new SymbolsDialog());
+		symbolsDialog->setWindowFlags(Qt::Window);
+	}
+
+	if (!symbolsDialog->isVisible()) {
+		symbolsDialog->open();
+	}
+
+	if (resultAvailable) {
+		emit simulatorExecActionStr();
+	}
 }
 
 void LSystemUi::setBgColor()
@@ -243,6 +261,16 @@ void LSystemUi::removeAllSliders()
 {
 	if (quickAngle->isVisible()) unfocusAngleEdit();
 	if (quickLinear->isVisible()) unfocusLinearEdit();
+}
+
+void LSystemUi::clearAll()
+{
+	lastX = -1;
+	lastY = -1;
+	drawArea->clear();
+	if (symbolsDialog) {
+		symbolsDialog->clearContent();
+	}
 }
 
 ConfigSet LSystemUi::getConfigSet()
@@ -393,16 +421,29 @@ void LSystemUi::copyToClipboardMarked()
 void LSystemUi::processSimulatorResult(const common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData)
 {
 	if (execResult.resultKind == common::ExecResult::ExecResultKind::InvalidConfig) {
+		resultAvailable = false;
 		return;
 	}
+	resultAvailable = true;
 	QSharedPointer<DrawMetaData> drawMetaData = qSharedPointerDynamicCast<DrawMetaData>(metaData);
 	drawMetaData->resultOk = (execResult.resultKind == ExecResult::ExecResultKind::Ok);
 	emit startDraw(execResult, metaData);
+
+	if (symbolsDialog) emit simulatorExecActionStr();
 }
 
 void LSystemUi::processActionStr(const QString & actionStr)
 {
-	showMessage(actionStr, MsgType::Info);
+	if (!symbolsDialog) {
+		symbolsDialog.reset(new SymbolsDialog());
+		symbolsDialog->setWindowFlags(Qt::Window);
+	}
+
+	if (!symbolsDialog->isVisible()) {
+		symbolsDialog->open();
+	}
+
+	symbolsDialog->setContent(actionStr);
 }
 
 void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPointer<MetaData> & metaData)
@@ -432,7 +473,8 @@ void LSystemUi::configLiveEdit()
 	lastValidConfigSet = configSet;
 
 	if (lastX == -1 && lastY == -1) {
-		showMessage("No start position given. Click on the drawing area first.", MsgType::Error);
+		lastX = drawArea->width() / 2;
+		lastY = drawArea->height() / 2;
 		return;
 	}
 
@@ -502,14 +544,14 @@ void LSystemUi::focusLinearEdit(FocusableLineEdit * lineEdit)
 		minValue = 0;
 		maxValue = 1;
 	} else if (lineEdit == ui->txtLastIterOpacity || lineEdit == ui->txtOpacity) {
-		smallStep = 5;
-		bigStep = 15;
-		minValue = 5;
+		smallStep = 1;
+		bigStep = 10;
+		minValue = 0;
 		maxValue = 100;
 	} else if (lineEdit == ui->txtThickness) {
-		smallStep = 0.5;
+		smallStep = 0.25;
 		bigStep = 1;
-		minValue = 1;
+		minValue = 0.5;
 		maxValue = 5;
 		extFactor = 1.5;
 	} else {
@@ -592,67 +634,9 @@ void LSystemUi::on_cmdAbout_clicked()
 	dia.exec();
 }
 
-
 void LSystemUi::on_cmdSettings_clicked()
 {
 	showSettings();
-}
-
-
-// ------------------------------------------------------
-
-LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
-	: menu(parent)
-{
-	drawingActions
-		<< menu.addAction("Delete drawing", &*parent->drawArea, &DrawArea::deleteMarked, Qt::Key_Delete)
-		<< menu.addAction("Copy drawing", parent, &LSystemUi::copyToClipboardMarked, Qt::CTRL + Qt::SHIFT + Qt::Key_C)
-		<< menu.addAction("Send to front", &*parent->drawArea, &DrawArea::sendToFrontMarked)
-		<< menu.addAction("Send to back", &*parent->drawArea, &DrawArea::sendToBackMarked)
-		<< menu.addSeparator();
-
-	setDrawingActionsVisible(false);
-
-	undoAction = menu.addAction("Undo", &*parent->drawArea, &DrawArea::restoreLastImage, Qt::CTRL + Qt::Key_Z);
-	undoAction->setEnabled(false);
-	redoAction = menu.addAction("Redo", &*parent->drawArea, &DrawArea::restoreLastImage, Qt::CTRL + Qt::Key_Y);
-	redoAction->setEnabled(false);
-	menu.addSeparator();
-
-	autoClearToggle = menu.addAction("Auto clear");
-	autoClearToggle->setCheckable(true);
-	menu.addSeparator();
-
-	menu.addAction("Clear", &*parent->drawArea, &DrawArea::clear, Qt::CTRL + Qt::Key_C);
-	menu.addAction("Set Bg-Color", parent, &LSystemUi::setBgColor, Qt::CTRL + Qt::Key_B);
-	menu.addSeparator();
-
-	menu.addAction("Copy canvas", &*parent->drawArea, &DrawArea::copyToClipboardFull);
-
-	// to get the shortcurts working
-	parent->ui->menubar->addMenu(&menu);
-	parent->ui->menubar->setNativeMenuBar(true);
-}
-
-void LSystemUi::DrawAreaMenu::setDrawingActionsVisible(bool visible)
-{
-	// shortcuts become enabled/disabled with making the actions (un)visible
-	for (QAction * action : qAsConst(drawingActions)) {
-		action->setVisible(visible);
-	}
-}
-
-LSystemUi::StatusMenu::StatusMenu(LSystemUi * parent)
-	: menu(parent)
-{
-	menu.addAction("Copy to clipboard", &*parent, &LSystemUi::copyStatus);
-}
-
-// ------------------------------------------------------
-
-QString LSystemUi::DrawMetaData::toString() const
-{
-	return printStr("[%1,DrawMetaData(x: %2, y: %3, clear: %4, resultOk: %5)]", MetaData::toString(), x, y, clear, resultOk);
 }
 
 void LSystemUi::on_cmdAdditionalOptions_clicked()
@@ -681,3 +665,72 @@ void LSystemUi::on_cmdCloseAdditionalSettings_clicked()
 	ui->frmAdditionalOptions->setVisible(false);
 }
 
+
+void LSystemUi::on_chkAntiAliasing_stateChanged()
+{
+	configLiveEdit();
+}
+
+
+// -------------------- DrawAreaMenu --------------------
+
+LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
+	: menu(parent)
+{
+	drawingActions
+		<< menu.addAction("Delete drawing", &*parent->drawArea, &DrawArea::deleteMarked, Qt::Key_Delete)
+		<< menu.addAction("Copy drawing", parent, &LSystemUi::copyToClipboardMarked, Qt::CTRL + Qt::SHIFT + Qt::Key_C)
+		<< menu.addAction("Send to front", &*parent->drawArea, &DrawArea::sendToFrontMarked)
+		<< menu.addAction("Send to back", &*parent->drawArea, &DrawArea::sendToBackMarked)
+		<< menu.addSeparator();
+
+	setDrawingActionsVisible(false);
+
+	undoAction = menu.addAction("Undo", &*parent->drawArea, &DrawArea::restoreLastImage, Qt::CTRL + Qt::Key_Z);
+	undoAction->setEnabled(false);
+	redoAction = menu.addAction("Redo", &*parent->drawArea, &DrawArea::restoreLastImage, Qt::CTRL + Qt::Key_Y);
+	redoAction->setEnabled(false);
+	menu.addSeparator();
+
+	autoClearToggle = menu.addAction("Auto clear");
+	autoClearToggle->setCheckable(true);
+	menu.addSeparator();
+
+	menu.addAction("Clear all", parent, &LSystemUi::clearAll, Qt::CTRL + Qt::Key_C);
+	menu.addAction("Set Bg-Color", parent, &LSystemUi::setBgColor, Qt::CTRL + Qt::Key_B);
+	menu.addSeparator();
+
+	menu.addAction("Copy canvas", &*parent->drawArea, &DrawArea::copyToClipboardFull);
+	menu.addSeparator();
+
+	menu.addAction("Show symbols", parent, &LSystemUi::showSymbols, Qt::CTRL + Qt::SHIFT + Qt::Key_S);
+
+	// to get the shortcurts working
+	parent->ui->menubar->addMenu(&menu);
+	parent->ui->menubar->setNativeMenuBar(true);
+}
+
+void LSystemUi::DrawAreaMenu::setDrawingActionsVisible(bool visible)
+{
+	// shortcuts become enabled/disabled with making the actions (un)visible
+	for (QAction * action : qAsConst(drawingActions)) {
+		action->setVisible(visible);
+	}
+}
+
+// -------------------- StatusMenu --------------------
+
+LSystemUi::StatusMenu::StatusMenu(LSystemUi * parent)
+	: menu(parent)
+{
+	menu.addAction("Copy to clipboard", &*parent, &LSystemUi::copyStatus);
+}
+
+// -------------------- DrawMetaData --------------------
+
+QString LSystemUi::DrawMetaData::toString() const
+{
+	return printStr("[%1,DrawMetaData(x: %2, y: %3, clear: %4, resultOk: %5)]", MetaData::toString(), x, y, clear, resultOk);
+}
+
+// ------------------------------------------------------
