@@ -33,9 +33,9 @@ void QuickAngle::setValueRestriction(ValueRestriction valueRestriction)
 
 void QuickAngle::setValue(double newValue)
 {
-	if (newValue != qRound(newValue)) {
-		selector()->setProperty("rangeStepSmall", true);
-	}
+	const bool isFine = newValue != qRound(newValue);
+	selector()->setProperty("rangeStepSmall", isFine);
+	selector()->setProperty("rangeStepFactor", isFine ? 0.1 : 1);
 	QuickBase::setValue(newValue);
 }
 

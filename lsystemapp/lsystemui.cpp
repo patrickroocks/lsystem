@@ -1,6 +1,7 @@
 #include "lsystemui.h"
 #include "ui_lsystemui.h"
 #include "util/tableitemdelegate.h"
+#include "version.h"
 
 #include "aboutdialog.h"
 #include "settingsdialog.h"
@@ -41,6 +42,8 @@ LSystemUi::LSystemUi(QWidget *parent)
 	, configList(this)
 {
 	ui->setupUi(this);
+
+	setWindowTitle(util::printStr("lsystem %1 - An interactive simulator for Lindenmayer systems", Version));
 
 	resetStatus();
 	errorDecayTimer.setInterval(StatusIntervalMs);
@@ -88,11 +91,19 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(drawArea.data(), &DrawArea::enableUndoRedo, this, &LSystemUi::enableUndoRedo);
 	connect(drawArea.data(), &DrawArea::translation, this, &LSystemUi::translateActiveDrawing);
 
+	lblDrawActions.reset(new ClickableLabel(drawArea.data()));
+	lblDrawActions->setVisible(false);
+	lblDrawActions->setMouseTracking(true);
+	lblDrawActions->setTextInteractionFlags(Qt::LinksAccessibleByMouse);
+	lblDrawActions->setStyleSheet("QLabel { background-color: white; border: 2px solid white;}");
+	connect(lblDrawActions.data(), &ClickableLabel::linkActivated, this, &LSystemUi::processDrawAction);
+
 	drawAreaMenu.reset(new DrawAreaMenu(this)); // needs drawArea
 	statusMenu.reset(new StatusMenu(this));
 
 	connect(drawArea.data(), &DrawArea::markingChanged,
 			[&](bool drawingMarked) { drawAreaMenu->setDrawingActionsVisible(drawingMarked); });
+	connect(drawArea.data(), &DrawArea::highlightChanged, this, &LSystemUi::highlightDrawing);
 
 	quickAngle.reset(new QuickAngle(ui->centralwidget));
 	quickAngle->setVisible(false);
@@ -156,7 +167,7 @@ void LSystemUi::resizeEvent(QResizeEvent * event)
 	ui->layPaintFrameWidget->resize(wdt - ui->layPaintFrameWidget->x(), hgt - ui->layPaintFrameWidget->y());
 
 	// size of wdgOut is not available at start
-	drawArea->resize(ui->layPaintFrameWidget->size().width() - 20, ui->layPaintFrameWidget->size().height() - 30);
+	drawArea->resize(ui->layPaintFrameWidget->size().width() - 20, ui->layPaintFrameWidget->size().height() - 50);
 
 	// repaint during resize will fail!
 	removeAllSliders();
@@ -227,6 +238,25 @@ void LSystemUi::setBgColor()
 {
 	const QColor col = QColorDialog::getColor(drawArea->getBgColor(), this);
 	if (col.isValid()) drawArea->setBgColor(col);
+}
+
+LSystemUi::DrawPlacement LSystemUi::getDrawPlacement() const
+{
+	LSystemUi::DrawPlacement rv;
+
+	const auto drawing = highlightedDrawing.value();
+	const auto& drawGeom = drawArea->geometry();
+	rv.drawingSize = drawing.botRight - drawing.topLeft;
+	rv.areaTopLeft = DrawPlacement::outerDist;
+	rv.areaWidthHeight = QPoint(drawGeom.width(), drawArea->height());
+	rv.areaBotRight = rv.areaWidthHeight - DrawPlacement::outerDist;
+	rv.areaSize = rv.areaBotRight - rv.areaTopLeft;
+
+	const double wdtFct = (double)rv.areaSize.x() / rv.drawingSize.x();
+	const double hgtFct = (double)rv.areaSize.y() / rv.drawingSize.y();
+	rv.fct = qMin(wdtFct, hgtFct);
+
+	return rv;
 }
 
 void LSystemUi::showMessage(const QString & msg, MsgType msgType)
@@ -387,6 +417,67 @@ void LSystemUi::translateActiveDrawing(int diffX, int diffY)
 	}
 }
 
+void LSystemUi::highlightDrawing(std::optional<DrawResult> drawResult)
+{
+	highlightedDrawing = drawResult;
+
+	lblDrawActions->setVisible(false);
+	if (!drawResult.has_value()) {
+		return;
+	}
+
+	drawPlacement = getDrawPlacement();
+	const auto& dp = drawPlacement;
+
+	// first guess label pos
+	const auto& drawing = drawResult.value();
+	QPoint labelPos = drawing.topLeft + DrawPlacement::outerDist;
+
+	// Always display maxize button
+	const bool showMax = (dp.fct != 1);
+
+	// check if drawing can be moved left/right/top/down
+	const bool moveRight = (drawing.topLeft.x() < dp.areaTopLeft.x());
+	const bool moveDown = (drawing.topLeft.y() < dp.areaTopLeft.y());
+	const bool moveLeft = (drawing.botRight.x() > dp.areaBotRight.x());
+	const bool moveUp = (drawing.botRight.y() > dp.areaBotRight.y());
+
+	QStringList texts;
+	QStringList toolTips;
+
+	const auto addLink = [&](const QString & symbol, const QString & link, const QString & toolTip) {
+		texts << QString("<a href=\"%1\" style=\"color:black;text-decoration:none\">%2</a>").arg(link).arg(symbol);
+		toolTips << toolTip;
+	};
+
+	if (showMax) addLink("&#x25a2;", DrawLinks::Maximize, "Scale to maximum");
+
+	// codes like "&searr;" are not supported
+	if (moveRight && moveDown) addLink("&#8600;", DrawLinks::MoveRightDown, "Move right&down");
+	if (moveLeft  && moveDown) addLink("&#8601;", DrawLinks::MoveLeftDown,  "Move left&down");
+	if (moveRight && moveUp)   addLink("&#8599;", DrawLinks::MoveRightUp,   "Move right&up");
+	if (moveLeft  && moveUp)   addLink("&#8598;", DrawLinks::MoveLeftUp,    "Move left&up");
+
+	if (moveDown)  addLink("&darr;", DrawLinks::MoveDown,  "Move down");
+	if (moveLeft)  addLink("&larr;", DrawLinks::MoveLeft,  "Move left");
+	if (moveRight) addLink("&rarr;", DrawLinks::MoveRight, "Move right");
+	if (moveUp)    addLink("&uarr;", DrawLinks::MoveUp,    "Move up");
+
+	lblDrawActions->setText(texts.join("&nbsp;"));
+	lblDrawActions->setToolTip(toolTips.join(" | "));
+	lblDrawActions->adjustSize();
+
+	// enforce label within visible area (after label is filled with text!)
+	const QPoint labelDist(10, 10);
+	const auto labelGeom = lblDrawActions->geometry();
+	const auto labelMinPos = labelDist;
+	const auto labelMaxPos = dp.areaWidthHeight - QPoint(labelGeom.width(), labelGeom.height()) - labelDist;
+	labelPos.setX(qMin(qMax(labelMinPos.x(), labelPos.x()), labelMaxPos.x()));
+	labelPos.setY(qMin(qMax(labelMinPos.y(), labelPos.y()), labelMaxPos.y()));
+	lblDrawActions->setGeometry(labelPos.x(), labelPos.y(), lblDrawActions->geometry().width(), lblDrawActions->geometry().height());
+	lblDrawActions->setVisible(true);
+}
+
 void LSystemUi::showErrorInUi(const QString & errString)
 {
 	showMessage(errString, MsgType::Error);
@@ -526,12 +617,14 @@ void LSystemUi::focusLinearEdit(FocusableLineEdit * lineEdit)
 	double minValue;
 	double maxValue;
 	double extFactor = 0;
+	double fineStepSize = 0;
 	if (lineEdit == ui->txtStep) {
 		smallStep = 1;
 		bigStep = 3;
 		minValue = 1;
 		maxValue = qMax(lastValidConfigSet.stepSize, 30.);
 		extFactor = 2;
+		fineStepSize = 0.1;
 	} else if (lineEdit == ui->txtIter) {
 		smallStep = 1;
 		bigStep = 3;
@@ -564,6 +657,7 @@ void LSystemUi::focusLinearEdit(FocusableLineEdit * lineEdit)
 	quickLinear->setSmallBigStep(smallStep, bigStep);
 	quickLinear->setMinMaxValue(minValue, maxValue);
 	quickLinear->setExtensionFactor(extFactor);
+	quickLinear->setFineStepSize(fineStepSize);
 	quickLinear->setValue(lineEdit->text().toDouble());
 
 	// control
@@ -665,12 +759,99 @@ void LSystemUi::on_cmdCloseAdditionalSettings_clicked()
 	ui->frmAdditionalOptions->setVisible(false);
 }
 
-
 void LSystemUi::on_chkAntiAliasing_stateChanged()
 {
 	configLiveEdit();
 }
 
+void LSystemUi::processDrawAction(const QString & link)
+{
+	if (!highlightedDrawing.has_value()) return;
+
+	const auto& dp = drawPlacement;
+	const auto& drawing = highlightedDrawing.value();
+
+	bool startPointChanged = false;
+
+	if (link == DrawLinks::Maximize) {
+
+		const auto newStepSize = lastValidConfigSet.stepSize * dp.fct;
+
+		// calculate new y position
+
+		const auto predTopY = lastY - (lastY - drawing.topLeft.y()) * dp.fct;
+		const auto predBottomY = predTopY + dp.drawingSize.y() * dp.fct;
+
+		if (predTopY < dp.areaTopLeft.y()) {
+			lastY += dp.areaTopLeft.y() - predTopY;
+			startPointChanged = true;
+		} else if (predBottomY > dp.areaBotRight.y()) {
+			lastY -= (predBottomY - dp.areaBotRight.y());
+			startPointChanged = true;
+		}
+
+		// calculate new x position
+
+		const auto predLeftX = lastX - (lastX - drawing.topLeft.x()) * dp.fct;
+		const auto predRightX = predLeftX + dp.drawingSize.x() * dp.fct;
+
+		if (predLeftX < dp.areaTopLeft.x()) {
+			lastX += dp.areaTopLeft.x() - predLeftX;
+			startPointChanged = true;
+		} else if (predRightX > dp.areaBotRight.x()) {
+			lastX -= (predRightX - dp.areaBotRight.x());
+			startPointChanged = true;
+		}
+
+		// update step size => causes redraw
+
+		const auto newStepText = util::formatFixed(newStepSize, 2);
+		if (newStepText != ui->txtStep->text()) {
+			ui->txtStep->setText(util::formatFixed(newStepSize, 2));
+			return;
+		}
+
+	} else {
+
+		startPointChanged = true;
+
+		bool moveLeft = false;
+		bool moveRight = false;
+		bool moveDown = false;
+		bool moveUp = false;
+
+		if (link == DrawLinks::MoveDown) {
+			moveDown = true;
+		} else if (link == DrawLinks::MoveUp) {
+			moveUp = true;
+		} else if (link == DrawLinks::MoveLeft) {
+			moveLeft = true;
+		} else if (link == DrawLinks::MoveRight) {
+			moveRight = true;
+		} else if (link == DrawLinks::MoveRightDown) {
+			moveDown = true;
+			moveRight = true;
+		} else if (link == DrawLinks::MoveLeftDown) {
+			moveDown = true;
+			moveLeft = true;
+		} else if (link == DrawLinks::MoveRightUp) {
+			moveUp = true;
+			moveRight = true;
+		} else if (link == DrawLinks::MoveLeftUp) {
+			moveUp = true;
+			moveLeft = true;
+		}
+
+		if (moveDown)  lastY += dp.areaTopLeft .y() - drawing.topLeft .y();
+		if (moveUp)    lastY += dp.areaBotRight.y() - drawing.botRight.y();
+		if (moveLeft)  lastX += dp.areaBotRight.x() - drawing.botRight.x();
+		if (moveRight) lastX += dp.areaTopLeft .x() - drawing.topLeft .x();
+	}
+
+	if (startPointChanged) {
+		drawArea->translateHighlighted(QPoint(lastX, lastY));
+	}
+}
 
 // -------------------- DrawAreaMenu --------------------
 
@@ -734,3 +915,4 @@ QString LSystemUi::DrawMetaData::toString() const
 }
 
 // ------------------------------------------------------
+

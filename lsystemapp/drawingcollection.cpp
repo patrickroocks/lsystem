@@ -51,7 +51,7 @@ void Drawing::drawSegments(const LineSegs & segs, double opacyFactor, double thi
 	}
 }
 
-void Drawing::drawToImage(QImage & dstImage, bool isMarked)
+void Drawing::drawToImage(QImage & dstImage, bool isMarked, bool isHighlighted)
 {
 	QPainter painter(&dstImage);
 	painter.drawImage(offset + topLeft, image);
@@ -62,6 +62,14 @@ void Drawing::drawToImage(QImage & dstImage, bool isMarked)
 		pen.setWidth(2);
 		painter.setPen(pen);
 		painter.drawRect(QRect(offset + topLeft, offset + botRight));
+	}
+	if (isHighlighted) {
+		QPen pen;
+		pen.setColor(QColor(0, 0, 0, 30));
+		pen.setWidth(1);
+		painter.setPen(pen);
+		QPoint dist(2, 2);
+		painter.drawRect(QRect(offset + topLeft - dist, offset + botRight + dist));
 	}
 }
 
@@ -75,9 +83,16 @@ bool Drawing::withinArea(const QPoint & pos)
 	return pos >= topLeft + offset && pos <= botRight + offset;
 }
 
-void Drawing::move(const QPoint & newOffset)
+bool Drawing::move(const QPoint & newOffset)
 {
+	if (offset == newOffset) return false;
 	offset = newOffset;
+	return true;
+}
+
+DrawResult Drawing::toDrawResult()
+{
+	return DrawResult{topLeft + offset, botRight + offset};
 }
 
 void Drawing::updateRect(double minX, double minY, double maxX, double maxY)
@@ -99,7 +114,7 @@ void DrawingCollection::addDrawing(Drawing newDrawing, const QPoint & off)
 	zIndexToDrawing[newDrawing.zIndex] = newDrawing.num;
 	drawings[newDrawing.num] = newDrawing;
 
-	newDrawing.drawToImage(image, false);
+	newDrawing.drawToImage(image, false, false);
 }
 
 void DrawingCollection::resize(const QSize & newSize)
@@ -126,7 +141,7 @@ void DrawingCollection::redraw()
 	image.fill(backColor);
 
 	for (qint64 drawNum : qAsConst(zIndexToDrawing)) {
-		drawings[drawNum].drawToImage(image, drawNum == markedDrawing);
+		drawings[drawNum].drawToImage(image, drawNum == markedDrawing, drawNum == highlightedDrawing);
 	}
 }
 
@@ -183,7 +198,7 @@ bool DrawingCollection::setMarkedDrawing(qint64 newMarkedDrawing)
 
 bool DrawingCollection::moveDrawing(qint64 drawingNum, const QPoint & newOffset)
 {
-	drawings[drawingNum].move(newOffset);
+	if (!drawings[drawingNum].move(newOffset)) return false;
 	redraw();
 	return true;
 }
@@ -206,6 +221,23 @@ bool DrawingCollection::sendToBack(qint64 drawingNum)
 {
 	if (zIndexToDrawing.isEmpty()) return false;
 	return sendToZIndex(drawingNum, zIndexToDrawing.firstKey() - 1);
+}
+
+bool DrawingCollection::highlightDrawing(qint64 newHighlightedDrawing)
+{
+	if (highlightedDrawing == newHighlightedDrawing) return false;
+	highlightedDrawing = newHighlightedDrawing;
+	redraw();
+	return true;
+}
+
+std::optional<DrawResult> DrawingCollection::getHighlightedDrawResult()
+{
+	if (!highlightedDrawing) {
+		return {};
+	} else {
+		return drawings[highlightedDrawing].toDrawResult();
+	}
 }
 
 bool DrawingCollection::sendToZIndex(qint64 drawingNum, qint64 newZIndex)

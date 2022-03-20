@@ -12,6 +12,7 @@
 #include "util/quickangle.h"
 #include "util/quicklinear.h"
 #include "util/focusablelineedit.h"
+#include "util/clickablelabel.h"
 
 #include <QMainWindow>
 #include <QTimer>
@@ -80,6 +81,8 @@ private slots:
 	// from drawarea
 	void enableUndoRedo(bool undoOrRedo);
 	void translateActiveDrawing(int diffX, int diffY);
+	void highlightDrawing(std::optional<lsystem::ui::DrawResult> drawResult);
+	void processDrawAction(const QString & link);
 
 	// from different other components
 	void showErrorInUi(const QString& errString);
@@ -95,11 +98,39 @@ private slots:
 	void on_chkAntiAliasing_stateChanged();
 
 private:
+	struct DrawPlacement
+	{
+		constexpr static const QPoint outerDist{5, 5};
+		QPoint drawingSize;
+		QPoint areaWidthHeight;
+		QPoint areaTopLeft;
+		QPoint areaBotRight;
+		QPoint areaSize;
+		double fct = 0;
+	};
+
+	struct DrawLinks
+	{
+		static const constexpr char * Maximize = "maximize";
+
+		static const constexpr char * MoveDown = "move_down";
+		static const constexpr char * MoveUp = "move_up";
+		static const constexpr char * MoveLeft = "move_left";
+		static const constexpr char * MoveRight = "move_right";
+
+		static const constexpr char * MoveRightDown = "move_right_down";
+		static const constexpr char * MoveLeftDown = "move_left_down";
+		static const constexpr char * MoveRightUp = "move_right_up";
+		static const constexpr char * MoveLeftUp = "move_left_up";
+	};
+
+private:
 
 	// Draw Area
 	void drawAreaClick(int x, int y, Qt::MouseButton button, bool drawingMarked);
 	void startPaint(int x, int y);
 	void setBgColor();
+	DrawPlacement getDrawPlacement() const;
 
 	// current Config
 	void configLiveEdit();
@@ -132,6 +163,7 @@ private:
 	Ui::LSystemUi * ui;
 	QScopedPointer<lsystem::ui::DrawArea> drawArea;
 	QThread drawAreaThread;
+	DrawPlacement drawPlacement;
 
 	QScopedPointer<TableItemDelegateAutoUpdate> tableItemDelegate;
 	QScopedPointer<QuickAngle> quickAngle;
@@ -172,6 +204,8 @@ private:
 	int lastX = -1;
 	int lastY = -1;
 	lsystem::common::ConfigSet lastValidConfigSet;
+	std::optional<lsystem::ui::DrawResult> highlightedDrawing;
+	QScopedPointer<ClickableLabel> lblDrawActions;
 
 	enum class TransparencyOpt {
 		Ask = 0,

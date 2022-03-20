@@ -7,15 +7,22 @@
 
 namespace lsystem::ui {
 
+struct DrawResult
+{
+	QPoint topLeft;
+	QPoint botRight;
+};
+
 class Drawing
 {
 public:
 	Drawing() = default;
 	Drawing(const common::ExecResult & execResult, const QSharedPointer<common::MetaData> & metaData);
-	void drawToImage(QImage & dstImage, bool isMarked);
+	void drawToImage(QImage & dstImage, bool isMarked, bool isHighlighted);
 	QPoint size() const;
 	bool withinArea(const QPoint & pos);
-	void move(const QPoint & newOffset);
+	bool move(const QPoint & newOffset);
+	DrawResult toDrawResult();
 
 public:
 	qint64 zIndex = 0;
@@ -34,7 +41,6 @@ private:
 	QPoint botRight;
 };
 
-
 class DrawingCollection
 {
 public:
@@ -52,11 +58,14 @@ public:
 	QImage & getDrawingImage(qint64 drawingNum);
 	QImage getImage();
 	int getMarkedDrawing() const { return markedDrawing; }
+	int getHighlightedDrawing() const { return highlightedDrawing; }
 	bool setMarkedDrawing(qint64 newMarkedDrawing);
 	bool moveDrawing(qint64 drawingNum, const QPoint & newOffset);
 	bool deleteImage(qint64 drawingNum);
 	bool sendToFront(qint64 drawingNum);
 	bool sendToBack(qint64 drawingNum);
+	bool highlightDrawing(qint64 newHighlightedDrawing);
+	std::optional<DrawResult> getHighlightedDrawResult();
 
 public:
 	QColor backColor = QColor(255, 255, 255);
@@ -73,6 +82,7 @@ private:
 	QMap<qint64 /*zIndex*/, qint64 /*drawNum*/> zIndexToDrawing;
 
 	qint64 markedDrawing = 0;
+	qint64 highlightedDrawing = 0;
 };
 
 }

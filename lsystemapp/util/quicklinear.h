@@ -10,8 +10,12 @@ public:
 	explicit QuickLinear(QWidget * parent = nullptr);
 
 	void setExtensionFactor(double extFactor);
+	void setFineStepSize(double fineStepSize);
 
+	void setValue(double newValue);
 private:
+
+	double fineStepSize;
 
 	static const int sizeWidth = 180;
 	static const int sizeHeight = 65;

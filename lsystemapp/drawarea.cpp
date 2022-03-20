@@ -30,6 +30,9 @@ void DrawArea::draw(const ui::Drawing & drawing, int offX, int offY, bool clearB
 	lastDrawings = drawings;
 
 	if (clearBefore) {
+		if (drawings.highlightDrawing(0)) {
+			highlightChanged({});
+		}
 		drawings.clear();
 	}
 	drawings.addDrawing(drawing, QPoint(offX, offY));
@@ -97,6 +100,15 @@ void DrawArea::sendToBackMarked()
 	lastDrawings = drawings;
 	drawings.sendToBack(drawings.getMarkedDrawing());
 	update();
+}
+
+void DrawArea::translateHighlighted(const QPoint & newOffset)
+{
+	if (!drawings.getHighlightedDrawing()) return;
+	if (drawings.moveDrawing(drawings.getHighlightedDrawing(), newOffset)) {
+		update();
+		emit highlightChanged(drawings.getHighlightedDrawResult());
+	}
 }
 
 void DrawArea::setBgColor(const QColor & col)
@@ -171,6 +183,9 @@ void DrawArea::mouseReleaseEvent(QMouseEvent * event)
 		if (moveMode == MoveState::MoveStarted) {
 			const QPoint transPt = QPoint(event->x(), event->y()) - moveStart;
 			emit translation(transPt.x(), transPt.y());
+			if (drawings.getHighlightedDrawing()) {
+				emit highlightChanged(drawings.getHighlightedDrawResult());
+			}
 		}
 		moveMode = MoveState::NoMove;
 	}
@@ -197,6 +212,11 @@ void DrawArea::mouseMoveEvent(QMouseEvent * event)
 			} else {
 				setCursor(Qt::CrossCursor);
 			}
+		}
+
+		if (drawings.highlightDrawing(mouseOverDrawing)) {
+			update();
+			emit highlightChanged(drawings.getHighlightedDrawResult());
 		}
 	}
 }

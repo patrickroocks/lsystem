@@ -1,4 +1,5 @@
 #include "quickbase.h"
+#include <util/divutils.h>
 
 #include <QFocusEvent>
 #include <QQuickItem>
@@ -101,14 +102,7 @@ void QuickBase::valueChangedInSelector()
 	const auto newValue = selector_->property("value").toDouble();
 	if (newValue != currentValue) {
 		currentValue = newValue;
-
-		QString numStr = QString::number(currentValue, 'f', 2); // 2 digits after dec point
-		if (numStr.right(2) == "00") numStr = numStr.left(numStr.length() - 3); // remove ".00" (or ",00")
-		else if (numStr.right(1) == "0") numStr = numStr.left(numStr.length() - 1); // remove one trailing 0, keep comma
-
-		if (lineEdit) lineEdit->setText(numStr);
+		if (lineEdit) lineEdit->setText(util::formatFixed(currentValue, 2));
 		emit valueChanged(currentValue);
 	}
 }
-
-

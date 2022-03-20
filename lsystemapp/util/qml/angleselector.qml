@@ -144,7 +144,7 @@ Rectangle
         x: size/2 + distButtonX
         y: size/2 - sizeButton / 2
         text: "↷"
-        toolTipText: "Increase by " + rangeStepEffective + "°"
+        toolTipText: "Increase by " + rangeStepEffective.toFixed(1) + "°"
         onClicked:
         {
             setNewValue(value + rangeStepEffective, true)
@@ -157,7 +157,7 @@ Rectangle
         x: size/2 - distButtonX - width
         y: size/2 - sizeButton / 2
         text: "↶"
-        toolTipText: "Decrease by " + rangeStepEffective + "°"
+        toolTipText: "Decrease by " + rangeStepEffective.toFixed(1) + "°"
         onClicked:
         {
             setNewValue(value - rangeStepEffective, true)

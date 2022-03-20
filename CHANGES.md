@@ -1,3 +1,15 @@
+# Version 0.4.0
+
+- slider for step size, iterations and scaling
+- additional features for drawing
+  * show last iteration (with opacity < 1)
+  * line thickness
+  * anti aliasing
+- suggest interaction with hovered drawing
+  * scale to maximum of windows
+  * move left/right/down/up
+- several bugfixes
+
 # Version 0.3.0
 
 - enhanced interactive mode

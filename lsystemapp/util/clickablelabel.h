@@ -12,9 +12,13 @@ public:
 
 signals:
 	void mousePressed(QMouseEvent * event);
+	void mouseReleased(QMouseEvent * event);
+	void mouseMoved(QMouseEvent * event);
 
 protected:
-	void mousePressEvent(QMouseEvent * event);
+	void mousePressEvent(QMouseEvent * event) override;
+	void mouseMoveEvent(QMouseEvent * event) override;
+	void mouseReleaseEvent(QMouseEvent * event) override;
 };
 
 #endif // CLICKABLELABEL_H

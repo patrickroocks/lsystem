@@ -23,12 +23,14 @@ public:
 	void deleteMarked();
 	void sendToFrontMarked();
 	void sendToBackMarked();
+	void translateHighlighted(const QPoint & newOffset);
 
 	void setBgColor(const QColor & col);
 	QColor getBgColor() const;
 
 signals:
 	void markingChanged(bool drawingMarked);
+	void highlightChanged(std::optional<DrawResult>);
 	void mouseClick(int x, int y, Qt::MouseButton button, bool drawingMarked);
 	void enableUndoRedo(bool undoOrRedo);
 	void translation(int x, int y);

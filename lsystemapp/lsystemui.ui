@@ -13,6 +13,9 @@
   <property name="windowTitle">
    <string>lsystem - An interactive simulator for Lindenmayer systems</string>
   </property>
+  <property name="toolTip">
+   <string/>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QWidget" name="topMainLayoutWidget">
     <property name="geometry">
