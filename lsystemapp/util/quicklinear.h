@@ -12,10 +12,11 @@ public:
 	void setExtensionFactor(double extFactor);
 	void setFineStepSize(double fineStepSize);
 
-	void setValue(double newValue);
-private:
+protected:
+	double fineStepSize() const override { return fineStepSize_; }
 
-	double fineStepSize;
+private:
+	double fineStepSize_ = 0;
 
 	static const int sizeWidth = 180;
 	static const int sizeHeight = 65;

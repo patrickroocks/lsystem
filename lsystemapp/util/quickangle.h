@@ -10,7 +10,9 @@ class QuickAngle final : public QuickBase
 public:
 	explicit QuickAngle(QWidget * parent = nullptr);
 	void setValueRestriction(ValueRestriction valueRestriction);
-	void setValue(double newValue);
+
+protected:
+	double fineStepSize() const override { return 0.1; }
 
 private:
 	static const int size = 180;

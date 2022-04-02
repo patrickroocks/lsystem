@@ -197,8 +197,6 @@ Rectangle
                 rangeStepFactor = checked ? fineStepSize : 1;
                 if (!internalCheckedChange) {
                     updateText();
-                } else {
-                    internalCheckedChange = false;
                 }
             }
         }
@@ -209,7 +207,6 @@ Rectangle
             x: sizeBorder
             y: sizeHeight - sizeButton - sizeBorder
             text: '-'
-            toolTipText: "Decrease by " + rangeStepEffective.toFixed(2)
             onClicked:
             {
                 setNewValue(value - rangeStepEffective, true)
@@ -222,7 +219,6 @@ Rectangle
             x: sliderEnd() + sizeBorder
             y: sizeHeight - sizeButton - sizeBorder
             text: '+'
-            toolTipText: "Increase by " + rangeStepEffective.toFixed(2)
             onClicked:
             {
                 setNewValue(value + rangeStepEffective, true)
@@ -250,6 +246,7 @@ Rectangle
                 if (fineStepSize > 0 && parsed !== Math.round(parsed)) {
                     toggleStepButton.internalCheckedChange = true
                     toggleStepButton.checked = true;
+                    toggleStepButton.internalCheckedChange = false
                 }
                 isErr = !setStrValue(text, false);
                 updateRectColors();
@@ -276,12 +273,19 @@ Rectangle
     function setStrValue(strVal, updateText)
     {
         var parsed;
-        if (rangeStepSize < 1) {
+        if (rangeStepEffective < 1) {
             parsed = parseFloat(strVal);
         } else {
             parsed = parseInt(strVal);
         }
         return !isNaN(parsed) && setNewValue(parsed, updateText);
+    }
+
+    function setFineChecked(isFineChecked)
+    {
+        toggleStepButton.internalCheckedChange = true;
+        toggleStepButton.checked = isFineChecked
+        toggleStepButton.internalCheckedChange = false;
     }
 
     function setExtValue(val, focusToText)

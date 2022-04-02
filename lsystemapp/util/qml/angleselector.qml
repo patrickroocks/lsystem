@@ -184,8 +184,6 @@ Rectangle
             rangeStepFactor = checked ? 0.1 : 1;
             if (!internalCheckedChange) {
                 updateText();
-            } else {
-                internalCheckedChange = false;
             }
         }
     }
@@ -209,6 +207,7 @@ Rectangle
                 if (parsed !== Math.round(parsed)) {
                     toggleStepButton.internalCheckedChange = true
                     toggleStepButton.checked = true;
+                    toggleStepButton.internalCheckedChange = false
                 }
                 isErr = !setStrValue(text, false);
                 updateCircleColor();
@@ -236,6 +235,13 @@ Rectangle
     {
         var parsed = parseFloat(strVal);
         return !isNaN(parsed) && setNewValue(parsed, updateText);
+    }
+
+    function setFineChecked(isFineChecked)
+    {
+        toggleStepButton.internalCheckedChange = true;
+        toggleStepButton.checked = isFineChecked
+        toggleStepButton.internalCheckedChange = false;
     }
 
     function setExtValue(val, focusToText)

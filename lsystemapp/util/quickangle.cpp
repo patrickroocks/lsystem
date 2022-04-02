@@ -31,11 +31,3 @@ void QuickAngle::setValueRestriction(ValueRestriction valueRestriction)
 	selector()->setProperty("valueFilter", valueFilter);
 }
 
-void QuickAngle::setValue(double newValue)
-{
-	const bool isFine = newValue != qRound(newValue);
-	selector()->setProperty("rangeStepSmall", isFine);
-	selector()->setProperty("rangeStepFactor", isFine ? 0.1 : 1);
-	QuickBase::setValue(newValue);
-}
-

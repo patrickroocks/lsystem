@@ -41,7 +41,7 @@ Rectangle
         id: toolTip
         delay: 1000
         timeout: 2000
-        visible: mouseOver
+        visible: text && mouseOver
     }
 
     MouseArea

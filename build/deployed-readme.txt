@@ -21,7 +21,7 @@ This package was build via the scripts in https://github.com/patrickroocks/lsyst
 --------------
 
 - Extract all the contents of this archive
-- Run lsystem.exe
+- Run lsystemapp.exe
 
 
 3) Settings
@@ -29,4 +29,4 @@ This package was build via the scripts in https://github.com/patrickroocks/lsyst
 
 (e.g., configurations of user defined fractals)
 
-They will be stored in config.json in the same folder as lsystem.exe
+They will be stored in config.json in the same folder as lsystemapp.exe

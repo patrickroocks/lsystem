@@ -28,6 +28,9 @@ void QuickBase::placeAt(int x, int y)
 
 void QuickBase::setValue(double newValue)
 {
+	const bool isFine = newValue != qRound(newValue) && fineStepSize() > 0;
+	selector()->setProperty("rangeStepSmall", isFine);
+	QMetaObject::invokeMethod(selector(), "setFineChecked", Q_ARG(QVariant, isFine));
 	QMetaObject::invokeMethod(selector_, "setExtValue", Q_ARG(QVariant, newValue), Q_ARG(QVariant, true));
 }
 
