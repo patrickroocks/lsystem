@@ -31,8 +31,8 @@ inline QString printImpl(const char * chars)      { return QString(chars);      
 // * Qt Types
 inline QString printImpl(const QDateTime & dateTime) { return dateTime.isNull() ? "<nulldate>" : dateTime.toString(Qt::ISODateWithMs); }
 inline QString printImpl(const QUrl      & url)      { return url.toString(); }
-inline QString printImpl(const QPoint    & point)    { return QString("(%1,%2)").arg(point.x()).arg(point.y()); }
-inline QString printImpl(const QPointF   & point)    { return QString("(%1,%2)").arg(point.x()).arg(point.y()); }
+inline QString printImpl(const QPoint    & point)    { return QString("(%1, %2)").arg(point.x()).arg(point.y()); }
+inline QString printImpl(const QPointF   & point)    { return QString("(%1, %2)").arg(point.x()).arg(point.y()); }
 inline QString printImpl(const QFileInfo & fileInfo) { return fileInfo.absoluteFilePath(); }
 
 // for flags we use binary encoding as there we see the flags which are set quite easy
@@ -95,7 +95,7 @@ inline QString printImpl(const QStringList & val) { return printImpl((QList<QStr
 template<typename T1, typename T2>
 QString printImpl(const QPair<T1,T2> & val)
 {
-	return QString("(%1,%2)").arg(printImpl(val.first))
+	return QString("(%1, %2)").arg(printImpl(val.first))
 							 .arg(printImpl(val.second));
 }
 
@@ -108,7 +108,7 @@ QString printMapping(const Container & cont)
 	while (it.hasNext()) {
 		it.next();
 		if (isFirst) isFirst = false;
-		else rv += ',';
+		else rv += ", ";
 		rv += printImpl(it.key()) + ':' + printImpl(it.value());
 	}
 	rv += ']';
@@ -127,7 +127,7 @@ QString printCollection(const Container & cont)
 	bool isFirst = true;
 	for (const auto & elem : cont) {
 		if (isFirst) isFirst = false;
-		else rv += ',';
+		else rv += ", ";
 		rv += printImpl(elem);
 	}
 	return rv;

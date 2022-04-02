@@ -22,7 +22,7 @@ QString getTestDiff(QList<TestExpr> testExpressions)
 	const int indent = sectionMaxSize + varMaxSize + 8;
 	const int lineWidth = qMax(80, 140 - indent);
 
-	auto insertNewlinesAndSpace = [&](const QString & str) {
+	const auto insertNewlinesAndSpace = [&](const QString & str) {
 		if (str.size() < lineWidth) return str;
 		QString res;
 		int curPos = 0;

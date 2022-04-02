@@ -20,22 +20,27 @@ void DrawArea::clear()
 {
 	lastDrawings = drawings;
 
-	drawings.clear();
+	drawings.clearAll();
 	update();
 	setNextUndoRedo(true);
 }
 
-void DrawArea::draw(const ui::Drawing & drawing, int offX, int offY, bool clearBefore)
+void DrawArea::draw(const ui::Drawing & drawing, const QPoint & offset, bool clearAll, bool clearLast)
 {
 	lastDrawings = drawings;
 
-	if (clearBefore) {
+	if (clearAll) {
 		if (drawings.highlightDrawing(0)) {
 			highlightChanged({});
 		}
-		drawings.clear();
+		drawings.clearAll();
+	} else if (clearLast) {
+		if (drawings.getHighlightedDrawingNum() == drawings.getLastDrawingNum() && drawings.highlightDrawing(0)) {
+			highlightChanged({});
+		}
+		drawings.deleteHighlightedOrLastDrawing();
 	}
-	drawings.addDrawing(drawing, QPoint(offX, offY));
+	drawings.addDrawing(drawing, offset);
 
 	// hack to ensure that the image is really painted
 	// todo: find out what happens here, it's all in the same thread
@@ -62,7 +67,7 @@ void DrawArea::copyToClipboardFull()
 
 void DrawArea::copyToClipboardMarked(bool transparent)
 {
-	const QPoint drawingSize = drawings.getDrawingSize(drawings.getMarkedDrawing());
+	const QPoint drawingSize = drawings.getDrawingSize(drawings.getMarkedDrawingNum());
 	if (drawingSize.isNull()) return;
 
 	QClipboard * clipboard = QGuiApplication::clipboard();
@@ -75,14 +80,14 @@ void DrawArea::copyToClipboardMarked(bool transparent)
 	} else {
 		newImage.fill(drawings.backColor);
 	}
-	painter.drawImage(QPoint(0, 0), drawings.getDrawingImage(drawings.getMarkedDrawing()));
+	painter.drawImage(QPoint(0, 0), drawings.getDrawingImage(drawings.getMarkedDrawingNum()));
 	clipboard->setImage(newImage);
 }
 
 void DrawArea::deleteMarked()
 {
 	lastDrawings = drawings;
-	drawings.deleteImage(drawings.getMarkedDrawing());
+	drawings.deleteImage(drawings.getMarkedDrawingNum());
 	drawings.setMarkedDrawing(0);
 	update();
 	setNextUndoRedo(true);
@@ -91,21 +96,21 @@ void DrawArea::deleteMarked()
 void DrawArea::sendToFrontMarked()
 {
 	lastDrawings = drawings;
-	drawings.sendToFront(drawings.getMarkedDrawing());
+	drawings.sendToFront(drawings.getMarkedDrawingNum());
 	update();
 }
 
 void DrawArea::sendToBackMarked()
 {
 	lastDrawings = drawings;
-	drawings.sendToBack(drawings.getMarkedDrawing());
+	drawings.sendToBack(drawings.getMarkedDrawingNum());
 	update();
 }
 
 void DrawArea::translateHighlighted(const QPoint & newOffset)
 {
-	if (!drawings.getHighlightedDrawing()) return;
-	if (drawings.moveDrawing(drawings.getHighlightedDrawing(), newOffset)) {
+	if (!drawings.getHighlightedDrawingNum()) return;
+	if (drawings.moveDrawing(drawings.getHighlightedDrawingNum(), newOffset)) {
 		update();
 		emit highlightChanged(drawings.getHighlightedDrawResult());
 	}
@@ -124,6 +129,16 @@ void DrawArea::setBgColor(const QColor & col)
 QColor DrawArea::getBgColor() const
 {
 	return drawings.backColor;
+}
+
+std::optional<QPoint> DrawArea::getLastOffset() const
+{
+	return drawings.getLastOffset();
+}
+
+std::optional<DrawResult> DrawArea::getMarkedDrawingResult()
+{
+	return drawings.getMarkedDrawResult();
 }
 
 void DrawArea::paintEvent(QPaintEvent * event)
@@ -154,23 +169,23 @@ void DrawArea::mousePressEvent(QMouseEvent * event)
 
 	bool cancelEvent = false;
 
-	if (clickedDrawing > 0 && clickedDrawing == drawings.getMarkedDrawing() && event->button() == Qt::MouseButton::LeftButton) {
+	if (clickedDrawing > 0 && clickedDrawing == drawings.getMarkedDrawingNum() && event->button() == Qt::MouseButton::LeftButton) {
 		moveMode = MoveState::ReadyForMove;
 		moveStart = QPoint(event->x(), event->y());
-		moveStartOffset = drawings.getDrawingOffset(drawings.getMarkedDrawing()) - QPoint(event->x(), event->y());
+		moveStartOffset = drawings.getDrawingOffset(drawings.getMarkedDrawingNum()) - QPoint(event->x(), event->y());
 		setCursor(Qt::SizeAllCursor);
 		cancelEvent = true;
-	} else if (drawings.getMarkedDrawing() > 0 && clickedDrawing == 0) {
+	} else if (drawings.getMarkedDrawingNum() > 0 && clickedDrawing == 0) {
 		cancelEvent = true;
 	}
 
 	if (drawings.setMarkedDrawing(clickedDrawing)) {
-		emit markingChanged(drawings.getMarkedDrawing() > 0);
+		emit markingChanged(drawings.getMarkedDrawingNum() > 0);
 		update();
 	}
 
 	if (!cancelEvent) {
-		emit mouseClick(event->x(), event->y(), event->button(), drawings.getMarkedDrawing() > 0);
+		emit mouseClick(event->x(), event->y(), event->button(), drawings.getMarkedDrawingNum() > 0);
 	}
 }
 
@@ -180,12 +195,8 @@ void DrawArea::mouseReleaseEvent(QMouseEvent * event)
 
 	if (moveMode != MoveState::NoMove) {
 		setCursor(Qt::ArrowCursor);
-		if (moveMode == MoveState::MoveStarted) {
-			const QPoint transPt = QPoint(event->x(), event->y()) - moveStart;
-			emit translation(transPt.x(), transPt.y());
-			if (drawings.getHighlightedDrawing()) {
-				emit highlightChanged(drawings.getHighlightedDrawResult());
-			}
+		if (moveMode == MoveState::MoveStarted && drawings.getHighlightedDrawingNum()) {
+			emit highlightChanged(drawings.getHighlightedDrawResult());
 		}
 		moveMode = MoveState::NoMove;
 	}
@@ -201,12 +212,12 @@ void DrawArea::mouseMoveEvent(QMouseEvent * event)
 			moveMode = MoveState::MoveStarted;
 		}
 		QPoint newOffset = moveStartOffset + QPoint(event->x(), event->y());
-		if (drawings.moveDrawing(drawings.getMarkedDrawing(), newOffset)) update();
+		if (drawings.moveDrawing(drawings.getMarkedDrawingNum(), newOffset)) update();
 
 	} else {
 
 		const qint64 mouseOverDrawing = drawings.getDrawingByPos(event->pos());
-		if (drawings.getMarkedDrawing() == 0) {
+		if (drawings.getMarkedDrawingNum() == 0) {
 			if (mouseOverDrawing > 0) {
 				setCursor(Qt::ArrowCursor);
 			} else {

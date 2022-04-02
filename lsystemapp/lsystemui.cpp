@@ -89,7 +89,6 @@ LSystemUi::LSystemUi(QWidget *parent)
 	drawArea->setMouseTracking(true); // for mouse move event
 	connect(drawArea.data(), &DrawArea::mouseClick, this, &LSystemUi::drawAreaClick);
 	connect(drawArea.data(), &DrawArea::enableUndoRedo, this, &LSystemUi::enableUndoRedo);
-	connect(drawArea.data(), &DrawArea::translation, this, &LSystemUi::translateActiveDrawing);
 
 	lblDrawActions.reset(new ClickableLabel(drawArea.data()));
 	lblDrawActions->setVisible(false);
@@ -128,16 +127,16 @@ LSystemUi::LSystemUi(QWidget *parent)
 	std::vector<FocusableLineEdit*> allEdits = configEditsLinear;
 	allEdits.insert(allEdits.end(), configEditsAngle.begin(), configEditsAngle.end());
 
-	for (FocusableLineEdit* lineEdit : allEdits) {
+	for (FocusableLineEdit * lineEdit : allEdits) {
 		connect(lineEdit, &FocusableLineEdit::textChanged, this, &LSystemUi::configLiveEdit);
 	}
 
 	// connection for interactive sliders
-	for (FocusableLineEdit* lineEdit : configEditsAngle) {
+	for (FocusableLineEdit * lineEdit : configEditsAngle) {
 		connect(lineEdit, &FocusableLineEdit::gotFocus, this, &LSystemUi::focusAngleEdit);
 	}
 
-	for (FocusableLineEdit* lineEdit : configEditsLinear) {
+	for (FocusableLineEdit * lineEdit : configEditsLinear) {
 		connect(lineEdit, &FocusableLineEdit::gotFocus, this, &LSystemUi::focusLinearEdit);
 	}
 
@@ -185,18 +184,14 @@ void LSystemUi::on_cmdRemove_clicked()
 
 void LSystemUi::startPaint(int x, int y)
 {
-	const ConfigSet configSet = getConfigSet();
+	const ConfigSet configSet = getConfigSet(true);
 	if (!configSet.valid) return;
-	lastValidConfigSet = configSet;
-
-	lastX = x;
-	lastY = y;
 
 	QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
-	execMeta->x = x;
-	execMeta->y = y;
-	execMeta->clear = drawAreaMenu->autoClearToggle->isChecked() || ui->chkAutoPaint->isChecked();
+	execMeta->offset = QPoint{x, y};
+	execMeta->clearAll = drawAreaMenu->autoClearToggle->isChecked() || ui->chkAutoPaint->isChecked();
 	getAdditionalOptions(execMeta);
+	execMeta->config = configSet;
 
 	emit simulatorExec(configSet, execMeta);
 }
@@ -232,6 +227,11 @@ void LSystemUi::showSymbols()
 	if (resultAvailable) {
 		emit simulatorExecActionStr();
 	}
+}
+
+void LSystemUi::showMarkedConfig()
+{
+	setConfigSet(drawArea->getMarkedDrawingResult()->config);
 }
 
 void LSystemUi::setBgColor()
@@ -295,19 +295,17 @@ void LSystemUi::removeAllSliders()
 
 void LSystemUi::clearAll()
 {
-	lastX = -1;
-	lastY = -1;
 	drawArea->clear();
 	if (symbolsDialog) {
 		symbolsDialog->clearContent();
 	}
 }
 
-ConfigSet LSystemUi::getConfigSet()
+ConfigSet LSystemUi::getConfigSet(bool storeAsLastValid)
 {
 	ConfigSet configSet;
 
-	auto showVarError = [&](const QString & errorVar, const QString & extraInfo = QString()) {
+	const auto showVarError = [&](const QString & errorVar, const QString & extraInfo = QString()) {
 		showMessage(QString("Invalid value for variable '%1'%2").arg(
 				errorVar,
 				extraInfo.isEmpty() ? "" : (" (" + extraInfo + ")")), MsgType::Error);
@@ -330,11 +328,17 @@ ConfigSet LSystemUi::getConfigSet()
 	if (!ok) { showVarError("step size"); return configSet; }
 
 	configSet.valid = true;
+
+	if (storeAsLastValid && configSet.valid) {
+		lastValidConfigSet = configSet;
+	}
+
 	return configSet;
 }
 
 void LSystemUi::setConfigSet(const ConfigSet & configSet)
 {
+	disableConfigLiveEdit = true;
 	defModel.setDefinitions(configSet.definitions);
 	ui->txtScaleDown ->setText(QString::number(configSet.scaling));
 	ui->txtLeft      ->setText(QString::number(configSet.turn.left));
@@ -342,11 +346,17 @@ void LSystemUi::setConfigSet(const ConfigSet & configSet)
 	ui->txtStartAngle->setText(QString::number(configSet.startAngle));
 	ui->txtIter      ->setText(QString::number(configSet.numIter));
 	ui->txtStep      ->setText(QString::number(configSet.stepSize));
+	disableConfigLiveEdit = false;
+
+	// still initialization phase => do not draw
+	if (!drawArea) return;
+
+	configLiveEdit();
 }
 
 void LSystemUi::on_cmdStore_clicked()
 {
-	const ConfigSet c = getConfigSet();
+	const ConfigSet c = getConfigSet(false);
 	if (!c.valid) return;
 
 	ConfigNameKind currentConfig = configList.getConfigNameKindByIndex(ui->lstConfigs->currentIndex());
@@ -407,14 +417,6 @@ void LSystemUi::enableUndoRedo(bool undoOrRedo)
 {
 	drawAreaMenu->undoAction->setEnabled( undoOrRedo);
 	drawAreaMenu->redoAction->setEnabled(!undoOrRedo);
-}
-
-void LSystemUi::translateActiveDrawing(int diffX, int diffY)
-{
-	if (lastX > -1 && lastY > -1) {
-		lastX += diffX;
-		lastY += diffY;
-	}
 }
 
 void LSystemUi::highlightDrawing(std::optional<DrawResult> drawResult)
@@ -520,7 +522,7 @@ void LSystemUi::processSimulatorResult(const common::ExecResult & execResult, co
 	drawMetaData->resultOk = (execResult.resultKind == ExecResult::ExecResultKind::Ok);
 	emit startDraw(execResult, metaData);
 
-	if (symbolsDialog) emit simulatorExecActionStr();
+	if (symbolsDialog && symbolsDialog->isVisible()) emit simulatorExecActionStr();
 }
 
 void LSystemUi::processActionStr(const QString & actionStr)
@@ -545,10 +547,10 @@ void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPoin
 		return;
 	}
 
-	drawArea->draw(drawing, drawMetaData->x, drawMetaData->y, drawMetaData->clear);
+	drawArea->draw(drawing, drawMetaData->offset, drawMetaData->clearAll, drawMetaData->clearLast);
 
 	if (drawMetaData->resultOk) {
-		const QString msgPainted = printStr("Painted %1 segments, size is %2 px, <a href=\"%3\">Show symbols</a>",
+		const QString msgPainted = printStr("Painted %1 segments, size is %2 px, <a href=\"%3\">show symbols</a>",
 				drawing.numSegments, drawing.size(), Links::ShowSymbols);
 
 		showMessage(msgPainted, MsgType::Info);
@@ -557,22 +559,22 @@ void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPoin
 
 void LSystemUi::configLiveEdit()
 {
-	if (!ui->chkAutoPaint->isChecked()) return;
+	if (!ui->chkAutoPaint->isChecked() || disableConfigLiveEdit) return;
 
-	ConfigSet configSet = getConfigSet();
+	ConfigSet configSet = getConfigSet(true);
 	if (!configSet.valid) return;
-	lastValidConfigSet = configSet;
 
-	if (lastX == -1 && lastY == -1) {
-		lastX = drawArea->width() / 2;
-		lastY = drawArea->height() / 2;
-		return;
-	}
+	auto optOffset = drawArea->getLastOffset();
 
 	QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
-	execMeta->x = lastX;
-	execMeta->y = lastY;
-	execMeta->clear = true;
+	if (optOffset.has_value()) {
+		execMeta->offset = optOffset.value();
+	} else {
+		execMeta->offset = QPoint{drawArea->width() / 2, drawArea->height() / 2};
+	}
+
+	execMeta->clearAll = true;
+	execMeta->config = configSet;
 	getAdditionalOptions(execMeta);
 
 	emit simulatorExec(configSet, execMeta);
@@ -622,7 +624,7 @@ void LSystemUi::focusLinearEdit(FocusableLineEdit * lineEdit)
 		smallStep = 1;
 		bigStep = 3;
 		minValue = 1;
-		maxValue = qMax(lastValidConfigSet.stepSize, 30.);
+		maxValue = qMax((double)qCeil(lastValidConfigSet.stepSize), 30.);
 		extFactor = 2;
 		fineStepSize = 0.1;
 	} else if (lineEdit == ui->txtIter) {
@@ -701,9 +703,10 @@ void LSystemUi::on_lblStatus_linkActivated(const QString & link)
 {
 	if (link == Links::NextIterations) {
 		QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
-		execMeta->x = lastX;
-		execMeta->y = lastY;
-		execMeta->clear = true;
+		const auto optOffset = drawArea->getLastOffset();
+		if (!optOffset.has_value()) return;
+		execMeta->offset = optOffset.value();
+		execMeta->clearLast = true;
 		emit simulatorExecDoubleStackSize(execMeta);
 	} else if (link == Links::ShowSymbols) {
 		emit simulatorExecActionStr();
@@ -773,42 +776,64 @@ void LSystemUi::processDrawAction(const QString & link)
 
 	bool startPointChanged = false;
 
+	if (!drawArea->getLastOffset().has_value()) return;
+
+	int xOff = drawing.offset.x();
+	int yOff = drawing.offset.y();
+
 	if (link == DrawLinks::Maximize) {
 
-		const auto newStepSize = lastValidConfigSet.stepSize * dp.fct;
+		const auto newStepSize = drawing.config.stepSize * dp.fct;
 
 		// calculate new y position
 
-		const auto predTopY = lastY - (lastY - drawing.topLeft.y()) * dp.fct;
+		const auto predTopY = yOff - (yOff - drawing.topLeft.y()) * dp.fct;
 		const auto predBottomY = predTopY + dp.drawingSize.y() * dp.fct;
 
 		if (predTopY < dp.areaTopLeft.y()) {
-			lastY += dp.areaTopLeft.y() - predTopY;
+			yOff += dp.areaTopLeft.y() - predTopY;
 			startPointChanged = true;
 		} else if (predBottomY > dp.areaBotRight.y()) {
-			lastY -= (predBottomY - dp.areaBotRight.y());
+			yOff -= (predBottomY - dp.areaBotRight.y());
 			startPointChanged = true;
 		}
 
 		// calculate new x position
 
-		const auto predLeftX = lastX - (lastX - drawing.topLeft.x()) * dp.fct;
+		const auto predLeftX = xOff - (xOff - drawing.topLeft.x()) * dp.fct;
 		const auto predRightX = predLeftX + dp.drawingSize.x() * dp.fct;
 
 		if (predLeftX < dp.areaTopLeft.x()) {
-			lastX += dp.areaTopLeft.x() - predLeftX;
+			xOff += dp.areaTopLeft.x() - predLeftX;
 			startPointChanged = true;
 		} else if (predRightX > dp.areaBotRight.x()) {
-			lastX -= (predRightX - dp.areaBotRight.x());
+			xOff -= (predRightX - dp.areaBotRight.x());
 			startPointChanged = true;
 		}
 
-		// update step size => causes redraw
+		if (drawing.config.stepSize != newStepSize) {
 
-		const auto newStepText = util::formatFixed(newStepSize, 2);
-		if (newStepText != ui->txtStep->text()) {
-			ui->txtStep->setText(util::formatFixed(newStepSize, 2));
-			return;
+			ConfigSet configSet = drawing.config;
+			configSet.stepSize = newStepSize;
+
+			if (ui->chkAutoPaint->isChecked()) {
+				disableConfigLiveEdit = true;
+				ui->txtStep->setText(util::formatFixed(newStepSize, 2));
+				disableConfigLiveEdit = false;
+				lastValidConfigSet = configSet;
+			}
+
+			QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
+			execMeta->offset = QPoint{xOff, yOff};
+			if (ui->chkAutoPaint->isChecked()) {
+				execMeta->clearAll = true;
+			} else {
+				execMeta->clearLast = true;
+			}
+			execMeta->config = configSet;
+
+			getAdditionalOptions(execMeta);
+			emit simulatorExec(configSet, execMeta);
 		}
 
 	} else {
@@ -842,14 +867,14 @@ void LSystemUi::processDrawAction(const QString & link)
 			moveLeft = true;
 		}
 
-		if (moveDown)  lastY += dp.areaTopLeft .y() - drawing.topLeft .y();
-		if (moveUp)    lastY += dp.areaBotRight.y() - drawing.botRight.y();
-		if (moveLeft)  lastX += dp.areaBotRight.x() - drawing.botRight.x();
-		if (moveRight) lastX += dp.areaTopLeft .x() - drawing.topLeft .x();
+		if (moveDown)  yOff += dp.areaTopLeft .y() - drawing.topLeft .y();
+		if (moveUp)    yOff += dp.areaBotRight.y() - drawing.botRight.y();
+		if (moveLeft)  xOff += dp.areaBotRight.x() - drawing.botRight.x();
+		if (moveRight) xOff += dp.areaTopLeft .x() - drawing.topLeft .x();
 	}
 
 	if (startPointChanged) {
-		drawArea->translateHighlighted(QPoint(lastX, lastY));
+		drawArea->translateHighlighted(QPoint(xOff, yOff));
 	}
 }
 
@@ -860,9 +885,10 @@ LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
 {
 	drawingActions
 		<< menu.addAction("Delete drawing", &*parent->drawArea, &DrawArea::deleteMarked, Qt::Key_Delete)
-		<< menu.addAction("Copy drawing", parent, &LSystemUi::copyToClipboardMarked, Qt::CTRL + Qt::SHIFT + Qt::Key_C)
+		<< menu.addAction("Copy drawing", parent, &LSystemUi::copyToClipboardMarked, Qt::CTRL + Qt::Key_C)
 		<< menu.addAction("Send to front", &*parent->drawArea, &DrawArea::sendToFrontMarked)
 		<< menu.addAction("Send to back", &*parent->drawArea, &DrawArea::sendToBackMarked)
+		<< menu.addAction("Show config", parent, &LSystemUi::showMarkedConfig, Qt::CTRL + Qt::SHIFT + Qt::Key_C)
 		<< menu.addSeparator();
 
 	setDrawingActionsVisible(false);
@@ -877,14 +903,14 @@ LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
 	autoClearToggle->setCheckable(true);
 	menu.addSeparator();
 
-	menu.addAction("Clear all", parent, &LSystemUi::clearAll, Qt::CTRL + Qt::Key_C);
+	menu.addAction("Clear all", parent, &LSystemUi::clearAll, Qt::CTRL + Qt::Key_Delete);
 	menu.addAction("Set Bg-Color", parent, &LSystemUi::setBgColor, Qt::CTRL + Qt::Key_B);
 	menu.addSeparator();
 
 	menu.addAction("Copy canvas", &*parent->drawArea, &DrawArea::copyToClipboardFull);
 	menu.addSeparator();
 
-	menu.addAction("Show symbols", parent, &LSystemUi::showSymbols, Qt::CTRL + Qt::SHIFT + Qt::Key_S);
+	menu.addAction("Show symbols window", parent, &LSystemUi::showSymbols, Qt::CTRL + Qt::SHIFT + Qt::Key_S);
 
 	// to get the shortcurts working
 	parent->ui->menubar->addMenu(&menu);
@@ -911,7 +937,8 @@ LSystemUi::StatusMenu::StatusMenu(LSystemUi * parent)
 
 QString LSystemUi::DrawMetaData::toString() const
 {
-	return printStr("[%1,DrawMetaData(x: %2, y: %3, clear: %4, resultOk: %5)]", MetaData::toString(), x, y, clear, resultOk);
+	return printStr("[%1,DrawMetaData(offset: %2, clearAll: %3, clearLast: %4, resultOk: %5)]",
+			MetaData::toString(), offset, clearAll, clearLast, resultOk);
 }
 
 // ------------------------------------------------------

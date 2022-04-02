@@ -600,11 +600,11 @@ private:
 		// has do be done before, because preparators will modify shared data
 		const QString arrivedStr = util::print(arrived);
 
-		auto expectedFound = [&](const ExpectEntry & entry) {
+		const auto expectedFound = [&](const ExpectEntry & entry) {
 			if (entry.flags.testFlag(ExpectFlags::IgnoreDuplicated)) ignoredEntries << IgnoreEntry(entry.expections, entry.location, IgnoreFlags::None);
 		};
 
-		auto genFailMessage = [&](const QString & infoText, const QList<ExpectInfo> & expectInfos) -> QString {
+		const auto genFailMessage = [&](const QString & infoText, const QList<ExpectInfo> & expectInfos) -> QString {
 			const SigWatcherHandler & handler = SigWatcherHandler::instance();
 			QString rv = QString("unexpected signal call (%1): %2%3\n\n   ") // arrived is in brackets! (tuple)
 					.arg(infoText).arg(watcherVariableName).arg(arrivedStr);
@@ -682,7 +682,7 @@ private:
 
 		ArgsTupleVal arrived = std::make_tuple(vals...);
 
-		auto ignoreArrived = [&](QList<IgnoreEntry> & ignores, bool alreadyMatched) -> bool {
+		const auto ignoreArrived = [&](QList<IgnoreEntry> & ignores, bool alreadyMatched) -> bool {
 			QMutableListIterator<IgnoreEntry> it(ignores);
 			while (it.hasNext()) {
 				it.next();

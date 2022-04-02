@@ -44,9 +44,9 @@ private:
 	};
 
 	struct DrawMetaData : public lsystem::common::MetaData {
-		int x = 0;
-		int y = 0;
-		bool clear = false;
+		QPoint offset;
+		bool clearAll = false;
+		bool clearLast = false;
 		bool resultOk = false;
 		QString toString() const override;
 	};
@@ -80,7 +80,6 @@ private slots:
 
 	// from drawarea
 	void enableUndoRedo(bool undoOrRedo);
-	void translateActiveDrawing(int diffX, int diffY);
 	void highlightDrawing(std::optional<lsystem::ui::DrawResult> drawResult);
 	void processDrawAction(const QString & link);
 
@@ -143,12 +142,13 @@ private:
 	// additional options & windows
 	void getAdditionalOptions(const QSharedPointer<lsystem::common::MetaData> & execMeta);
 	void showSymbols();
+	void showMarkedConfig();
 
 	// Status
 	void copyStatus();
 
 	// Config-List
-	lsystem::common::ConfigSet getConfigSet();
+	lsystem::common::ConfigSet getConfigSet(bool storeAsLastValid);
 	void setConfigSet(const lsystem::common::ConfigSet & configSet);
 	void loadConfigByLstIndex(const QModelIndex & index);
 
@@ -176,7 +176,9 @@ private:
 	QThread simulatorThread;
 	lsystem::SegmentDrawer segDrawer;
 	QThread segDrawerThread;
+
 	bool resultAvailable = false;
+	bool disableConfigLiveEdit = false;
 
 	QTimer errorDecayTimer;
 
@@ -201,8 +203,6 @@ private:
 	};
 	QScopedPointer<StatusMenu> statusMenu;
 
-	int lastX = -1;
-	int lastY = -1;
 	lsystem::common::ConfigSet lastValidConfigSet;
 	std::optional<lsystem::ui::DrawResult> highlightedDrawing;
 	QScopedPointer<ClickableLabel> lblDrawActions;

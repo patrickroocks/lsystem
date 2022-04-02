@@ -15,7 +15,7 @@ public:
 	explicit DrawArea(QWidget * parent = nullptr);
 
 	void clear();
-	void draw(const Drawing & drawing, int offX, int offY, bool clearBefore);
+	void draw(const Drawing & drawing, const QPoint & offset, bool clearAll, bool clearLast);
 	void restoreLastImage();
 	void copyToClipboardFull();
 
@@ -28,12 +28,14 @@ public:
 	void setBgColor(const QColor & col);
 	QColor getBgColor() const;
 
+	std::optional<QPoint> getLastOffset() const;
+	std::optional<DrawResult> getMarkedDrawingResult();
+
 signals:
 	void markingChanged(bool drawingMarked);
 	void highlightChanged(std::optional<DrawResult>);
 	void mouseClick(int x, int y, Qt::MouseButton button, bool drawingMarked);
 	void enableUndoRedo(bool undoOrRedo);
-	void translation(int x, int y);
 
 protected:
 	void paintEvent(QPaintEvent * event) override;

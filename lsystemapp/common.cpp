@@ -37,7 +37,7 @@ QJsonObject Definition::toJson() const
 
 QString LineSeg::toString() const
 {
-	return printStr("L(%1,%2)", start, end);
+	return printStr("L(%1, %2)", start, end);
 }
 
 QLine LineSeg::lineNegY() const

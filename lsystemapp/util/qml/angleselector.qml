@@ -206,7 +206,7 @@ Rectangle
         {
             if (focus) {
                 var parsed = parseFloat(text);
-                if (parsed != Math.round(parsed)) {
+                if (parsed !== Math.round(parsed)) {
                     toggleStepButton.internalCheckedChange = true
                     toggleStepButton.checked = true;
                 }

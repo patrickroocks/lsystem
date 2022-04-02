@@ -11,6 +11,9 @@ struct DrawResult
 {
 	QPoint topLeft;
 	QPoint botRight;
+	QPoint offset;
+	qint64 drawingNum = 0;
+	lsystem::common::ConfigSet config;
 };
 
 class Drawing
@@ -30,6 +33,7 @@ public:
 	QPoint offset;
 	qint64 numSegments = 0;
 	QImage image;
+	lsystem::common::ConfigSet config;
 
 private:
 	void expandSizeToSegments(const common::LineSegs & segs, double thickness);
@@ -47,7 +51,8 @@ public:
 	void addDrawing(Drawing newDrawing, const QPoint & off);
 
 	void resize(const QSize & newSize);
-	void clear();
+	void clearAll();
+	void deleteHighlightedOrLastDrawing();
 
 	void redraw();
 	QPoint getLastSize() const;
@@ -57,8 +62,9 @@ public:
 	QPoint getDrawingSize(qint64 drawingNum);
 	QImage & getDrawingImage(qint64 drawingNum);
 	QImage getImage();
-	int getMarkedDrawing() const { return markedDrawing; }
-	int getHighlightedDrawing() const { return highlightedDrawing; }
+	int getMarkedDrawingNum() const { return markedDrawing; }
+	int getHighlightedDrawingNum() const { return highlightedDrawing; }
+	int getLastDrawingNum() const { return drawings.empty() ? 0 : drawings.lastKey(); }
 	bool setMarkedDrawing(qint64 newMarkedDrawing);
 	bool moveDrawing(qint64 drawingNum, const QPoint & newOffset);
 	bool deleteImage(qint64 drawingNum);
@@ -66,6 +72,8 @@ public:
 	bool sendToBack(qint64 drawingNum);
 	bool highlightDrawing(qint64 newHighlightedDrawing);
 	std::optional<DrawResult> getHighlightedDrawResult();
+	std::optional<DrawResult> getMarkedDrawResult();
+	std::optional<QPoint> getLastOffset() const;
 
 public:
 	QColor backColor = QColor(255, 255, 255);
@@ -76,7 +84,6 @@ private:
 
 private:
 	QImage image;
-	qint64 lastDrawingNum = 0;
 
 	QMap<qint64 /*drawNum*/, Drawing> drawings;
 	QMap<qint64 /*zIndex*/, qint64 /*drawNum*/> zIndexToDrawing;

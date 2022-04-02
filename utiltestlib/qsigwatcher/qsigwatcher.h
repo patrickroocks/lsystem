@@ -113,7 +113,8 @@ private:
 // -------------------------- connect lambdas --------------------------
 
 template<typename T>
-inline std::function<QString(T)> operator&(std::function<QString(T)> func1, std::function<QString(T)> func2) {
+inline std::function<QString(T)> operator&(std::function<QString(T)> func1, std::function<QString(T)> func2)
+{
 	return [&](T val) {
 		const QString res = func1(val);
 		if (!res.isEmpty()) return res;

@@ -14,7 +14,7 @@ using namespace util;
 
 namespace {
 
-const int StackSize = 1000;
+constexpr int StackSize = 1000;
 
 }
 
@@ -133,7 +133,7 @@ void SimulatorBaseTest::baseTest()
 		CHECK_AT(1, [](const ExecResult & res) {
 			CHECK_COMPARE(res.resultKind, ExecResult::ExecResultKind::Ok);
 			CHECK_COMPARE(res.iterNum, 2);
-			CHECK_COMPARE(print(res.segments), "[L((0,0),(0,-1)),L((0,-1),(1,-1)),L((1,-1),(1,0)),L((1,0),(0,0))]");
+			CHECK_COMPARE(print(res.segments), "[L((0, 0), (0, -1)), L((0, -1), (1, -1)), L((1, -1), (1, 0)), L((1, 0), (0, 0))]");
 			CHECK_RETURN }) &
 		CHECK_AT(2, [&inputMeta](const QSharedPointer<common::MetaData> & resMeta) {
 			CHECK_COMPARE_ADDR(resMeta, inputMeta);

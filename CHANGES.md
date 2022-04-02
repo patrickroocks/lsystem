@@ -8,6 +8,7 @@
 - suggest interaction with hovered drawing
   * scale to maximum of windows
   * move left/right/down/up
+- show config of drawing (non interactive mode)
 - several bugfixes
 
 # Version 0.3.0

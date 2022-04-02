@@ -123,7 +123,7 @@ void Simulator::execIterations(const QSharedPointer<MetaData> & metaData)
 
 bool Simulator::execIter()
 {
-	auto takeNextActions = [&]() {
+	const auto takeNextActions = [&]() {
 		currentActions.clear();
 		qSwap(currentActions, nextActions);
 	};

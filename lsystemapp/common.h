@@ -131,6 +131,7 @@ struct MetaData
 	double thickness = 0;
 	double opacity = 0;
 	bool antiAliasing = false;
+	ConfigSet config;
 };
 
 inline void registerCommonTypes()

@@ -2,6 +2,7 @@
 #include "ui_aboutdialog.h"
 
 #include <version.h>
+#include <QDate>
 
 AboutDialog::AboutDialog(QWidget * parent)
 	 : QDialog(parent)
@@ -9,7 +10,8 @@ AboutDialog::AboutDialog(QWidget * parent)
 {
 	ui->setupUi(this);
 
-	ui->lblAbout->setText(ui->lblAbout->text().arg(lsystem::common::Version));
+	// replace %1 and %2 in info string
+	ui->lblAbout->setText(ui->lblAbout->text().arg(lsystem::common::Version, QDate::currentDate().toString("yyyy")));
 }
 
 AboutDialog::~AboutDialog()

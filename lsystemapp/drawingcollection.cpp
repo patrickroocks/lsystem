@@ -8,6 +8,7 @@ namespace lsystem::ui {
 
 Drawing::Drawing(const ExecResult & execResult, const QSharedPointer<MetaData> & metaData)
 	: numSegments(execResult.segments.size())
+	, config(metaData->config)
 {
 	const bool paintLastIter = !execResult.segmentsLastIter.isEmpty() && metaData->lastIterOpacy > 0;
 
@@ -92,7 +93,7 @@ bool Drawing::move(const QPoint & newOffset)
 
 DrawResult Drawing::toDrawResult()
 {
-	return DrawResult{topLeft + offset, botRight + offset};
+	return DrawResult{.topLeft = topLeft + offset, .botRight = botRight + offset, .offset = offset, .drawingNum = num, .config = config};
 }
 
 void Drawing::updateRect(double minX, double minY, double maxX, double maxY)
@@ -126,13 +127,27 @@ void DrawingCollection::resize(const QSize & newSize)
 	image = newImage;
 }
 
-void DrawingCollection::clear()
+void DrawingCollection::clearAll()
 {
 	markedDrawing = 0;
 	drawings.clear();
 	zIndexToDrawing.clear();
 
 	image.fill(backColor);
+}
+
+void DrawingCollection::deleteHighlightedOrLastDrawing()
+{
+	const auto numToDelete = getHighlightedDrawingNum() ? getHighlightedDrawingNum() : getLastDrawingNum();
+	if (numToDelete == 0) return;
+
+	drawings.remove(numToDelete);
+
+	QMutableMapIterator it{zIndexToDrawing};
+	while (it.hasNext()) {
+		it.next();
+		if (it.value() == numToDelete) it.remove();
+	}
 }
 
 void DrawingCollection::redraw()
@@ -237,6 +252,24 @@ std::optional<DrawResult> DrawingCollection::getHighlightedDrawResult()
 		return {};
 	} else {
 		return drawings[highlightedDrawing].toDrawResult();
+	}
+}
+
+std::optional<DrawResult> DrawingCollection::getMarkedDrawResult()
+{
+	if (!markedDrawing) {
+		return {};
+	} else {
+		return drawings[markedDrawing].toDrawResult();
+	}
+}
+
+std::optional<QPoint> DrawingCollection::getLastOffset() const
+{
+	if (drawings.empty()) {
+		return {};
+	} else {
+		return drawings.last().offset;
 	}
 }
 
