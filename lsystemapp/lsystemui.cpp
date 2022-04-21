@@ -72,6 +72,7 @@ LSystemUi::LSystemUi(QWidget *parent)
 	ui->tblDefinitions->setColumnWidth(1, 200);
 	ui->tblDefinitions->setColumnWidth(2, 20);
 	ui->tblDefinitions->setColumnWidth(3, 15);
+	ui->tblDefinitions->setColumnWidth(4, 15);
 	ui->tblDefinitions->setAcceptDrops(true);
 	ui->tblDefinitions->setStyleSheet("QHeaderView::section { background-color: #CCCCCC }");
 	tableItemDelegate.reset(new TableItemDelegateAutoUpdate);
@@ -81,6 +82,8 @@ LSystemUi::LSystemUi(QWidget *parent)
 			&defModel, &DefinitionModel::selectionChanged);
 	connect(&defModel, &DefinitionModel::deselect,
 			[&]() { ui->tblDefinitions->setCurrentIndex(QModelIndex()); });
+	connect(&defModel, &DefinitionModel::getSelection,
+			[&]() { return ui->tblDefinitions->currentIndex(); });
 	connect(&defModel, &DefinitionModel::newStartSymbol, ui->lblStartSymbol, &QLabel::setText);
 	connect(&defModel, &DefinitionModel::showError, this, &LSystemUi::showErrorInUi);
 	connect(&defModel, &DefinitionModel::edited, this, &LSystemUi::configLiveEdit);

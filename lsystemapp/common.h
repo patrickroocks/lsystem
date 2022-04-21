@@ -18,6 +18,7 @@ struct Definition
 	QString command;
 	QColor color;
 	bool paint = false;
+	bool move = false;
 };
 
 inline bool operator==(const Definition & lhs, const Definition & rhs)
@@ -25,7 +26,8 @@ inline bool operator==(const Definition & lhs, const Definition & rhs)
 	return     lhs.literal == rhs.literal
 			&& lhs.command == rhs.command
 			&& lhs.color   == rhs.color
-			&& lhs.paint   == rhs.paint;
+			&& lhs.paint   == rhs.paint
+			&& lhs.move    == rhs.move;
 }
 
 using Definitions = QList<Definition>;
@@ -48,6 +50,8 @@ struct LineSeg
 	// start/end with negated Y; when painting, the positive y-axis points downward
 	// but mathematically positive y-values point upward
 	QLine lineNegY() const;
+	bool isPoint() const;
+	QPointF pointNegY() const;
 };
 
 using LineSegs = QList<LineSeg>;

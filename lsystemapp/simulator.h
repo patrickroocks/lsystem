@@ -60,10 +60,11 @@ private:
 class ProcessLiteralAction : public Action
 {
 public:
-	ProcessLiteralAction(SimlatorInterface & actInt, char literal, QColor color, bool paint)
+	ProcessLiteralAction(SimlatorInterface & actInt, char literal, QColor color, bool paint, bool move)
 		: Action(actInt, literal),
 		  color(color),
-		  paint(paint)
+		  paint(paint),
+		  move(move)
 	{}
 
 	void expand() const override;
@@ -75,6 +76,7 @@ public:
 private:
 	QColor color;
 	bool paint = false;
+	bool move = false;
 };
 
 class TurnAction : public Action

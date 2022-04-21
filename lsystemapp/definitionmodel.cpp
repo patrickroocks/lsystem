@@ -7,7 +7,7 @@
 
 namespace {
 
-const int MaxNumDefinitions = 5;
+const int MaxNumDefinitions = 10;
 
 }
 
@@ -56,20 +56,21 @@ int DefinitionModel::rowCount(const QModelIndex & parent) const
 int DefinitionModel::columnCount(const QModelIndex & parent) const
 {
 	Q_UNUSED(parent);
-	return 4;
+	return 5;
 }
 
 QVariant DefinitionModel::data(const QModelIndex & index, int role) const
 {
 	if (role == Qt::DisplayRole || role == Qt::EditRole) {
-		if (index.column() == 0) return QString(getRow(index)->literal);
+		if      (index.column() == 0) return QString(getRow(index)->literal);
 		else if (index.column() == 1) return getRow(index)->command;
 
 	} else if (role == Qt::BackgroundRole) {
 		if (index.column() == 2) return QBrush(getRow(index)->color);
 
 	} else if (role == Qt::CheckStateRole) {
-		if (index.column() == 3) return getRow(index)->paint ? Qt::Checked : Qt::Unchecked;
+		if      (index.column() == 3) return getRow(index)->paint ? Qt::Checked : Qt::Unchecked;
+		else if (index.column() == 4) return getRow(index)->move ? Qt::Checked : Qt::Unchecked;
 
 	}
 
@@ -96,8 +97,8 @@ Qt::ItemFlags DefinitionModel::flags(const QModelIndex & index) const
 {
 	if (index.isValid()) {
 		Qt::ItemFlags rv = QAbstractTableModel::flags(index);
-		if      (index.column() <= 1) rv |= Qt::ItemIsEditable;
-		else if (index.column() == 3) rv |= Qt::ItemIsUserCheckable;
+		if      (index.column() <= 1) rv |= Qt::ItemIsEditable;       // Literal, Command
+		else if (index.column() >= 3) rv |= Qt::ItemIsUserCheckable;  // Move, Paint
 		return rv | Qt::ItemIsDragEnabled;
 	} else {
 		return Qt::ItemIsDropEnabled;
@@ -112,6 +113,7 @@ QVariant DefinitionModel::headerData(int section, Qt::Orientation orientation, i
 		case 1: return QString("Command");
 		case 2: return QString("Color");
 		case 3: return QString("Paint");
+		case 4: return QString("Move");
 		}
 
 	}
@@ -123,6 +125,7 @@ bool DefinitionModel::setData(const QModelIndex & index, const QVariant & value,
 	if (!checkIndex(index)) return false;
 
 	auto itRow = getRow(index);
+	bool editDone = false;
 
 	if (role == Qt::EditRole) {
 		if (index.column() == 0) {
@@ -136,28 +139,36 @@ bool DefinitionModel::setData(const QModelIndex & index, const QVariant & value,
 				emit showError(QString("Literal '%1' is not allowed, expected one char [A-Z]").arg(literalStr));
 				return false;
 			}
-			itRow->literal = newChar;
-			checkForNewStartSymbol();
-			emit edited();
-			return true;
+			if (itRow->literal != newChar) {
+				itRow->literal = newChar;
+				checkForNewStartSymbol();
+				editDone = true;
+			}
 		} else if (index.column() == 1) {
 			if (itRow->command != value.toString()) {
 				itRow->command = value.toString();
-				emit edited();
+				editDone = true;
 			}
-			return true;
 		}
 	} else if (role == Qt::CheckStateRole) {
+
+		const bool newChecked = (Qt::CheckState)value.toInt() == Qt::Checked;
+
 		if (index.column() == 3) {
-			const bool newChecked = (Qt::CheckState)value.toInt() == Qt::Checked;
 			if (newChecked != itRow->paint) {
 				itRow->paint = newChecked;
-				emit edited();
+				editDone = true;
 			}
-			return true;
+		} else if (index.column() == 4) {
+			if (newChecked != itRow->move) {
+				itRow->move = newChecked;
+				editDone = true;
+			}
 		}
 	}
-	return false;
+
+	if (editDone) emit edited();
+	return editDone;
 }
 
 bool DefinitionModel::dropMimeData(const QMimeData * data, Qt::DropAction action, int row, int column, const QModelIndex & parent)
@@ -201,6 +212,8 @@ bool DefinitionModel::dropMimeData(const QMimeData * data, Qt::DropAction action
 void DefinitionModel::selectionChanged(const QItemSelection & selected, const QItemSelection & deselected)
 {
 	Q_UNUSED(deselected);
+
+	// open color dialog?
 	if (selected.indexes().size() != 1) return;
 	QModelIndex ind = selected.indexes().first();
 	if (ind.column() != 2) return;
@@ -216,38 +229,49 @@ void DefinitionModel::selectionChanged(const QItemSelection & selected, const QI
 
 bool DefinitionModel::add()
 {
-	if (definitions.size() < MaxNumDefinitions) {
-		const int addRowNum = definitions.size();
+	if (definitions.size() >= MaxNumDefinitions) {
+		showError(printStr("Reached maximum number of definitions (%1)", MaxNumDefinitions));
+		return false;
+	}
 
-		QSet<char> currentLiterals;
-		for (const Definition & def : qAsConst(definitions)) currentLiterals << def.literal;
-		char nextChar = definitions.last().literal;
+	const int addRowNum = definitions.size();
+
+	QSet<char> currentLiterals;
+	for (const Definition & def : qAsConst(definitions)) currentLiterals << def.literal;
+	char nextChar;
+	if (definitions.empty()) {
+		nextChar = 'A';
+	} else {
+		nextChar =  definitions.last().literal;
 		while (true) {
 			nextChar++;
 			if (nextChar == 'Z') nextChar = 'A';
 			if (!currentLiterals.contains(nextChar)) break;
 		}
-		Definition newDefinition;
-		newDefinition.literal = nextChar;
-		newDefinition.color = QColor(0, 0, 0);
-		newDefinition.paint = true;
-		definitions << newDefinition;
-		insertRow(addRowNum);
-		return true;
 	}
-	return false;
+	Definition newDefinition;
+	newDefinition.literal = nextChar;
+	newDefinition.color = QColor(0, 0, 0);
+	newDefinition.paint = true;
+	definitions << newDefinition;
+	insertRow(addRowNum);
+	return true;
 }
 
 bool DefinitionModel::remove()
 {
-	if (definitions.size() > 1) {
-		const int removeRowNum = definitions.size() - 1;
-		auto it = definitions.begin() + removeRowNum;
-		definitions.erase(it);
-		removeRow(removeRowNum);
+	auto selection = emit getSelection();
+	if (selection.isValid()) {
+
+		auto selectedRow = getRow(selection);
+		auto selectedRowIndex = selectedRow - definitions.begin();
+		definitions.erase(selectedRow);
+		removeRow(selectedRowIndex);
 		return true;
+	} else {
+		showError("no literal selected");
+		return false;
 	}
-	return false;
 }
 
 void DefinitionModel::setDefinitions(const Definitions & newDefinitions)

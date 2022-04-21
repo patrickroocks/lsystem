@@ -6,6 +6,7 @@
 
 namespace lsystem {
 
+// wrapper around Drawing constructor, runs in own thread
 class SegmentDrawer : public QObject
 {
 	Q_OBJECT

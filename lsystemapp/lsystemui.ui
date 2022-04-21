@@ -225,7 +225,7 @@ margin: 2px 5px 2px 0px;</string>
                </size>
               </property>
               <property name="toolTip">
-               <string>Add a literal at the end of the list</string>
+               <string>Remove the marked literal</string>
               </property>
               <property name="text">
                <string>del</string>

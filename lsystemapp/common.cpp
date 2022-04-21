@@ -14,12 +14,14 @@ Definition::Definition(const QJsonObject & obj)
 	command = obj["command"].toString();
 	color   = obj["color"].toInt();
 	paint   = obj["paint"].toBool();
+	move    = obj["move"].toBool();
 }
 
 Definition::Definition(char literal, const QString & command)
 	: literal(literal)
 	, command(command)
 	, paint(true)
+	, move(true)
 {
 }
 
@@ -30,6 +32,7 @@ QJsonObject Definition::toJson() const
 	rv["command"] = command;
 	rv["color"]   = color.value();
 	rv["paint"]   = paint;
+	rv["move"]    = paint;
 	return rv;
 }
 
@@ -43,6 +46,16 @@ QString LineSeg::toString() const
 QLine LineSeg::lineNegY() const
 {
 	return QLine(start.x(), -start.y(), end.x(), -end.y());
+}
+
+bool LineSeg::isPoint() const
+{
+	return start == end;
+}
+
+QPointF LineSeg::pointNegY() const
+{
+	return QPoint(start.x(), -start.y());
 }
 
 // ---------------------------------------------------------------------------

@@ -21,13 +21,19 @@ void ProcessLiteralAction::expand() const
 
 void ProcessLiteralAction::exec(State & state) const
 {
-	if (!paint) return;
+	auto lastState = state.cur;
 
-	LineSeg seg;
-	seg.start = state.cur;
-	seg.end   = state.cur += state.d;
-	seg.color = color;
-	simInt.addSegment(seg);
+	if (move) {
+		state.cur += state.d;
+	}
+
+	if (paint) {
+		LineSeg seg;
+		seg.start = lastState;
+		seg.end   = state.cur;
+		seg.color = color;
+		simInt.addSegment(seg);
+	}
 }
 
 void ScaleStartAction::exec(State & state) const
@@ -177,6 +183,11 @@ bool Simulator::parseActions(const ConfigSet & newConfig)
 	mainActions.clear();
 	startAction = nullptr;
 
+	if (newConfig.definitions.isEmpty()) {
+		emit errorReceived("No literals given");
+		return false;
+	}
+
 	QMap<char, DynAction> allActions;
 	auto addAction = [&allActions](const DynAction & action) {
 		allActions[action->getLiteral()] = action;
@@ -203,7 +214,7 @@ bool Simulator::parseActions(const ConfigSet & newConfig)
 			return false;
 		}
 		DynProcessLiteralAction & mainAction = mainActions[def.literal];
-		mainAction = DynProcessLiteralAction::create(*this, def.literal, def.color, def.paint);
+		mainAction = DynProcessLiteralAction::create(*this, def.literal, def.color, def.paint, def.move);
 		addAction(mainAction);
 
 		// first action is start action

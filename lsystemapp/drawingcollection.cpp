@@ -41,14 +41,19 @@ void Drawing::drawSegments(const LineSegs & segs, double opacyFactor, double thi
 	pen.setWidthF(thickness);
 	pen.setCapStyle(Qt::RoundCap);
 
-	// todo order segments by color
+	// todo order segments by color for speedup
 	for (const LineSeg & seg : segs) {
 		QColor colorCopy(seg.color);
 		colorCopy.setAlphaF(opacyFactor);
 		pen.setColor(colorCopy);
 
 		painter.setPen(pen);
-		painter.drawLine(seg.lineNegY() - topLeft);
+
+		if (seg.isPoint()) {
+			painter.drawPoint(seg.pointNegY() - topLeft);
+		} else {
+			painter.drawLine(seg.lineNegY() - topLeft);
+		}
 	}
 }
 

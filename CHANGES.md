@@ -1,3 +1,8 @@
+# Version 0.5.0
+
+- "move" option
+- new predefined configs
+
 # Version 0.4.0
 
 - slider for step size, iterations and scaling

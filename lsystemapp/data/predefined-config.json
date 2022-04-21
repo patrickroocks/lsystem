@@ -9,7 +9,8 @@
 					"literal" : "A",
 					"color": -16777216,
 					"command": "A+A",
-					"paint": true
+					"paint": true,
+					"move": true
 				}
 			],
 			"numIter": 3,
@@ -24,20 +25,19 @@
 				{
 					"literal" : "A",
 					"color": -1,
-					"command": "-BF+AFA+FB-",
-					"paint": false
+					"command": "-BF+AFA+FB-"
 				},
 				{
 					"literal" : "B",
 					"color": -1,
-					"command": "+AF-BFB-FA+",
-					"paint": false
+					"command": "+AF-BFB-FA+"
 				},
 				{
 					"literal" : "F",
 					"color": -16777216,
 					"command": "F",
-					"paint": true
+					"paint": true,
+					"move": true
 				}
 			],
 			"numIter": 5,
@@ -52,14 +52,14 @@
 				{
 					"literal" : "X",
 					"color": -16777216,
-					"command": "F--F--F",
-					"paint": false
+					"command": "F--F--F"
 				},
 				{
 					"literal" : "F",
 					"color": -16777216,
 					"command": "F+F--F+F",
-					"paint": true
+					"paint": true,
+					"move": true
 				}
 			],
 			"numIter": 5,
@@ -75,7 +75,8 @@
 					"literal" : "A",
 					"color": -16777216,
 					"command": "+A--A+",
-					"paint": true
+					"paint": true,
+					"move": true
 				}
 			],
 			"numIter": 14,
@@ -85,41 +86,96 @@
 			"turnLeft": 45,
 			"turnRight": -45
 		},
-		"Sierpiński Triangle": {
+		"Sierpiński Triangle (1)": {
 			"definitions": [
 				{
 					"literal" : "A",
 					"color": -1103575,
 					"command": "B-A-B",
-					"paint": true
+					"paint": true,
+					"move": true
 				},
 				{
 					"literal" : "B",
 					"color": -16777216,
 					"command": "A+B+A",
-					"paint": true
+					"paint": true,
+					"move": true
 				}
 			],
 			"numIter": 7,
 			"scaling": 0,
-			"startAngle": 0,
+			"startAngle": 180,
 			"stepSize": 4,
 			"turnLeft": 60,
 			"turnRight": -60
+		},
+		"Sierpiński Triangle (2)": {
+			"definitions": [
+				{
+					"literal" : "A",
+					"color": -1,
+					"command": "F-G-G"
+				},
+				{
+					"literal" : "F",
+					"color": -16777216,
+					"command": "F-G+F+G-F",
+					"paint": true,
+					"move": true
+				},
+				{
+					"literal" : "G",
+					"color": -16777216,
+					"command": "GG",
+					"paint": true,
+					"move": true
+				}
+			],
+			"numIter": 7,
+			"scaling": 0,
+			"startAngle": 180,
+			"stepSize": 8,
+			"turnLeft": 120,
+			"turnRight": -120
+		},
+		"Sierpiński Carpet": {
+			"definitions": [
+				{
+					"literal" : "A",
+					"color": -16777216,
+					"command": "A+A-A-A-F+A+A+A-A",
+					"paint": true,
+					"move": true
+				},
+				{
+					"literal" : "F",
+					"color": -16777216,
+					"command": "FFF",
+					"paint": false,
+					"move": true
+				}
+			],
+			"numIter": 5,
+			"scaling": 0,
+			"startAngle": 45,
+			"stepSize": 3,
+			"turnLeft": 90,
+			"turnRight": -90
 		},
 		"Spiral": {
 			"definitions": [
 				{
 					"literal" : "A",
 					"color": -16777216,
-					"command": "B+[A]",
-					"paint": false
+					"command": "B+[A]"
 				},
 				{
 					"literal" : "B",
 					"color": -16777216,
 					"command": "B",
-					"paint": true
+					"paint": true,
+					"move": true
 				}
 			],
 			"numIter": 25,
@@ -135,7 +191,8 @@
 					"literal" : "A",
 					"color": -11625978,
 					"command": "A[+A][-A]",
-					"paint": true
+					"paint": true,
+					"move": true
 				}
 			],
 			"numIter": 6,
@@ -144,6 +201,27 @@
 			"stepSize": 50,
 			"turnLeft": 20,
 			"turnRight": -30
+		},
+		"Plant": {
+			"definitions": [
+				{
+					"literal" : "X",
+					"command": "F+[[X]-X]-F[-FX]+X"
+				},
+				{
+					"literal" : "F",
+					"color": -11625978,
+					"command": "FF",
+					"paint": true,
+					"move": true
+				}
+			],
+			"numIter": 6,
+			"scaling": 0.9,
+			"startAngle": 90,
+			"stepSize": 4,
+			"turnLeft": 20,
+			"turnRight": -25
 		}
 	}
 }

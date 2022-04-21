@@ -32,6 +32,7 @@ public:
 
 signals:
 	void deselect();
+	QModelIndex getSelection();
 	void newStartSymbol(const QString & startSymbol);
 	void showError(const QString & errorText);
 	void edited();
