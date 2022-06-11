@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>920</width>
+    <width>1021</width>
     <height>589</height>
    </rect>
   </property>
@@ -22,7 +22,7 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>871</width>
+      <width>921</width>
       <height>202</height>
      </rect>
     </property>
@@ -425,8 +425,8 @@ margin: 2px 5px 2px 0px;</string>
           <widget class="QLabel" name="label_7">
            <property name="geometry">
             <rect>
-             <x>379</x>
-             <y>31</y>
+             <x>400</x>
+             <y>30</y>
              <width>65</width>
              <height>21</height>
             </rect>
@@ -438,8 +438,8 @@ margin: 2px 5px 2px 0px;</string>
           <widget class="FocusableLineEdit" name="txtScaleDown" native="true">
            <property name="geometry">
             <rect>
-             <x>470</x>
-             <y>33</y>
+             <x>491</x>
+             <y>32</y>
              <width>51</width>
              <height>21</height>
             </rect>
@@ -457,8 +457,8 @@ margin: 2px 5px 2px 0px;</string>
           <widget class="QLabel" name="label_10">
            <property name="geometry">
             <rect>
-             <x>380</x>
-             <y>5</y>
+             <x>401</x>
+             <y>4</y>
              <width>81</width>
              <height>21</height>
             </rect>
@@ -470,8 +470,8 @@ margin: 2px 5px 2px 0px;</string>
           <widget class="FocusableLineEdit" name="txtStartAngle" native="true">
            <property name="geometry">
             <rect>
-             <x>470</x>
-             <y>7</y>
+             <x>491</x>
+             <y>6</y>
              <width>51</width>
              <height>21</height>
             </rect>
@@ -489,7 +489,7 @@ margin: 2px 5px 2px 0px;</string>
           <widget class="QPushButton" name="cmdAdditionalOptions">
            <property name="geometry">
             <rect>
-             <x>540</x>
+             <x>550</x>
              <y>10</y>
              <width>71</width>
              <height>41</height>
@@ -498,6 +498,24 @@ margin: 2px 5px 2px 0px;</string>
            <property name="text">
             <string>More
 options</string>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="cmdRightFormula">
+           <property name="geometry">
+            <rect>
+             <x>367</x>
+             <y>5</y>
+             <width>21</width>
+             <height>25</height>
+            </rect>
+           </property>
+           <property name="font">
+            <font>
+             <italic>true</italic>
+            </font>
+           </property>
+           <property name="text">
+            <string>f</string>
            </property>
           </widget>
          </widget>
@@ -595,7 +613,7 @@ options</string>
      <rect>
       <x>10</x>
       <y>220</y>
-      <width>871</width>
+      <width>921</width>
       <height>151</height>
      </rect>
     </property>
@@ -916,7 +934,7 @@ border: 1px solid black;</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>920</width>
+     <width>1021</width>
      <height>22</height>
     </rect>
    </property>

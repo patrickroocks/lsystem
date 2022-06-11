@@ -4,6 +4,7 @@
 #include "version.h"
 
 #include "aboutdialog.h"
+#include "angleformuladialog.h"
 #include "settingsdialog.h"
 
 #include <util/print.h>
@@ -315,20 +316,50 @@ ConfigSet LSystemUi::getConfigSet(bool storeAsLastValid)
 	};
 
 	configSet.definitions = defModel.getDefinitions();
+
 	bool ok;
+
 	configSet.scaling = ui->txtScaleDown->text().toDouble(&ok);
-	if (!ok) { showVarError("scaling"); return configSet; }
+	if (!ok) {
+		showVarError("scaling");
+		return configSet;
+	}
+
 	configSet.turn.left = ui->txtLeft->text().toDouble(&ok);
-	if (!ok || configSet.turn.left < 0) { showVarError("turn left", "must be a positive number"); return configSet; }
-	configSet.turn.right = ui->txtRight->text().toDouble(&ok);
-	if (!ok || configSet.turn.right > 0) { showVarError("turn right", "must be a negative number"); return configSet; }
+	if (!ok || configSet.turn.left < 0) {
+		showVarError("turn left", "must be a positive number");
+		return configSet;
+	}
+
+	const AngleEvaluator::Result evalRes = angleEvaluator.evaluate(ui->txtLeft->text(), ui->txtRight->text());
+	if (evalRes.isOk) {
+		configSet.turn.right = evalRes.angle;
+		if (configSet.turn.right > 0) {
+			showVarError("turn right", "must be a negative number");
+			return configSet;
+		}
+	} else {
+		showVarError("turn right", evalRes.error);
+		return configSet;
+	}
+
 	configSet.startAngle = ui->txtStartAngle->text().toDouble(&ok);
-	if (!ok) { showVarError("start angle"); return configSet; }
+	if (!ok) {
+		showVarError("start angle");
+		return configSet;
+	}
 
 	configSet.numIter = ui->txtIter->text().toUInt(&ok);
-	if (!ok) { showVarError("iterations"); return configSet; }
+	if (!ok) {
+		showVarError("iterations");
+		return configSet;
+	}
+
 	configSet.stepSize = ui->txtStep->text().toDouble(&ok);
-	if (!ok) { showVarError("step size"); return configSet; }
+	if (!ok) {
+		showVarError("step size");
+		return configSet;
+	}
 
 	configSet.valid = true;
 
@@ -586,6 +617,17 @@ void LSystemUi::configLiveEdit()
 void LSystemUi::focusAngleEdit(FocusableLineEdit * lineEdit)
 {
 	if (!ui->chkAutoPaint->isChecked()) return;
+
+	// special case: forumla in right edit
+	if (lineEdit == ui->txtRight) {
+		const AngleEvaluator::Result res = angleEvaluator.evaluate(ui->txtLeft->text(), ui->txtRight->text());
+		if (res.isFormula) {
+			lineEdit->clearFocus();
+			showRightAngleDialog();
+			return;
+		}
+	}
+
 
 	const QPoint lineditTopLeft = ui->wdgConfig->mapTo(ui->centralwidget, lineEdit->geometry().topLeft());
 	const int x = lineditTopLeft.x() - 2;
@@ -880,6 +922,24 @@ void LSystemUi::processDrawAction(const QString & link)
 		drawArea->translateHighlighted(QPoint(xOff, yOff));
 	}
 }
+
+void LSystemUi::showRightAngleDialog()
+{
+	QString strRightAngle = ui->txtRight->text();
+	AngleFormulaDialog dia(this, ui->txtLeft->text(), strRightAngle);
+	dia.setModal(true);
+	dia.exec();
+
+	if (!strRightAngle.isNull()) {
+		ui->txtRight->setText(strRightAngle);
+	}
+}
+
+void LSystemUi::on_cmdRightFormula_clicked()
+{
+	showRightAngleDialog();
+}
+
 
 // -------------------- DrawAreaMenu --------------------
 

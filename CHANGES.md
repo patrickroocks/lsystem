@@ -1,7 +1,8 @@
 # Version 0.5.0
 
-- "move" option
+- "move" option for literals
 - new predefined configs
+- support formulars for right angles (dependent of left angles)
 
 # Version 0.4.0
 

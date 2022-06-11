@@ -1,6 +1,7 @@
 #ifndef LSYSTEMUI_H
 #define LSYSTEMUI_H
 
+#include <angleevaluator.h>
 #include <configfilestore.h>
 #include <configlist.h>
 #include <definitionmodel.h>
@@ -8,11 +9,11 @@
 #include <segmentdrawer.h>
 #include <simulator.h>
 #include <symbolsdialog.h>
-#include "util/tableitemdelegate.h"
-#include "util/quickangle.h"
-#include "util/quicklinear.h"
-#include "util/focusablelineedit.h"
-#include "util/clickablelabel.h"
+#include <util/tableitemdelegate.h>
+#include <util/quickangle.h>
+#include <util/quicklinear.h>
+#include <util/focusablelineedit.h>
+#include <util/clickablelabel.h>
 
 #include <QMainWindow>
 #include <QTimer>
@@ -96,6 +97,8 @@ private slots:
 	void on_chkShowLastIter_stateChanged();
 	void on_chkAntiAliasing_stateChanged();
 
+	void on_cmdRightFormula_clicked();
+
 private:
 	struct DrawPlacement
 	{
@@ -143,6 +146,7 @@ private:
 	void getAdditionalOptions(const QSharedPointer<lsystem::common::MetaData> & execMeta);
 	void showSymbols();
 	void showMarkedConfig();
+	void showRightAngleDialog();
 
 	// Status
 	void copyStatus();
@@ -214,5 +218,7 @@ private:
 	} transparencyOpt = TransparencyOpt::Ask;
 
 	QScopedPointer<SymbolsDialog> symbolsDialog;
+
+	AngleEvaluator angleEvaluator;
 };
 #endif // LSYSTEMUI_H

@@ -4,6 +4,8 @@ CONFIG += c++17
 
 SOURCES += \
 	aboutdialog.cpp \
+	angleevaluator.cpp \
+	angleformuladialog.cpp \
 	common.cpp \
 	configfilestore.cpp \
 	configlist.cpp \
@@ -25,6 +27,8 @@ SOURCES += \
 
 HEADERS += \
 	aboutdialog.h \
+	angleevaluator.h \
+	angleformuladialog.h \
 	common.h \
 	configfilestore.h \
 	configlist.h \
@@ -48,6 +52,7 @@ HEADERS += \
 
 FORMS += \
 	aboutdialog.ui \
+	angleformuladialog.ui \
 	lsystemui.ui \
 	settingsdialog.ui \
 	symbolsdialog.ui

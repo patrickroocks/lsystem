@@ -52,12 +52,12 @@
 				{
 					"literal" : "X",
 					"color": -16777216,
-					"command": "F--F--F"
+					"command": "F-F-F"
 				},
 				{
 					"literal" : "F",
 					"color": -16777216,
-					"command": "F+F--F+F",
+					"command": "F+F-F+F",
 					"paint": true,
 					"move": true
 				}
@@ -67,7 +67,7 @@
 			"startAngle": 0,
 			"stepSize": 4,
 			"turnLeft": 60,
-			"turnRight": -60
+			"turnRight": -120
 		},
 		"Lévy C curve": {
 			"definitions": [
