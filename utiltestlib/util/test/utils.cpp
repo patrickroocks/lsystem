@@ -31,7 +31,7 @@ QString getTestDiff(QList<TestExpr> testExpressions)
 			QString nextLine = str.mid(curPos, lineWidth);
 			if (nextLine.isEmpty()) return res;
 			for (int i = nextLine.length() - 1 ; i > 40 ; i--) {
-				const QCharRef c = nextLine[i];
+				const QChar c = nextLine[i];
 				if (c == ',' || c == ':' || c == '{' || c == '}' || c == '(' || c == ')' || c == '[' || c == ']') {
 					nextLine = nextLine.left(i + 1);
 					break;

@@ -1,4 +1,4 @@
-QT += core widgets gui quick quickwidgets
+QT += core widgets gui quick quickwidgets quickcontrols2
 
 CONFIG += c++17
 
@@ -20,6 +20,7 @@ SOURCES += \
 	symbolsdialog.cpp \
 	util/clickablelabel.cpp \
 	util/focusablelineedit.cpp \
+	util/playercontrol.cpp \
 	util/quickangle.cpp \
 	util/quickbase.cpp \
 	util/quicklinear.cpp \
@@ -42,6 +43,7 @@ HEADERS += \
 	symbolsdialog.h \
 	util/clickablelabel.h \
 	util/focusablelineedit.h \
+	util/playercontrol.h \
 	util/qpointenhance.h \
 	util/quickangle.h \
 	util/quickbase.h \

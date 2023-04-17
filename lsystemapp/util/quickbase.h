@@ -1,5 +1,4 @@
-#ifndef QUICKBASE_H
-#define QUICKBASE_H
+#pragma once
 
 #include <QLineEdit>
 #include <QQuickItem>
@@ -57,4 +56,3 @@ private:
 	double maxValue_ = 0;
 };
 
-#endif // QUICKBASE_H

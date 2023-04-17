@@ -10,8 +10,5 @@ class TableItemDelegateAutoUpdate : public QStyledItemDelegate
 {
 public:
 	TableItemDelegateAutoUpdate(QObject* parent = nullptr);
-
 	QWidget* createEditor(QWidget * parent, const QStyleOptionViewItem & option, const QModelIndex & index) const;
-private:
-	QSignalMapper* mapper;
 };

@@ -15,8 +15,7 @@ protected:
 	double fineStepSize() const override { return 0.1; }
 
 private:
-	static const int size = 180;
-	static const char * qmlSource;
+    static const int size = 180;
 	static const int bigStep = 5;
 };
 

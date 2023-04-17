@@ -21,6 +21,7 @@
 #include <QShortcut>
 #include <QCheckBox>
 
+#include <optional>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class LSystemUi; }
@@ -99,6 +100,10 @@ private slots:
 
 	void on_cmdRightFormula_clicked();
 
+	void on_cmdPlayer_clicked();
+
+	void on_cmdClosePlayer_clicked();
+
 private:
 	struct DrawPlacement
 	{
@@ -162,6 +167,7 @@ private:
 	void showSettings();
 	void removeAllSliders();
 	void clearAll();
+	void toggleHelperFrame(QPushButton * button, QWidget * frame);
 
 private:
 	Ui::LSystemUi * ui;

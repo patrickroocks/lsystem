@@ -1,7 +1,6 @@
-import QtQuick 2.11
-import QtQuick.Shapes 1.15
-import QtQuick.Controls 1.4
-import QtQuick.Controls.Private 1.0
+import QtQuick
+import QtQuick.Shapes
+import QtQuick.Controls
 
 // Selector for an angle
 

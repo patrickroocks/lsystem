@@ -1,6 +1,10 @@
 #include "quickangle.h"
 
-const char * QuickAngle::qmlSource = "qrc:/util/angleselector.qml";
+namespace {
+
+const char * qmlSource = "qrc:/util/angleselector.qml";
+
+}
 
 QuickAngle::QuickAngle(QWidget * parent)
 	: QuickBase(parent, qmlSource)

@@ -49,7 +49,6 @@ template<typename K,  typename V>  QString printImpl(const QMap      <K, V> & ma
 template<typename K,  typename V>  QString printImpl(const QMultiMap <K, V> & map);
 template<typename K,  typename V>  QString printImpl(const QHash     <K, V> & hash);
 template<typename K,  typename V>  QString printImpl(const QMultiHash<K, V> & hash);
-template<typename T>               QString printImpl(const QVector<T>       & vec);
 template<typename T>               QString printImpl(const QList<T>         & lst);
 template<typename T>               QString printImpl(const QSet<T>          & set);
 template<typename T>               QString printImpl(const std::list<T>     & lst);
@@ -88,9 +87,6 @@ QString printImpl(T* cl) { return cl ? impl::printImpl(*cl) : "<null>"; }
 inline QString printImpl(std::nullptr_t) { return "<null>"; }
 
 // * Containers and complex types implementations
-
-// Forward QStringList to QList
-inline QString printImpl(const QStringList & val) { return printImpl((QList<QString>)(val)); }
 
 template<typename T1, typename T2>
 QString printImpl(const QPair<T1,T2> & val)
@@ -133,8 +129,7 @@ QString printCollection(const Container & cont)
 	return rv;
 }
 
-template<typename T>             QString printImpl(const QList      <T>    & lst) { return "[" + printCollection(lst) + "]"; }
-template<typename T>             QString printImpl(const QVector    <T>    & vec) { return "(" + printCollection(vec) + ")"; }
+template<typename T>             QString printImpl(const QList      <T>    & vec) { return "(" + printCollection(vec) + ")"; }
 template<typename T>             QString printImpl(const QSet       <T>    & set) { return "{" + printCollection(set) + "}"; }
 
 template<typename T>             QString printImpl(const std::list  <T>    & lst) { return "[" + printCollection(lst) + "]"; }

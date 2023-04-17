@@ -5,6 +5,8 @@
 
 #include <QImage>
 
+#include <optional>
+
 namespace lsystem::ui {
 
 struct DrawResult

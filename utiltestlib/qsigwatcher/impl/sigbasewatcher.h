@@ -33,7 +33,7 @@ protected:
 	virtual QString getName() const = 0;
 
 protected:
-	static QMutex mutex;
+    static QRecursiveMutex mutex;
 };
 
 template<typename... F>

@@ -13,6 +13,7 @@ HEADERS = \
 	qsigwatcher/structures.h \
 	qsigwatcher/impl/watcherhandler.h \
 	qsigwatcher/impl/internalstructures.h \
+	util/containerutils.h \
 	util/destroyable.h \
 	util/divutils.h \
 	util/print.h \

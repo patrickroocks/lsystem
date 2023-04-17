@@ -1,14 +1,13 @@
 import QtQuick 2.11
 import QtQuick.Shapes 1.15
-import QtQuick.Controls 1.4
-import QtQuick.Controls 2.15
-import QtQuick.Controls.Private 1.0
+import QtQuick.Controls
 
 Rectangle
 {
     id: rectButton;
 
     property int sizeButton: 20
+    property int yOffsetLabel: 0
 
     property alias text: lblText.text
     property alias toolTipText: toolTip.text
@@ -27,7 +26,14 @@ Rectangle
     Label
     {
         id: lblText
-        anchors.centerIn: parent
+        font.pointSize: 0.7*sizeButton
+        y: yOffsetLabel
+        x: 0
+        height: sizeButton
+        width: sizeButton
+        text: "a"
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
     }
 
     border

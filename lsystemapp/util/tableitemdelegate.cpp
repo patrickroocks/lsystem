@@ -4,17 +4,16 @@
 
 TableItemDelegateAutoUpdate::TableItemDelegateAutoUpdate(QObject * parent)
 	: QStyledItemDelegate(parent)
-	, mapper(new QSignalMapper(this))
 {
-	connect(mapper, SIGNAL(mapped(QWidget*)), SIGNAL(commitData(QWidget*)));
 }
 
 QWidget * TableItemDelegateAutoUpdate::createEditor(QWidget * parent, const QStyleOptionViewItem & option, const QModelIndex & index) const
 {
 	QWidget* editor = QStyledItemDelegate::createEditor(parent, option, index);
-	if (qobject_cast<QLineEdit*>(editor)) {
-		connect(editor, SIGNAL(textChanged(QString)), mapper, SLOT(map()));
-		mapper->setMapping(editor, editor);
+	if (QLineEdit* castedEditor = qobject_cast<QLineEdit*>(editor)) {
+
+		// createEditor must be const, such that it is called. commitData is non-const
+		connect(castedEditor, &QLineEdit::textEdited, [&](const QString&) { const_cast<TableItemDelegateAutoUpdate*>(this)->commitData(editor); });
 	}
 	return editor;
 }

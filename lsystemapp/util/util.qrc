@@ -4,5 +4,7 @@
         <file alias="linearselector.qml">qml/linearselector.qml</file>
         <file alias="ToggleButton.qml">qml/ToggleButton.qml</file>
         <file alias="SmallButton.qml">qml/SmallButton.qml</file>
+        <file alias="playercontrol.qml">qml/playercontrol.qml</file>
+        <file alias="RangeModel.qml">qml/RangeModel.qml</file>
     </qresource>
 </RCC>

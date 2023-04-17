@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1021</width>
+    <width>1073</width>
     <height>589</height>
    </rect>
   </property>
@@ -22,7 +22,7 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>921</width>
+      <width>961</width>
       <height>202</height>
      </rect>
     </property>
@@ -518,6 +518,19 @@ options</string>
             <string>f</string>
            </property>
           </widget>
+          <widget class="QPushButton" name="cmdPlayer">
+           <property name="geometry">
+            <rect>
+             <x>630</x>
+             <y>10</y>
+             <width>51</width>
+             <height>41</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Player</string>
+           </property>
+          </widget>
          </widget>
         </item>
        </layout>
@@ -613,7 +626,7 @@ options</string>
      <rect>
       <x>10</x>
       <y>220</y>
-      <width>921</width>
+      <width>961</width>
       <height>151</height>
      </rect>
     </property>
@@ -734,7 +747,7 @@ border: 1px solid black;</string>
     </property>
     <property name="geometry">
      <rect>
-      <x>250</x>
+      <x>20</x>
       <y>380</y>
       <width>441</width>
       <height>141</height>
@@ -902,7 +915,7 @@ border: 1px solid black;</string>
       </rect>
      </property>
      <property name="toolTip">
-      <string>The left turn (mathematically positive) for each occurrence of &quot;+&quot;</string>
+	  <string>The opacity of the drawing between 0 and 100, where 0 means not visible and 50 means half transparent.</string>
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: rgb(255, 255, 255);</string>
@@ -928,13 +941,108 @@ border: 1px solid black;</string>
      </property>
     </widget>
    </widget>
+   <widget class="QFrame" name="frmPlayer">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>500</x>
+      <y>390</y>
+      <width>441</width>
+      <height>141</height>
+     </rect>
+    </property>
+    <property name="focusPolicy">
+     <enum>Qt::NoFocus</enum>
+    </property>
+    <property name="autoFillBackground">
+     <bool>true</bool>
+    </property>
+    <property name="styleSheet">
+     <string notr="true"/>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Raised</enum>
+    </property>
+    <widget class="QPushButton" name="cmdClosePlayer">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>0</y>
+       <width>41</width>
+       <height>25</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>X</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lblLatency">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>131</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Latency (s):</string>
+     </property>
+    </widget>
+    <widget class="FocusableLineEdit" name="txtLatency" native="true">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>110</x>
+       <y>10</y>
+       <width>51</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="toolTip">
+	  <string>The latency in the replayer</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: rgb(255, 255, 255);</string>
+     </property>
+     <property name="text" stdset="0">
+      <string>0.5</string>
+     </property>
+    </widget>
+	<widget class="PlayerControl" name="playerControl" native="true">
+	 <property name="geometry">
+	  <rect>
+	   <x>10</x>
+	   <y>40</y>
+	   <width>250</width>
+	   <height>50</height>
+	  </rect>
+	 </property>
+	</widget>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1021</width>
+     <width>1073</width>
      <height>22</height>
     </rect>
    </property>
@@ -950,6 +1058,11 @@ border: 1px solid black;</string>
    <class>FocusableLineEdit</class>
    <extends>QWidget</extends>
    <header>util/focusablelineedit.h</header>
+  </customwidget>
+  <customwidget>
+   <class>PlayerControl</class>
+   <extends>QQuickWidget</extends>
+   <header>util/playercontrol.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

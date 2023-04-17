@@ -2,6 +2,6 @@
 
 namespace sigwatcher::impl {
 
-QMutex Watcher::mutex(QMutex::Recursive);
+QRecursiveMutex Watcher::mutex;
 
 }

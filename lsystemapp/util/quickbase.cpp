@@ -1,4 +1,5 @@
 #include "quickbase.h"
+
 #include <util/divutils.h>
 
 #include <QFocusEvent>

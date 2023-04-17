@@ -7,6 +7,7 @@
 #include "angleformuladialog.h"
 #include "settingsdialog.h"
 
+#include <util/containerutils.h>
 #include <util/print.h>
 
 #include <QClipboard>
@@ -120,18 +121,19 @@ LSystemUi::LSystemUi(QWidget *parent)
 	ui->txtLeft->setValueRestriction(ValueRestriction::PositiveNumbers);
 	ui->txtRight->setValueRestriction(ValueRestriction::NegativeNumbers);
 
-	// connection for live edit
+	// * connections for live edits
 	const std::vector<FocusableLineEdit*> configEditsLinear = {
 			ui->txtIter, ui->txtStep, ui->txtScaleDown,
 			ui->txtLastIterOpacity, ui->txtThickness, ui->txtOpacity};
 
-	const std::vector<FocusableLineEdit*> configEditsAngle = {
-			ui->txtStartAngle, ui->txtLeft, ui->txtRight};
+	const std::vector<FocusableLineEdit*> allLinearEdits =  util::concatenateVectors(configEditsLinear, {ui->txtLatency});
 
-	std::vector<FocusableLineEdit*> allEdits = configEditsLinear;
-	allEdits.insert(allEdits.end(), configEditsAngle.begin(), configEditsAngle.end());
+	const std::vector<FocusableLineEdit*> configEditsAngle = {ui->txtStartAngle, ui->txtLeft, ui->txtRight};
 
-	for (FocusableLineEdit * lineEdit : allEdits) {
+	const std::vector<FocusableLineEdit*> allEdits = util::concatenateVectors(allLinearEdits, configEditsAngle);
+	const std::vector<FocusableLineEdit*> allConfigEdits = util::concatenateVectors(configEditsLinear, configEditsAngle);
+
+	for (FocusableLineEdit * lineEdit : allConfigEdits) {
 		connect(lineEdit, &FocusableLineEdit::textChanged, this, &LSystemUi::configLiveEdit);
 	}
 
@@ -140,7 +142,7 @@ LSystemUi::LSystemUi(QWidget *parent)
 		connect(lineEdit, &FocusableLineEdit::gotFocus, this, &LSystemUi::focusAngleEdit);
 	}
 
-	for (FocusableLineEdit * lineEdit : configEditsLinear) {
+	for (FocusableLineEdit * lineEdit : allLinearEdits) {
 		connect(lineEdit, &FocusableLineEdit::gotFocus, this, &LSystemUi::focusLinearEdit);
 	}
 
@@ -152,6 +154,7 @@ LSystemUi::LSystemUi(QWidget *parent)
 	segDrawerThread.start();
 
 	ui->frmAdditionalOptions->setVisible(false);
+	ui->frmPlayer->setVisible(false);
 }
 
 LSystemUi::~LSystemUi()
@@ -593,6 +596,8 @@ void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPoin
 
 void LSystemUi::configLiveEdit()
 {
+	// TODO: difference between fractal config and LATENCY!
+
 	if (!ui->chkAutoPaint->isChecked() || disableConfigLiveEdit) return;
 
 	ConfigSet configSet = getConfigSet(true);
@@ -694,6 +699,11 @@ void LSystemUi::focusLinearEdit(FocusableLineEdit * lineEdit)
 		minValue = 0.5;
 		maxValue = 5;
 		extFactor = 1.5;
+	} else if (lineEdit == ui->txtLatency) {
+		smallStep = 0.05;
+		bigStep = 0.5;
+		minValue = 0.05;
+		maxValue = 2;
 	} else {
 		// should not happen
 		return;
@@ -765,7 +775,7 @@ void LSystemUi::on_lblStatus_linkActivated(const QString & link)
 void LSystemUi::on_lblStatus_mousePressed(QMouseEvent * event)
 {
 	if (event->button() == Qt::RightButton) {
-		statusMenu->menu.exec(event->globalPos());
+        statusMenu->menu.exec(event->globalPosition().toPoint());
 	}
 }
 
@@ -781,16 +791,27 @@ void LSystemUi::on_cmdSettings_clicked()
 	showSettings();
 }
 
+void LSystemUi::toggleHelperFrame(QPushButton * button, QWidget * frame)
+{
+	if (!frame->isVisible()) {
+		const auto butBottomLeft = ui->wdgConfig->mapTo(ui->centralwidget, button->geometry().bottomLeft());
+		const auto & frameGeom = frame->geometry();
+		frame->setGeometry(butBottomLeft.x() - frameGeom.width(), butBottomLeft.y() - frameGeom.height(), frameGeom.width(), frameGeom.height());
+		frame->setVisible(true);
+	} else {
+		frame->setVisible(false);
+	}
+
+}
+
 void LSystemUi::on_cmdAdditionalOptions_clicked()
 {
-	if (!ui->frmAdditionalOptions->isVisible()) {
-		const auto butBottomLeft = ui->wdgConfig->mapTo(ui->centralwidget, ui->cmdAdditionalOptions->geometry().bottomLeft());
-		const auto & frmGeom = ui->frmAdditionalOptions->geometry();
-		ui->frmAdditionalOptions->setGeometry(butBottomLeft.x() - frmGeom.width(), butBottomLeft.y() - frmGeom.height(), frmGeom.width(), frmGeom.height());
-		ui->frmAdditionalOptions->setVisible(true);
-	} else {
-		ui->frmAdditionalOptions->setVisible(false);
-	}
+	toggleHelperFrame(ui->cmdAdditionalOptions, ui->frmAdditionalOptions);
+}
+
+void LSystemUi::on_cmdPlayer_clicked()
+{
+	toggleHelperFrame(ui->cmdPlayer, ui->frmPlayer);
 }
 
 void LSystemUi::on_chkShowLastIter_stateChanged()
@@ -805,6 +826,11 @@ void LSystemUi::on_chkShowLastIter_stateChanged()
 void LSystemUi::on_cmdCloseAdditionalSettings_clicked()
 {
 	ui->frmAdditionalOptions->setVisible(false);
+}
+
+void LSystemUi::on_cmdClosePlayer_clicked()
+{
+	ui->frmPlayer->setVisible(false);
 }
 
 void LSystemUi::on_chkAntiAliasing_stateChanged()
@@ -947,18 +973,18 @@ LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
 	: menu(parent)
 {
 	drawingActions
-		<< menu.addAction("Delete drawing", &*parent->drawArea, &DrawArea::deleteMarked, Qt::Key_Delete)
-		<< menu.addAction("Copy drawing", parent, &LSystemUi::copyToClipboardMarked, Qt::CTRL + Qt::Key_C)
+        << menu.addAction("Delete drawing", Qt::Key_Delete, &*parent->drawArea, &DrawArea::deleteMarked)
+        << menu.addAction("Copy drawing", Qt::CTRL | Qt::Key_C, parent, &LSystemUi::copyToClipboardMarked)
 		<< menu.addAction("Send to front", &*parent->drawArea, &DrawArea::sendToFrontMarked)
 		<< menu.addAction("Send to back", &*parent->drawArea, &DrawArea::sendToBackMarked)
-		<< menu.addAction("Show config", parent, &LSystemUi::showMarkedConfig, Qt::CTRL + Qt::SHIFT + Qt::Key_C)
+		<< menu.addAction("Show config", Qt::CTRL | Qt::SHIFT | Qt::Key_C, parent, &LSystemUi::showMarkedConfig)
 		<< menu.addSeparator();
 
 	setDrawingActionsVisible(false);
 
-	undoAction = menu.addAction("Undo", &*parent->drawArea, &DrawArea::restoreLastImage, Qt::CTRL + Qt::Key_Z);
+	undoAction = menu.addAction("Undo", Qt::CTRL | Qt::Key_Z, &*parent->drawArea, &DrawArea::restoreLastImage);
 	undoAction->setEnabled(false);
-	redoAction = menu.addAction("Redo", &*parent->drawArea, &DrawArea::restoreLastImage, Qt::CTRL + Qt::Key_Y);
+	redoAction = menu.addAction("Redo", Qt::CTRL | Qt::Key_Y, &*parent->drawArea, &DrawArea::restoreLastImage);
 	redoAction->setEnabled(false);
 	menu.addSeparator();
 
@@ -966,14 +992,14 @@ LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
 	autoClearToggle->setCheckable(true);
 	menu.addSeparator();
 
-	menu.addAction("Clear all", parent, &LSystemUi::clearAll, Qt::CTRL + Qt::Key_Delete);
-	menu.addAction("Set Bg-Color", parent, &LSystemUi::setBgColor, Qt::CTRL + Qt::Key_B);
+	menu.addAction("Clear all", Qt::CTRL | Qt::Key_Delete, parent, &LSystemUi::clearAll);
+	menu.addAction("Set Bg-Color", Qt::CTRL | Qt::Key_B, parent, &LSystemUi::setBgColor);
 	menu.addSeparator();
 
 	menu.addAction("Copy canvas", &*parent->drawArea, &DrawArea::copyToClipboardFull);
 	menu.addSeparator();
 
-	menu.addAction("Show symbols window", parent, &LSystemUi::showSymbols, Qt::CTRL + Qt::SHIFT + Qt::Key_S);
+	menu.addAction("Show symbols window", Qt::CTRL | Qt::SHIFT | Qt::Key_S, parent, &LSystemUi::showSymbols);
 
 	// to get the shortcurts working
 	parent->ui->menubar->addMenu(&menu);
@@ -1005,4 +1031,6 @@ QString LSystemUi::DrawMetaData::toString() const
 }
 
 // ------------------------------------------------------
+
+
 

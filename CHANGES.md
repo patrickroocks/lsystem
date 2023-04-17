@@ -1,3 +1,8 @@
+# Version 0.6.0
+
+- changed to Qt 6.5
+- Player to animate the construction of the fractal
+
 # Version 0.5.0
 
 - "move" option for literals
