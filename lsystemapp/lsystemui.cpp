@@ -775,7 +775,7 @@ void LSystemUi::on_lblStatus_linkActivated(const QString & link)
 void LSystemUi::on_lblStatus_mousePressed(QMouseEvent * event)
 {
 	if (event->button() == Qt::RightButton) {
-        statusMenu->menu.exec(event->globalPosition().toPoint());
+		statusMenu->menu.exec(event->globalPosition().toPoint());
 	}
 }
 
@@ -973,8 +973,8 @@ LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
 	: menu(parent)
 {
 	drawingActions
-        << menu.addAction("Delete drawing", Qt::Key_Delete, &*parent->drawArea, &DrawArea::deleteMarked)
-        << menu.addAction("Copy drawing", Qt::CTRL | Qt::Key_C, parent, &LSystemUi::copyToClipboardMarked)
+		<< menu.addAction("Delete drawing", Qt::Key_Delete, &*parent->drawArea, &DrawArea::deleteMarked)
+		<< menu.addAction("Copy drawing", Qt::CTRL | Qt::Key_C, parent, &LSystemUi::copyToClipboardMarked)
 		<< menu.addAction("Send to front", &*parent->drawArea, &DrawArea::sendToFrontMarked)
 		<< menu.addAction("Send to back", &*parent->drawArea, &DrawArea::sendToBackMarked)
 		<< menu.addAction("Show config", Qt::CTRL | Qt::SHIFT | Qt::Key_C, parent, &LSystemUi::showMarkedConfig)

@@ -11,4 +11,5 @@ SUBDIRS += \
 	lsystemapp
 
 OTHER_FILES += \
-	CHANGES.md
+	CHANGES.md \
+	README.md

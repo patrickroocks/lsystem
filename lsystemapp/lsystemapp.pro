@@ -73,5 +73,5 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 RESOURCES += \
-    data/config.qrc \
-    util/util.qrc
+	data/config.qrc \
+	util/util.qrc

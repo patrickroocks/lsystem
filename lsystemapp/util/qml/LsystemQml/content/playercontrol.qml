@@ -15,6 +15,7 @@ Rectangle {
     property int minValue: range.minimumValue
     property alias value: range.value
 
+    // induces "playingChanged"
     property bool playing: false
 
     width: sizeWidth

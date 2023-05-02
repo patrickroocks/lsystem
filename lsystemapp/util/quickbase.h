@@ -17,11 +17,9 @@ public:
 	void setMinMaxValue(double newMinValue, double newMaxValue);
 
 signals:
-	// to QML
-	void valueChanged(int value);
-
 	// to main UI
 	void focusOut();
+	void valueChanged(int value);
 
 protected:
 	void focusOutEvent(QFocusEvent * event) override;
@@ -39,6 +37,7 @@ protected:
 	virtual double fineStepSize() const = 0;
 
 private slots:
+	// from QML
 	void valueChangedInSelector();
 
 private:
