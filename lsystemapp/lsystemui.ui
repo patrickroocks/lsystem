@@ -824,7 +824,6 @@ border: 1px solid black;</string>
      </property>
      <property name="font">
       <font>
-       <weight>75</weight>
        <bold>true</bold>
       </font>
      </property>
@@ -915,7 +914,7 @@ border: 1px solid black;</string>
       </rect>
      </property>
      <property name="toolTip">
-	  <string>The opacity of the drawing between 0 and 100, where 0 means not visible and 50 means half transparent.</string>
+      <string>The opacity of the drawing between 0 and 100, where 0 means not visible and 50 means half transparent.</string>
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: rgb(255, 255, 255);</string>
@@ -949,8 +948,8 @@ border: 1px solid black;</string>
      <rect>
       <x>500</x>
       <y>390</y>
-      <width>441</width>
-      <height>141</height>
+      <width>281</width>
+      <height>101</height>
      </rect>
     </property>
     <property name="focusPolicy">
@@ -971,7 +970,7 @@ border: 1px solid black;</string>
     <widget class="QPushButton" name="cmdClosePlayer">
      <property name="geometry">
       <rect>
-       <x>400</x>
+       <x>240</x>
        <y>0</y>
        <width>41</width>
        <height>25</height>
@@ -979,7 +978,6 @@ border: 1px solid black;</string>
      </property>
      <property name="font">
       <font>
-       <weight>75</weight>
        <bold>true</bold>
       </font>
      </property>
@@ -1016,7 +1014,7 @@ border: 1px solid black;</string>
       </rect>
      </property>
      <property name="toolTip">
-	  <string>The latency in the replayer</string>
+      <string>The latency in the replayer</string>
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: rgb(255, 255, 255);</string>
@@ -1025,16 +1023,16 @@ border: 1px solid black;</string>
       <string>0.5</string>
      </property>
     </widget>
-	<widget class="PlayerControl" name="playerControl" native="true">
-	 <property name="geometry">
-	  <rect>
-	   <x>10</x>
-	   <y>40</y>
-	   <width>250</width>
-	   <height>50</height>
-	  </rect>
-	 </property>
-	</widget>
+    <widget class="PlayerControl" name="playerControl">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>250</width>
+       <height>50</height>
+      </rect>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -1049,6 +1047,11 @@ border: 1px solid black;</string>
   </widget>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>QQuickWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">QtQuickWidgets/QQuickWidget</header>
+  </customwidget>
   <customwidget>
    <class>ClickableLabel</class>
    <extends>QWidget</extends>

@@ -141,6 +141,7 @@ private:
 
 	// current Config
 	void configLiveEdit();
+	void execConfig(const lsystem::common::ConfigSet& configSet);
 	void focusAngleEdit(FocusableLineEdit * lineEdit);
 	void focusLinearEdit(FocusableLineEdit * lineEdit);
 	void unfocusAngleEdit();
@@ -152,6 +153,10 @@ private:
 	void showSymbols();
 	void showMarkedConfig();
 	void showRightAngleDialog();
+
+	// player
+	void playPauseChanged(bool playing);
+	void playerValueChanged(int value);
 
 	// Status
 	void copyStatus();

@@ -153,6 +153,10 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(&segDrawer, &SegmentDrawer::drawDone, this, &LSystemUi::drawDone);
 	segDrawerThread.start();
 
+	// Player control
+	connect(ui->playerControl, &PlayerControl::playPauseChanged, this, &LSystemUi::playPauseChanged);
+	connect(ui->playerControl, &PlayerControl::playerValueChanged, this, &LSystemUi::playerValueChanged);
+
 	ui->frmAdditionalOptions->setVisible(false);
 	ui->frmPlayer->setVisible(false);
 }
@@ -310,6 +314,7 @@ void LSystemUi::clearAll()
 
 ConfigSet LSystemUi::getConfigSet(bool storeAsLastValid)
 {
+	static quint32 lastNumIter = 0;
 	ConfigSet configSet;
 
 	const auto showVarError = [&](const QString & errorVar, const QString & extraInfo = QString()) {
@@ -334,6 +339,7 @@ ConfigSet LSystemUi::getConfigSet(bool storeAsLastValid)
 		return configSet;
 	}
 
+	// right angle can be a formula getting the left angle as an argument
 	const AngleEvaluator::Result evalRes = angleEvaluator.evaluate(ui->txtLeft->text(), ui->txtRight->text());
 	if (evalRes.isOk) {
 		configSet.turn.right = evalRes.angle;
@@ -356,6 +362,10 @@ ConfigSet LSystemUi::getConfigSet(bool storeAsLastValid)
 	if (!ok) {
 		showVarError("iterations");
 		return configSet;
+	}
+	if (lastNumIter != configSet.numIter) {
+		ui->playerControl->setMaxValue(configSet.numIter);
+		lastNumIter = configSet.numIter;
 	}
 
 	configSet.stepSize = ui->txtStep->text().toDouble(&ok);
@@ -384,6 +394,7 @@ void LSystemUi::setConfigSet(const ConfigSet & configSet)
 	ui->txtIter      ->setText(QString::number(configSet.numIter));
 	ui->txtStep      ->setText(QString::number(configSet.stepSize));
 	disableConfigLiveEdit = false;
+	ui->playerControl->setMaxValue(configSet.numIter);
 
 	// still initialization phase => do not draw
 	if (!drawArea) return;
@@ -603,6 +614,11 @@ void LSystemUi::configLiveEdit()
 	ConfigSet configSet = getConfigSet(true);
 	if (!configSet.valid) return;
 
+	execConfig(configSet);
+}
+
+void LSystemUi::execConfig(const ConfigSet& configSet)
+{
 	auto optOffset = drawArea->getLastOffset();
 
 	QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
@@ -959,6 +975,24 @@ void LSystemUi::showRightAngleDialog()
 	if (!strRightAngle.isNull()) {
 		ui->txtRight->setText(strRightAngle);
 	}
+}
+
+void LSystemUi::playPauseChanged(bool playing)
+{
+	// TODO
+}
+
+void LSystemUi::playerValueChanged(int value)
+{
+	// TODO player in non-interactive mode?
+	if (!ui->chkAutoPaint->isChecked() || disableConfigLiveEdit) return;
+
+	ConfigSet configSet = getConfigSet(true);
+	if (!configSet.valid) return;
+
+	configSet.numIter = value;
+
+	execConfig(configSet);
 }
 
 void LSystemUi::on_cmdRightFormula_clicked()

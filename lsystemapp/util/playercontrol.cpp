@@ -22,10 +22,23 @@ PlayerControl::PlayerControl(QWidget * parent)
 	control_ = rootObject();
 
 	QObject::connect(control_, SIGNAL(playingChanged()), this, SLOT(playingChanged()));
+	QObject::connect(control_, SIGNAL(valueChanged()), this, SLOT(valueChanged()));
+}
+
+void PlayerControl::setMaxValue(int maxValue)
+{
+	control_->setProperty("maxValue", maxValue);
+	control_->setProperty("value", maxValue);
 }
 
 void PlayerControl::playingChanged()
 {
 	const auto playing = control_->property("playing").toBool();
 	emit playPauseChanged(playing);
+}
+
+void PlayerControl::valueChanged()
+{
+	const auto value = control_->property("value").toInt();
+	emit playerValueChanged(value);
 }

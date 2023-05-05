@@ -6,7 +6,7 @@ import QtQuick.Particles
 Rectangle {
     id: rectangle1
 
-    property int sizeWidth: 200
+    property int sizeWidth: 250
     property int sizeHeight: 50
     property int sizeBorder: 10
     property int sizePlayButton: 30
@@ -15,6 +15,7 @@ Rectangle {
     property int minValue: range.minimumValue
     property alias value: range.value
 
+    // induces "playingChanged"
     property bool playing: false
 
     width: sizeWidth
@@ -59,6 +60,32 @@ Rectangle {
             y: sizeBorder
             width: sizeWidth - 3 * sizeBorder - sizePlayButton
             height: 30
+
+            Label
+            {
+                y: 15
+                x: 5
+                text: minValue
+            }
+
+            Label
+            {
+                x: shapeSlider.width - 35
+                y: 15
+                width: 30
+                text: maxValue
+                horizontalAlignment: Text.AlignRight
+            }
+
+            Label
+            {
+                x: shapeSlider.width / 2 - 15
+                y: -5
+                width: 30
+                color: "#25b300"
+                text: value
+                horizontalAlignment: Text.AlignHCenter
+            }
 
             ShapePath
             {
