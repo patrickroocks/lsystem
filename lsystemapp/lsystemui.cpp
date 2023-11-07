@@ -146,6 +146,8 @@ LSystemUi::LSystemUi(QWidget *parent)
 		connect(lineEdit, &FocusableLineEdit::gotFocus, this, &LSystemUi::focusLinearEdit);
 	}
 
+	connect(ui->txtLatency, &FocusableLineEdit::textChanged, this, &LSystemUi::latencyChanged);
+
 	connect(ui->chkAutoPaint, &QCheckBox::stateChanged, this, &LSystemUi::checkAutoPaintChanged);
 
 	segDrawer.moveToThread(&segDrawerThread);
@@ -153,7 +155,17 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(&segDrawer, &SegmentDrawer::drawDone, this, &LSystemUi::drawDone);
 	segDrawerThread.start();
 
-	// Player control
+	// Segment animator
+	segAnimator.reset(new SegmentAnimator(drawArea.get()));
+	segAnimator->moveToThread(&segAnimatorThread);
+	connect(this, &LSystemUi::startAnimateCurrentDrawing, segAnimator.get(), &SegmentAnimator::startAnimateCurrentDrawing);
+	connect(this, &LSystemUi::setAnimateLatency, segAnimator.get(), &SegmentAnimator::setAnimateLatency);
+	connect(this, &LSystemUi::stopAnimate, segAnimator.get(), &SegmentAnimator::stopAnimate);
+	connect(this, &LSystemUi::goToAnimationStep, segAnimator.get(), &SegmentAnimator::goToAnimationStep);
+	connect(segAnimator.get(), &SegmentAnimator::newAnimationStep, this, &LSystemUi::newAnimationStep);
+	segAnimatorThread.start();
+
+	// Player control (UI control for segment animator)
 	connect(ui->playerControl, &PlayerControl::playPauseChanged, this, &LSystemUi::playPauseChanged);
 	connect(ui->playerControl, &PlayerControl::playerValueChanged, this, &LSystemUi::playerValueChanged);
 
@@ -163,7 +175,7 @@ LSystemUi::LSystemUi(QWidget *parent)
 
 LSystemUi::~LSystemUi()
 {
-	quitAndWait({&simulatorThread, &segDrawerThread});
+	quitAndWait({&simulatorThread, &segDrawerThread, &segAnimatorThread});
 	delete ui;
 }
 
@@ -285,6 +297,12 @@ void LSystemUi::showMessage(const QString & msg, MsgType msgType)
 	errorDecayTimer.start();
 }
 
+void LSystemUi::showVarError(const QString & errorVar, const QString & extraInfo) {
+	showErrorInUi(QString("Invalid value for variable '%1'%2").arg(
+		errorVar,
+		extraInfo.isEmpty() ? "" : (" (" + extraInfo + ")")));
+}
+
 void LSystemUi::resetStatus()
 {
 	ui->lblStatus->setStyleSheet(StatusDefaultStyle);
@@ -314,14 +332,7 @@ void LSystemUi::clearAll()
 
 ConfigSet LSystemUi::getConfigSet(bool storeAsLastValid)
 {
-	static quint32 lastNumIter = 0;
 	ConfigSet configSet;
-
-	const auto showVarError = [&](const QString & errorVar, const QString & extraInfo = QString()) {
-		showMessage(QString("Invalid value for variable '%1'%2").arg(
-				errorVar,
-				extraInfo.isEmpty() ? "" : (" (" + extraInfo + ")")), MsgType::Error);
-	};
 
 	configSet.definitions = defModel.getDefinitions();
 
@@ -363,10 +374,6 @@ ConfigSet LSystemUi::getConfigSet(bool storeAsLastValid)
 		showVarError("iterations");
 		return configSet;
 	}
-	if (lastNumIter != configSet.numIter) {
-		ui->playerControl->setMaxValue(configSet.numIter);
-		lastNumIter = configSet.numIter;
-	}
 
 	configSet.stepSize = ui->txtStep->text().toDouble(&ok);
 	if (!ok) {
@@ -394,7 +401,6 @@ void LSystemUi::setConfigSet(const ConfigSet & configSet)
 	ui->txtIter      ->setText(QString::number(configSet.numIter));
 	ui->txtStep      ->setText(QString::number(configSet.stepSize));
 	disableConfigLiveEdit = false;
-	ui->playerControl->setMaxValue(configSet.numIter);
 
 	// still initialization phase => do not draw
 	if (!drawArea) return;
@@ -484,7 +490,7 @@ void LSystemUi::highlightDrawing(std::optional<DrawResult> drawResult)
 	QPoint labelPos = drawing.topLeft + DrawPlacement::outerDist;
 
 	// Always display maxize button
-	const bool showMax = (dp.fct != 1);
+	const bool showMax = true;
 
 	// check if drawing can be moved left/right/top/down
 	const bool moveRight = (drawing.topLeft.x() < dp.areaTopLeft.x());
@@ -597,9 +603,11 @@ void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPoin
 
 	drawArea->draw(drawing, drawMetaData->offset, drawMetaData->clearAll, drawMetaData->clearLast);
 
+	ui->playerControl->setMaxValueAndValue(drawing.segments.size());
+
 	if (drawMetaData->resultOk) {
 		const QString msgPainted = printStr("Painted %1 segments, size is %2 px, <a href=\"%3\">show symbols</a>",
-				drawing.numSegments, drawing.size(), Links::ShowSymbols);
+				drawing.segments.size(), drawing.size(), Links::ShowSymbols);
 
 		showMessage(msgPainted, MsgType::Info);
 	}
@@ -607,9 +615,8 @@ void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPoin
 
 void LSystemUi::configLiveEdit()
 {
-	// TODO: difference between fractal config and LATENCY!
-
-	if (!ui->chkAutoPaint->isChecked() || disableConfigLiveEdit) return;
+	if (!ui->chkAutoPaint->isChecked() || disableConfigLiveEdit)
+		return;
 
 	ConfigSet configSet = getConfigSet(true);
 	if (!configSet.valid) return;
@@ -716,10 +723,10 @@ void LSystemUi::focusLinearEdit(FocusableLineEdit * lineEdit)
 		maxValue = 5;
 		extFactor = 1.5;
 	} else if (lineEdit == ui->txtLatency) {
-		smallStep = 0.05;
-		bigStep = 0.5;
-		minValue = 0.05;
-		maxValue = 2;
+		smallStep = 0.01;
+		bigStep = 0.1;
+		minValue = 0.01;
+		maxValue = 1;
 	} else {
 		// should not happen
 		return;
@@ -764,6 +771,17 @@ void LSystemUi::checkAutoPaintChanged(int state)
 	}
 }
 
+void LSystemUi::latencyChanged()
+{
+	bool ok;
+	const auto latency = ui->txtLatency->text().toDouble(&ok);
+	if (!ok || latency <= 0) {
+		showVarError("latency", "must be a positive number");
+	}
+	std::chrono::milliseconds latencyMs{qRound(latency * 1000)};
+	emit setAnimateLatency(latencyMs);
+}
+
 void LSystemUi::copyStatus()
 {
 	QClipboard * clipboard = QGuiApplication::clipboard();
@@ -778,6 +796,7 @@ void LSystemUi::on_lblStatus_linkActivated(const QString & link)
 		if (!optOffset.has_value()) return;
 		execMeta->offset = optOffset.value();
 		execMeta->clearLast = true;
+		execMeta->config = getConfigSet(true);
 		emit simulatorExecDoubleStackSize(execMeta);
 	} else if (link == Links::ShowSymbols) {
 		emit simulatorExecActionStr();
@@ -979,7 +998,26 @@ void LSystemUi::showRightAngleDialog()
 
 void LSystemUi::playPauseChanged(bool playing)
 {
-	// TODO
+	if (playing) {
+		if (!resultAvailable) {
+			showErrorInUi("no drawing available");
+			ui->playerControl->setPlaying(false);
+			return;
+		}
+
+		latencyChanged();
+		emit startAnimateCurrentDrawing();
+	} else {
+		emit stopAnimate();
+	}
+}
+
+void LSystemUi::newAnimationStep(int step, bool animationDone)
+{
+	ui->playerControl->setValue(step);
+
+	if (animationDone)
+		ui->playerControl->setPlaying(false);
 }
 
 void LSystemUi::playerValueChanged(int value)
@@ -987,12 +1025,7 @@ void LSystemUi::playerValueChanged(int value)
 	// TODO player in non-interactive mode?
 	if (!ui->chkAutoPaint->isChecked() || disableConfigLiveEdit) return;
 
-	ConfigSet configSet = getConfigSet(true);
-	if (!configSet.valid) return;
-
-	configSet.numIter = value;
-
-	execConfig(configSet);
+	emit goToAnimationStep(value);
 }
 
 void LSystemUi::on_cmdRightFormula_clicked()
@@ -1043,7 +1076,7 @@ LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
 void LSystemUi::DrawAreaMenu::setDrawingActionsVisible(bool visible)
 {
 	// shortcuts become enabled/disabled with making the actions (un)visible
-	for (QAction * action : qAsConst(drawingActions)) {
+	for (QAction * action : std::as_const(drawingActions)) {
 		action->setVisible(visible);
 	}
 }

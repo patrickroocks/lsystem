@@ -6,14 +6,15 @@
 #include <configlist.h>
 #include <definitionmodel.h>
 #include <drawarea.h>
+#include <segmentanimator.h>
 #include <segmentdrawer.h>
 #include <simulator.h>
 #include <symbolsdialog.h>
-#include <util/tableitemdelegate.h>
+#include <util/clickablelabel.h>
+#include <util/focusablelineedit.h>
 #include <util/quickangle.h>
 #include <util/quicklinear.h>
-#include <util/focusablelineedit.h>
-#include <util/clickablelabel.h>
+#include <util/tableitemdelegate.h>
 
 #include <QMainWindow>
 #include <QTimer>
@@ -70,6 +71,11 @@ signals:
 	void simulatorExec(const lsystem::common::ConfigSet & newConfig, const QSharedPointer<lsystem::common::MetaData> & metaData);
 	void simulatorExecDoubleStackSize(const QSharedPointer<lsystem::common::MetaData> & metaData);
 	void startDraw(const lsystem::common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData);
+
+	void setAnimateLatency(std::chrono::milliseconds latency);
+	void startAnimateCurrentDrawing();
+	void stopAnimate();
+	void goToAnimationStep(int step);
 
 private slots:
 
@@ -147,6 +153,7 @@ private:
 	void unfocusAngleEdit();
 	void unfocusLinearEdit();
 	void checkAutoPaintChanged(int state);
+	void latencyChanged();
 
 	// additional options & windows
 	void getAdditionalOptions(const QSharedPointer<lsystem::common::MetaData> & execMeta);
@@ -157,6 +164,7 @@ private:
 	// player
 	void playPauseChanged(bool playing);
 	void playerValueChanged(int value);
+	void newAnimationStep(int step, bool animationDone);
 
 	// Status
 	void copyStatus();
@@ -168,6 +176,7 @@ private:
 
 	// Common helpers
 	void showMessage(const QString & msg, MsgType msgType);
+	void showVarError(const QString & errorVar, const QString & extraInfo = QString());
 	void resetStatus();
 	void showSettings();
 	void removeAllSliders();
@@ -191,6 +200,8 @@ private:
 	QThread simulatorThread;
 	lsystem::SegmentDrawer segDrawer;
 	QThread segDrawerThread;
+	QScopedPointer<lsystem::SegmentAnimator> segAnimator;
+	QThread segAnimatorThread;
 
 	bool resultAvailable = false;
 	bool disableConfigLiveEdit = false;

@@ -16,7 +16,6 @@ PlayerControl::PlayerControl(QWidget * parent)
 	setAttribute(Qt::WA_TranslucentBackground);
 	setClearColor(Qt::transparent);
 
-	setAutoFillBackground(true);
 	setResizeMode(QQuickWidget::SizeRootObjectToView);
 	setSource(QUrl(QString::fromUtf8(qmlSource)));
 	control_ = rootObject();
@@ -25,10 +24,22 @@ PlayerControl::PlayerControl(QWidget * parent)
 	QObject::connect(control_, SIGNAL(valueChanged()), this, SLOT(valueChanged()));
 }
 
-void PlayerControl::setMaxValue(int maxValue)
+void PlayerControl::setValue(int value)
+{
+	valueChanging = true;
+	control_->setProperty("value", value);
+	valueChanging = false;
+}
+
+void PlayerControl::setMaxValueAndValue(int maxValue)
 {
 	control_->setProperty("maxValue", maxValue);
-	control_->setProperty("value", maxValue);
+	setValue(maxValue);
+}
+
+void PlayerControl::setPlaying(bool playing)
+{
+	control_->setProperty("playing", playing);
 }
 
 void PlayerControl::playingChanged()
@@ -39,6 +50,7 @@ void PlayerControl::playingChanged()
 
 void PlayerControl::valueChanged()
 {
+	if (valueChanging) return;
 	const auto value = control_->property("value").toInt();
 	emit playerValueChanged(value);
 }

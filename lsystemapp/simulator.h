@@ -60,9 +60,9 @@ private:
 class ProcessLiteralAction : public Action
 {
 public:
-	ProcessLiteralAction(SimlatorInterface & actInt, char literal, QColor color, bool paint, bool move)
+	ProcessLiteralAction(SimlatorInterface & actInt, char literal, quint8 colorNum, bool paint, bool move)
 		: Action(actInt, literal),
-		  color(color),
+		  colorNum(colorNum),
 		  paint(paint),
 		  move(move)
 	{}
@@ -74,9 +74,9 @@ public:
 	DynActionList subActions;
 
 private:
-	QColor color;
-	bool paint = false;
-	bool move = false;
+	const quint8 colorNum;
+	const bool paint;
+	const bool move;
 };
 
 class TurnAction : public Action
@@ -165,6 +165,7 @@ private:
 	int curMaxStackSize = 0;
 
 	QMap<char, impl::DynProcessLiteralAction> mainActions;
+	QVector<QColor> actionColors;
 	impl::DynProcessLiteralAction startAction;
 };
 

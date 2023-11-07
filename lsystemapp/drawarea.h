@@ -1,5 +1,4 @@
-#ifndef DRAWAREA_H
-#define DRAWAREA_H
+#pragma once
 
 #include <drawingcollection.h>
 #include <common.h>
@@ -7,6 +6,8 @@
 #include <QWidget>
 
 namespace lsystem::ui {
+
+class Drawing;
 
 class DrawArea : public QWidget
 {
@@ -24,6 +25,9 @@ public:
 	void sendToFrontMarked();
 	void sendToBackMarked();
 	void translateHighlighted(const QPoint & newOffset);
+	Drawing* getCurrentDrawing();
+
+	void redrawAndUpdate(bool keepContent = false);
 
 	void setBgColor(const QColor & col);
 	QColor getBgColor() const;
@@ -66,5 +70,3 @@ private:
 };
 
 }
-
-#endif // DRAWAREA_H

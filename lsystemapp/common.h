@@ -43,7 +43,7 @@ struct LineSeg
 {
 	QPointF start;
 	QPointF end;
-	QColor color;
+	quint8 colorNum;
 
 	QString toString() const;
 
@@ -112,6 +112,7 @@ struct ExecResult
 	common::LineSegs segments;
 	common::LineSegs segmentsLastIter;
 	quint32 iterNum = 0;
+	QVector<QColor> actionColors;
 
 	QString toString() const;
 };
@@ -135,6 +136,7 @@ struct MetaData
 	double thickness = 0;
 	double opacity = 0;
 	bool antiAliasing = false;
+	std::optional<std::chrono::milliseconds> animLatency;
 	ConfigSet config;
 };
 

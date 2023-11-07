@@ -427,7 +427,7 @@ public:
 
 		bool processAndCheck(ValueUnderTest & val) const
 		{
-			for (const QSharedPointer<ExpectionBase> & expection : qAsConst(expections)) {
+			for (const QSharedPointer<ExpectionBase> & expection : std::as_const(expections)) {
 				if (!expection->processAndCheck(val)) return false;
 			}
 			return true;

@@ -81,7 +81,7 @@ bool SigWatcherHandler::check(qint64 timeoutMs, const char * file, int line, boo
 
 	if (!watcherState.waitingWatchers.isEmpty()) {
 		QString msg = util::printStr("these calls are still expected (between %1 and %2):", startWaitingTime, QDateTime::currentDateTimeUtc());
-		for (const WatcherState::WaitingWatcher & watcher : qAsConst(watcherState.waitingWatchers)) {
+		for (const WatcherState::WaitingWatcher & watcher : std::as_const(watcherState.waitingWatchers)) {
 			msg += QString("\n   signal (%1):").arg(watcher.watcherName)
 				+ watcher.location.getQtCreatorStr();
 			for (const ExpectOutput & expecting : watcher.expectingSignals) {
@@ -116,7 +116,7 @@ SigWatcherHandler::WatcherState SigWatcherHandler::checkWatchers()
 {
 	WatcherState rv;
 
-	for (const Watcher * watcher : qAsConst(watchers)) {
+	for (const Watcher * watcher : std::as_const(watchers)) {
 		const WaitingState waitingState = watcher->getWaitingState();
 		if (waitingState.isWaitingForExpected) {
 			rv.waitingWatchers << WatcherState::WaitingWatcher{waitingState.location, waitingState.waitingList, watcher->getName()};
@@ -130,7 +130,7 @@ SigWatcherHandler::WatcherState SigWatcherHandler::checkWatchers()
 
 void SigWatcherHandler::resetWatchers()
 {
-	for (Watcher * watcher : qAsConst(watchers)) watcher->reset();
+	for (Watcher * watcher : std::as_const(watchers)) watcher->reset();
 }
 
 }

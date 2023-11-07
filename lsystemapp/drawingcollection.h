@@ -1,9 +1,9 @@
-#ifndef DRAWINGCOLLECTION_H
-#define DRAWINGCOLLECTION_H
+#pragma once
 
 #include <common.h>
 
 #include <QImage>
+#include <QPainter>
 
 #include <optional>
 
@@ -29,18 +29,32 @@ public:
 	bool move(const QPoint & newOffset);
 	DrawResult toDrawResult();
 
+	enum class NextStepResult { Stopped, Restart, Continue };
+
+	NextStepResult nextAnimationStep();
+	bool goToAnimationStep(int newStep);
+
 public:
 	qint64 zIndex = 0;
 	qint64 num = 0;
 	QPoint offset;
-	qint64 numSegments = 0;
+	common::LineSegs segments;
+	QVector<QColor> actionColors;
 	QImage image;
 	lsystem::common::ConfigSet config;
+	common::MetaData metaData;
+
+	struct AnimState
+	{
+		bool inProgress = false;
+		int curSeg = 0; // index of the last segment which was painted
+	} animState;
 
 private:
 	void expandSizeToSegments(const common::LineSegs & segs, double thickness);
 	void drawSegments(const common::LineSegs & segs, double opacyFactor, double thickness, bool antiAliasing);
 	void updateRect(double minX, double minY, double maxX, double maxY);
+	void drawSegmentRange(int numStart, int numEnd, double opacyFactor, double thickness, bool antiAliasing);
 
 private:
 	QPoint topLeft;
@@ -56,7 +70,7 @@ public:
 	void clearAll();
 	void deleteHighlightedOrLastDrawing();
 
-	void redraw();
+	void redraw(bool keepContent = false);
 	QPoint getLastSize() const;
 
 	qint64 getDrawingByPos(const QPoint & pos);
@@ -66,6 +80,7 @@ public:
 	QImage getImage();
 	int getMarkedDrawingNum() const { return markedDrawing; }
 	int getHighlightedDrawingNum() const { return highlightedDrawing; }
+	Drawing* getCurrentDrawing();
 	int getLastDrawingNum() const { return drawings.empty() ? 0 : drawings.lastKey(); }
 	bool setMarkedDrawing(qint64 newMarkedDrawing);
 	bool moveDrawing(qint64 drawingNum, const QPoint & newOffset);
@@ -95,5 +110,3 @@ private:
 };
 
 }
-
-#endif // DRAWINGCOLLECTION_H

@@ -237,7 +237,7 @@ bool DefinitionModel::add()
 	const int addRowNum = definitions.size();
 
 	QSet<char> currentLiterals;
-	for (const Definition & def : qAsConst(definitions)) currentLiterals << def.literal;
+    for (const Definition & def : std::as_const(definitions)) currentLiterals << def.literal;
 	char nextChar;
 	if (definitions.empty()) {
 		nextChar = 'A';

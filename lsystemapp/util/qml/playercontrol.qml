@@ -11,8 +11,8 @@ Rectangle {
     property int sizeBorder: 10
     property int sizePlayButton: 30
 
-    property int maxValue: range.maximumValue
-    property int minValue: range.minimumValue
+    property alias maxValue: range.maximumValue
+    property alias minValue: range.minimumValue
     property alias value: range.value
 
     // induces "playingChanged"
@@ -131,40 +131,79 @@ Rectangle {
                     sweepAngle: 360
                 }
             }
+        }
 
-            MouseArea {
-                anchors.fill: parent
-                hoverEnabled: true
+        MouseArea {
+            height: sizeHeight
+            width: shapeSlider.width + 2 * sizeBorder
+            hoverEnabled: true
 
-                onPositionChanged:
-                {
-                    if (pressedButtons & Qt.LeftButton) {
-                        setValueByMouseX(mouseX)
-                    }
-                }
-
-                onClicked:
-                {
-                    // first stop the replayer, then jump to the value
-                    playing = false
+            onPositionChanged:
+            {
+                if (pressedButtons & Qt.LeftButton) {
                     setValueByMouseX(mouseX)
                 }
+            }
 
-                function setValueByMouseX(mouseX)
-                {
-                    value = minValue + (maxValue - minValue) * (mouseX / shapeSlider.width)
-                }
+            onClicked:
+            {
+                // first stop the replayer, then jump to the value
+                playing = false
+                setValueByMouseX(mouseX)
+            }
+
+            function setValueByMouseX(mouseX)
+            {
+                value = minValue + (maxValue - minValue) * ((mouseX - shapeSlider.x) / shapeSlider.width)
             }
         }
 
         SmallButton
         {
             id: playPause
-            yOffsetLabel: 5 // finetuning, UTF play/stop symbols seem not to be centered
             sizeButton: sizePlayButton
             x: shapeSlider.width + 2 * sizeBorder
             y: sizeBorder
-            text: playing ? "⏸" : "⏵"
+            text: ""
+
+            // play icon
+            Shape {
+                ShapePath {
+                    strokeWidth: 1
+                    strokeColor: "black"
+                    fillColor: "black"
+                    startX: 5; startY: 5
+                    PathLine { x: 5; y: 5 }
+                    PathLine { x: 5; y: 25 }
+                    PathLine { x: 20; y: 15 }
+                }
+                visible: !playing;
+            }
+
+            // pause icon
+            Shape {
+                ShapePath {
+                    strokeWidth: 1
+                    strokeColor: "black"
+                    fillColor: "black"
+                    startX: 5; startY: 5
+                    PathLine { x: 5; y: 5 }
+                    PathLine { x: 5; y: 25 }
+                    PathLine { x: 10; y: 25 }
+                    PathLine { x: 10; y: 5 }
+                }
+                ShapePath {
+                    strokeWidth: 1
+                    strokeColor: "black"
+                    fillColor: "black"
+                    startX: 15; startY: 5
+                    PathLine { x: 15; y: 5 }
+                    PathLine { x: 15; y: 25 }
+                    PathLine { x: 20; y: 25 }
+                    PathLine { x: 20; y: 5 }
+                }
+                visible: playing;
+            }
 
             onClicked:
             {

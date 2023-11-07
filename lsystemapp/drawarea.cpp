@@ -31,12 +31,12 @@ void DrawArea::draw(const ui::Drawing & drawing, const QPoint & offset, bool cle
 
 	if (clearAll) {
 		if (drawings.highlightDrawing(0)) {
-			highlightChanged({});
+			emit highlightChanged({});
 		}
 		drawings.clearAll();
 	} else if (clearLast) {
 		if (drawings.getHighlightedDrawingNum() == drawings.getLastDrawingNum() && drawings.highlightDrawing(0)) {
-			highlightChanged({});
+			emit highlightChanged({});
 		}
 		drawings.deleteHighlightedOrLastDrawing();
 	}
@@ -116,6 +116,19 @@ void DrawArea::translateHighlighted(const QPoint & newOffset)
 	}
 }
 
+Drawing * DrawArea::getCurrentDrawing()
+{
+	return drawings.getCurrentDrawing();
+}
+
+void DrawArea::redrawAndUpdate(bool keepContent)
+{
+	drawings.redraw(keepContent);
+	update();
+	if (drawings.getHighlightedDrawingNum() > 0)
+		emit highlightChanged(drawings.getHighlightedDrawResult());
+}
+
 void DrawArea::setBgColor(const QColor & col)
 {
 	drawings.backColor = col;
@@ -171,8 +184,8 @@ void DrawArea::mousePressEvent(QMouseEvent * event)
 
 	if (clickedDrawing > 0 && clickedDrawing == drawings.getMarkedDrawingNum() && event->button() == Qt::MouseButton::LeftButton) {
 		moveMode = MoveState::ReadyForMove;
-		moveStart = QPoint(event->x(), event->y());
-		moveStartOffset = drawings.getDrawingOffset(drawings.getMarkedDrawingNum()) - QPoint(event->x(), event->y());
+		moveStart = event->position().toPoint();
+		moveStartOffset = drawings.getDrawingOffset(drawings.getMarkedDrawingNum()) - event->position().toPoint();
 		setCursor(Qt::SizeAllCursor);
 		cancelEvent = true;
 	} else if (drawings.getMarkedDrawingNum() > 0 && clickedDrawing == 0) {
@@ -185,7 +198,8 @@ void DrawArea::mousePressEvent(QMouseEvent * event)
 	}
 
 	if (!cancelEvent) {
-		emit mouseClick(event->x(), event->y(), event->button(), drawings.getMarkedDrawingNum() > 0);
+		const auto pos = event->position().toPoint();
+		emit mouseClick(pos.x(), pos.y(), event->button(), drawings.getMarkedDrawingNum() > 0);
 	}
 }
 
@@ -211,7 +225,7 @@ void DrawArea::mouseMoveEvent(QMouseEvent * event)
 			setNextUndoRedo(true);
 			moveMode = MoveState::MoveStarted;
 		}
-		QPoint newOffset = moveStartOffset + QPoint(event->x(), event->y());
+		const QPoint newOffset = moveStartOffset + event->position().toPoint();
 		if (drawings.moveDrawing(drawings.getMarkedDrawingNum(), newOffset)) update();
 
 	} else {

@@ -14,7 +14,6 @@ QuickBase::QuickBase(QWidget * parent, const char * qmlSource)
 	setAttribute(Qt::WA_TranslucentBackground);
 	setClearColor(Qt::transparent);
 
-	setAutoFillBackground(true);
 	setResizeMode(QQuickWidget::SizeRootObjectToView);
 	setSource(QUrl(QString::fromUtf8(qmlSource)));
 	selector_ = rootObject();

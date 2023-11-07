@@ -1,6 +1,6 @@
 QT += core widgets gui quick quickwidgets quickcontrols2
 
-CONFIG += c++17
+CONFIG += c++20
 
 SOURCES += \
 	aboutdialog.cpp \
@@ -14,6 +14,7 @@ SOURCES += \
 	drawingcollection.cpp \
 	lsystemui.cpp \
 	main.cpp \
+	segmentanimator.cpp \
 	segmentdrawer.cpp \
 	settingsdialog.cpp \
 	simulator.cpp \
@@ -37,6 +38,7 @@ HEADERS += \
 	drawarea.h \
 	drawingcollection.h \
 	lsystemui.h \
+	segmentanimator.h \
 	segmentdrawer.h \
 	settingsdialog.h \
 	simulator.h \

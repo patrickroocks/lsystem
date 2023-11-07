@@ -1,26 +1,28 @@
 #include "drawingcollection.h"
+
 #include <util/qpointenhance.h>
-#include <QPainter>
 
 using namespace lsystem::common;
 
 namespace lsystem::ui {
 
 Drawing::Drawing(const ExecResult & execResult, const QSharedPointer<MetaData> & metaData)
-	: numSegments(execResult.segments.size())
+	: segments(execResult.segments)
+	, actionColors(execResult.actionColors)
 	, config(metaData->config)
+	, metaData(*metaData)
 {
 	const bool paintLastIter = !execResult.segmentsLastIter.isEmpty() && metaData->lastIterOpacy > 0;
 
 	if (paintLastIter) expandSizeToSegments(execResult.segmentsLastIter, metaData->thickness);
-	expandSizeToSegments(execResult.segments, metaData->thickness);
+	expandSizeToSegments(segments, metaData->thickness);
 
 	const QPoint pSize = botRight - topLeft + QPoint(1, 1);
 	image = QImage(QSize(pSize.x(), pSize.y()), QImage::Format_ARGB32);
 	image.fill(qRgba(0, 0, 0, 0)); // transparent
 
 	if (paintLastIter) drawSegments(execResult.segmentsLastIter, metaData->lastIterOpacy, metaData->thickness, metaData->antiAliasing);
-	drawSegments(execResult.segments, metaData->opacity, metaData->thickness, metaData->antiAliasing);
+	drawSegments(segments, metaData->opacity, metaData->thickness, metaData->antiAliasing);
 }
 
 void Drawing::expandSizeToSegments(const common::LineSegs & segs, double thickness)
@@ -35,26 +37,7 @@ void Drawing::expandSizeToSegments(const common::LineSegs & segs, double thickne
 
 void Drawing::drawSegments(const LineSegs & segs, double opacyFactor, double thickness, bool antiAliasing)
 {
-	QPainter painter(&image);
-	if (antiAliasing) painter.setRenderHint(QPainter::Antialiasing);
-	QPen pen;
-	pen.setWidthF(thickness);
-	pen.setCapStyle(Qt::RoundCap);
-
-	// todo order segments by color for speedup
-	for (const LineSeg & seg : segs) {
-		QColor colorCopy(seg.color);
-		colorCopy.setAlphaF(opacyFactor);
-		pen.setColor(colorCopy);
-
-		painter.setPen(pen);
-
-		if (seg.isPoint()) {
-			painter.drawPoint(seg.pointNegY() - topLeft);
-		} else {
-			painter.drawLine(seg.lineNegY() - topLeft);
-		}
-	}
+	drawSegmentRange(0, segs.size() - 1, opacyFactor, thickness, antiAliasing);
 }
 
 void Drawing::drawToImage(QImage & dstImage, bool isMarked, bool isHighlighted)
@@ -99,6 +82,91 @@ bool Drawing::move(const QPoint & newOffset)
 DrawResult Drawing::toDrawResult()
 {
 	return DrawResult{.topLeft = topLeft + offset, .botRight = botRight + offset, .offset = offset, .drawingNum = num, .config = config};
+}
+
+void Drawing::drawSegmentRange(int numStart, int numEnd, double opacyFactor, double thickness, bool antiAliasing)
+{
+	QPainter painter(&image);
+
+	if (antiAliasing) painter.setRenderHint(QPainter::Antialiasing);
+	QPen pen;
+	pen.setWidthF(thickness);
+	pen.setCapStyle(Qt::RoundCap);
+
+	QVector<QColor> drawColors;
+	for (QColor actionColorCopy : actionColors) {
+		actionColorCopy.setAlphaF(opacyFactor);
+		drawColors.push_back(actionColorCopy);
+	}
+
+	quint8 lastColorNum = 0;
+
+	const auto itStart = segments.cbegin() + numStart;
+	const auto itEnd = segments.cbegin() + numEnd + 1;
+
+	for (auto it = itStart ; it != itEnd ; ++it) {
+		const auto& seg = *it;
+
+		if (seg.colorNum != lastColorNum) {
+			pen.setColor(drawColors.at(seg.colorNum));
+			lastColorNum = seg.colorNum;
+			painter.setPen(pen);   // this is necessary after setColor!
+		}
+
+		if (seg.isPoint()) {
+			painter.drawPoint(seg.pointNegY() - topLeft);
+		} else {
+			painter.drawLine(seg.lineNegY() - topLeft);
+		}
+	}
+
+	animState.curSeg = numEnd;
+}
+
+Drawing::NextStepResult Drawing::nextAnimationStep()
+{
+	bool restarted = false;
+
+	if (!animState.inProgress) {
+		image.fill(qRgba(0, 0, 0, 0)); // transparent
+		animState.curSeg = 0;
+		animState.inProgress = true;
+		restarted = true;
+	} else if (animState.curSeg == segments.size() - 1) {
+		animState.inProgress = false;
+		return NextStepResult::Stopped;
+	} else {
+		animState.curSeg++;
+	}
+
+	drawSegmentRange(animState.curSeg, animState.curSeg, metaData.opacity, metaData.thickness, metaData.antiAliasing);
+
+	return restarted ? NextStepResult::Restart : NextStepResult::Continue;
+}
+
+bool Drawing::goToAnimationStep(int newStep)
+{
+	const int newSegNum = newStep - 1;
+
+	if (newSegNum < 0 || newSegNum >= segments.size())
+		return false;
+
+	if (animState.inProgress) {
+		if (newSegNum > animState.curSeg) {
+			// only draw additional segments
+			drawSegmentRange(animState.curSeg, newSegNum, metaData.opacity, metaData.thickness, metaData.antiAliasing);
+			return true;
+		} else if (newSegNum == animState.curSeg) {
+			return false;
+		}
+	}
+
+	// start from the begin
+	image.fill(qRgba(0, 0, 0, 0)); // transparent
+	drawSegmentRange(0, newSegNum, metaData.opacity, metaData.thickness, metaData.antiAliasing);
+	animState.inProgress = true;
+
+	return true;
 }
 
 void Drawing::updateRect(double minX, double minY, double maxX, double maxY)
@@ -155,12 +223,14 @@ void DrawingCollection::deleteHighlightedOrLastDrawing()
 	}
 }
 
-void DrawingCollection::redraw()
+void DrawingCollection::redraw(bool keepContent)
 {
 	dirty = false;
-	image.fill(backColor);
 
-	for (qint64 drawNum : qAsConst(zIndexToDrawing)) {
+	if (!keepContent)
+		image.fill(backColor);
+
+	for (qint64 drawNum : std::as_const(zIndexToDrawing)) {
 		drawings[drawNum].drawToImage(image, drawNum == markedDrawing, drawNum == highlightedDrawing);
 	}
 }
@@ -205,6 +275,13 @@ QImage & DrawingCollection::getDrawingImage(qint64 drawingNum)
 QImage DrawingCollection::getImage()
 {
 	return image;
+}
+
+Drawing* DrawingCollection::getCurrentDrawing()
+{
+	if (markedDrawing > 0) return &drawings[markedDrawing];
+	if (drawings.isEmpty()) return nullptr;
+	return &drawings.last();
 }
 
 bool DrawingCollection::setMarkedDrawing(qint64 newMarkedDrawing)

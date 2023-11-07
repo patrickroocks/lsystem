@@ -12,7 +12,7 @@ It supports Lindenmayer systems with arbitrary many variables (including helper 
 
 To build lsystem on Ubuntu, you will first need to [install Qt >= 6.5](https://www.qt.io/download-open-source). Moreover you will need to install:
 
-	sudo apt install libxkbcommon-dev libxcb-xinerama0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxkbcommon-x11-0 libxcb-cursor0
+        sudo apt install libxkbcommon-dev libxcb-xinerama0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxkbcommon-x11-0 libxcb-cursor0 libglew-dev
 
 ## Build and run (Ubuntu)
 

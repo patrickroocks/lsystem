@@ -14,7 +14,7 @@ using namespace impl;
 
 void ProcessLiteralAction::expand() const
 {
-	for (const DynAction & act : qAsConst(subActions)) {
+    for (const DynAction & act : std::as_const(subActions)) {
 		simInt.addAction(act.data());
 	}
 }
@@ -28,11 +28,9 @@ void ProcessLiteralAction::exec(State & state) const
 	}
 
 	if (paint) {
-		LineSeg seg;
-		seg.start = lastState;
-		seg.end   = state.cur;
-		seg.color = color;
-		simInt.addSegment(seg);
+		simInt.addSegment(LineSeg {.start = lastState,
+								   .end = state.cur,
+								   .colorNum = colorNum});
 	}
 }
 
@@ -94,13 +92,14 @@ void Simulator::execWithDoubleStackSize(const QSharedPointer<MetaData> & metaDat
 void Simulator::execActionStr()
 {
 	QString actionStr;
-	for (const Action * action : qAsConst(currentActions)) actionStr += print(action);
+    for (const Action * action : std::as_const(currentActions)) actionStr += print(action);
 	emit actionStrReceived(actionStr);
 }
 
 void Simulator::execIterations(const QSharedPointer<MetaData> & metaData)
 {
 	ExecResult res;
+	res.actionColors = actionColors;
 
 	currentActions = {startAction.data()};
 	nextActions.clear();
@@ -134,7 +133,7 @@ bool Simulator::execIter()
 		qSwap(currentActions, nextActions);
 	};
 
-	for (const Action * actPtr : qAsConst(currentActions)) {
+    for (const Action * actPtr : std::as_const(currentActions)) {
 		if (nextActions.size() > curMaxStackSize) {
 			takeNextActions();
 			return false;
@@ -156,7 +155,7 @@ LineSegs Simulator::getSegments()
 	state.d.setX(config.stepSize);
 	initialTurnAct.exec(state);
 
-	for (const Action * act : qAsConst(currentActions)) {
+    for (const Action * act : std::as_const(currentActions)) {
 		act->exec(state);
 	}
 
@@ -180,6 +179,7 @@ void Simulator::addSegment(const LineSeg & seg)
 
 bool Simulator::parseActions(const ConfigSet & newConfig)
 {
+	actionColors.clear();
 	mainActions.clear();
 	startAction = nullptr;
 
@@ -208,19 +208,29 @@ bool Simulator::parseActions(const ConfigSet & newConfig)
 	addAction(scaleEnd);
 
 	// * main actions
+
+	// create dynamic actions, create color map
 	for (const Definition & def : newConfig.definitions) {
 		if (mainActions.contains(def.literal)) {
 			emit errorReceived(printStr("Found duplicate definition for literal '%1'", def.literal));
 			return false;
 		}
 		DynProcessLiteralAction & mainAction = mainActions[def.literal];
-		mainAction = DynProcessLiteralAction::create(*this, def.literal, def.color, def.paint, def.move);
+
+		auto itCol = std::find(actionColors.begin(), actionColors.end(), def.color);
+		if (itCol == actionColors.end()) {
+			actionColors.push_back(def.color);
+			itCol = actionColors.end() - 1;
+		}
+
+		mainAction = DynProcessLiteralAction::create(*this, def.literal, itCol - actionColors.begin(), def.paint, def.move);
 		addAction(mainAction);
 
 		// first action is start action
 		if (!startAction) startAction = mainAction;
 	}
 
+	// compose commands for dynamic action (including links to subactions)
 	for (const Definition & def : newConfig.definitions) {
 		DynProcessLiteralAction literalAction = mainActions[def.literal];
 

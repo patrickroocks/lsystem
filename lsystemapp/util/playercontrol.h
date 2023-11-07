@@ -6,9 +6,11 @@ class PlayerControl : public QQuickWidget
 {
 	Q_OBJECT
 public:
-	explicit PlayerControl(QWidget * parent);
+	explicit PlayerControl(QWidget *parent);
 
-	void setMaxValue(int maxValue);
+	void setValue(int value);
+	void setMaxValueAndValue(int maxValue);
+	void setPlaying(bool playing);
 
 signals:
 	// when the user clicks in the timeline, first raise playPauseChanged(false), i.e., not playing,
@@ -23,4 +25,5 @@ private slots:
 
 private:
 	QQuickItem * control_ = nullptr;
+	bool valueChanging = false;
 };

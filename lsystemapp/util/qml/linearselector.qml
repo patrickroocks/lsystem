@@ -166,7 +166,7 @@ Rectangle
             visible: extensionFactor > 0
             x: sizeWidth - sizeButton - sizeBorder
             y: sizeBorder
-            text: "⨠"
+            text: ">"
             toolTipText: "Raise max value"
             onClicked:
             {
@@ -297,7 +297,6 @@ Rectangle
 
     function setNewValue(newVal, updText)
     {
-        if (newVal > maxValue || newVal < minValue) return false;
         value = newVal;
         if (updText) updateText();
         return true;

@@ -4,10 +4,12 @@
 #include <util/qtcontutils.h>
 
 #include <deque>
+#include <optional>
+#include <chrono>
 
 namespace util {
 
-METHOD_CHECKER(has_to_string, QString, toString,  const)
+METHOD_CHECKER(has_to_string, QString, toString, const)
 
 namespace impl {
 
@@ -39,6 +41,9 @@ inline QString printImpl(const QFileInfo & fileInfo) { return fileInfo.absoluteF
 template<typename T>
 inline QString printImpl(const QFlags<T> & flags) { return QString("0b%1").arg((quint64)flags, 0, 2); }
 
+// * chrono
+inline QString printImpl(const std::chrono::milliseconds & val) { return printImpl(val.count()) + "ms"; }
+
 // * // Forward declarations for nestable type
 
 template<typename T>               QString printImpl(const QSharedPointer<T> & cl);
@@ -55,6 +60,7 @@ template<typename T>               QString printImpl(const std::list<T>     & ls
 template<typename T>               QString printImpl(const std::vector<T>   & vec);
 template<typename... T>            QString printImpl(const std::tuple<T...> & tup);
 template<typename T, typename A>   QString printImpl(const std::deque<T, A> & deq);
+template<typename T>               QString printImpl(const std::optional<T> & val);
 
 // * search for toString
 template<typename T>
@@ -85,6 +91,11 @@ template<typename T>
 QString printImpl(T* cl) { return cl ? impl::printImpl(*cl) : "<null>"; }
 
 inline QString printImpl(std::nullptr_t) { return "<null>"; }
+
+// * optional
+
+template<typename T>
+QString printImpl(const std::optional<T>& val) { return val ? impl::printImpl(*val) : "<none>"; }
 
 // * Containers and complex types implementations
 
