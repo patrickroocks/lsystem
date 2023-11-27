@@ -36,7 +36,7 @@ public:
 	std::optional<DrawResult> getMarkedDrawingResult();
 
 signals:
-	void markingChanged(bool drawingMarked);
+	void markingChanged();
 	void highlightChanged(std::optional<DrawResult>);
 	void mouseClick(int x, int y, Qt::MouseButton button, bool drawingMarked);
 	void enableUndoRedo(bool undoOrRedo);

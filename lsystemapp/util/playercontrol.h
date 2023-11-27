@@ -9,8 +9,11 @@ public:
 	explicit PlayerControl(QWidget *parent);
 
 	void setValue(int value);
-	void setMaxValueAndValue(int maxValue);
+	void setMaxValueAndValue(int maxValue, int value);
 	void setPlaying(bool playing);
+
+	void stashState();
+	void unstashState();
 
 signals:
 	// when the user clicks in the timeline, first raise playPauseChanged(false), i.e., not playing,
@@ -26,4 +29,16 @@ private slots:
 private:
 	QQuickItem * control_ = nullptr;
 	bool valueChanging = false;
+
+	bool curPlaying = false;
+	int curValue = 0;
+	int curMaxValue = 0;
+
+	struct StashedState
+	{
+		bool playing = false;
+		int value = 0;
+	};
+
+	std::optional<StashedState> stashedState;
 };

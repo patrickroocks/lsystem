@@ -24,28 +24,40 @@ printImpl(const T & val) { return QString::number(val); }
 inline QString printImpl(const bool & val) { return val ? "true" : "false"; }
 
 // strings
-inline QString printImpl(const char        & val) { return QString(QChar(val)); }
-inline QString printImpl(const QChar       & val) { return QString(val);        }
-inline QString printImpl(const QString     & val) { return val;                 }
-inline QString printImpl(const QByteArray  & val) { return QString(val);        }
-inline QString printImpl(const char * chars)      { return QString(chars);      }
+inline QString printImpl(const char & val) { return QString(QChar(val)); }
+
+inline QString printImpl(const QChar & val) { return QString(val); }
+
+inline QString printImpl(const QString & val) { return val; }
+
+inline QString printImpl(const QByteArray & val) { return QString(val); }
+
+inline QString printImpl(const char * chars) { return QString(chars); }
 
 // * Qt Types
 inline QString printImpl(const QDateTime & dateTime) { return dateTime.isNull() ? "<nulldate>" : dateTime.toString(Qt::ISODateWithMs); }
-inline QString printImpl(const QUrl      & url)      { return url.toString(); }
-inline QString printImpl(const QPoint    & point)    { return QString("(%1, %2)").arg(point.x()).arg(point.y()); }
-inline QString printImpl(const QPointF   & point)    { return QString("(%1, %2)").arg(point.x()).arg(point.y()); }
+
+inline QString printImpl(const QUrl & url) { return url.toString(); }
+
+inline QString printImpl(const QPoint & point) { return QString("(%1, %2)").arg(point.x()).arg(point.y()); }
+
+inline QString printImpl(const QPointF & point) { return QString("(%1, %2)").arg(point.x()).arg(point.y()); }
+
 inline QString printImpl(const QFileInfo & fileInfo) { return fileInfo.absoluteFilePath(); }
 
 // for flags we use binary encoding as there we see the flags which are set quite easy
 template<typename T>
-inline QString printImpl(const QFlags<T> & flags) { return QString("0b%1").arg((quint64)flags, 0, 2); }
+inline QString printImpl(const QFlags<T> & flags)
+{
+	return QString("0b%1").arg(flags.toInt(), 0, 2);
+}
 
 // * chrono
 inline QString printImpl(const std::chrono::milliseconds & val) { return printImpl(val.count()) + "ms"; }
 
 // * // Forward declarations for nestable type
 
+// clang-format off
 template<typename T>               QString printImpl(const QSharedPointer<T> & cl);
 template<typename T>               QString printImpl(const QScopedPointer<T> & cl);
 template<typename T>               QString printImpl(      T*                  cl);
@@ -61,16 +73,21 @@ template<typename T>               QString printImpl(const std::vector<T>   & ve
 template<typename... T>            QString printImpl(const std::tuple<T...> & tup);
 template<typename T, typename A>   QString printImpl(const std::deque<T, A> & deq);
 template<typename T>               QString printImpl(const std::optional<T> & val);
+// clang-format on
 
 // * search for toString
 template<typename T>
-inline typename std::enable_if_t<has_to_string_v<T> && !std::is_enum_v<T>, QString>
-printImpl(const T & cl) { return cl.toString(); }
+inline typename std::enable_if_t<has_to_string_v<T> && !std::is_enum_v<T>, QString> printImpl(const T & cl)
+{
+	return cl.toString();
+}
 
 // * check if is enum with Q_ENUM macro
 template<typename T>
-inline typename std::enable_if_t<!has_to_string_v<T> && std::is_enum_v<T>, QString>
-printImpl(const T & cl) { return QVariant::fromValue(cl).toString(); }
+inline typename std::enable_if_t<!has_to_string_v<T> && std::is_enum_v<T>, QString> printImpl(const T & cl)
+{
+	return QVariant::fromValue(cl).toString();
+}
 
 // * other classes: assume that () operator is overloaded (std::function, lambda, ...)
 template<typename T>
@@ -82,10 +99,16 @@ printImpl(const T & fun) { return fun(); }
 // * pointer implementations
 
 template<typename T>
-QString printImpl(const QSharedPointer<T> & cl) { return cl ? impl::printImpl(*cl) : "<null>"; }
+QString printImpl(const QSharedPointer<T> & cl)
+{
+	return cl ? impl::printImpl(*cl) : "<null>";
+}
 
 template<typename T>
-QString printImpl(const QScopedPointer<T> & cl) { return cl ? impl::printImpl(*cl) : "<null>"; }
+QString printImpl(const QScopedPointer<T> & cl)
+{
+	return cl ? impl::printImpl(*cl) : "<null>";
+}
 
 template<typename T>
 QString printImpl(T* cl) { return cl ? impl::printImpl(*cl) : "<null>"; }
@@ -172,7 +195,7 @@ QString printImpl(const std::tuple<T...> & tup, integer_sequence<std::size_t, I.
 {
 	QString rv;
 	int ctx[] = { (printTupleImpl(rv, std::get<I>(tup)...), 0), 0 };
-	(void)ctx;
+	static_cast<void>(ctx);
 	return "(" + rv + ")";
 }
 
@@ -194,7 +217,7 @@ static QString printStr(const char * str, const Params & ... params)
 	if constexpr (sizeof...(Params) == 0) {
 		return str;
 	} else {
-		using TupleType = std::tuple<const Params & ...>;
+		using TupleType = std::tuple<const Params &...>;
 		TupleType t = std::forward_as_tuple(params...); // doesn't cause a copy, still a reference!
 
 		constexpr const size_t ts = std::tuple_size<TupleType>::value;
@@ -210,7 +233,8 @@ static QString printStr(const char * str, const Params & ... params)
 				if (ts > 9 && i == 1) {
 					msg += QByteArray(str, (int)(p - str));
 					const qint8 j = *(p+2) - '0';
-					if (j >= 0 && j <= 9 && 10 + j <= (qint8)ts) {
+					if (j >= 0 && j <= 9 && 10 + j <= static_cast<qint8>(ts)) {
+						// clang-format off
 						switch (j) {
 							case 0: msg += print(std::get< 9 < ts ?  9 : 0>(t)); break;
 							case 1: msg += print(std::get<10 < ts ? 10 : 0>(t)); break;
@@ -223,17 +247,21 @@ static QString printStr(const char * str, const Params & ... params)
 							case 8: msg += print(std::get<17 < ts ? 17 : 0>(t)); break;
 							case 9: msg += print(std::get<18 < ts ? 18 : 0>(t)); break;
 						}
-						p += 3; str = p;
+						// clang-format on
+						p += 3;
+						str = p;
 						continue;
 					} else {
 						msg += print(std::get<0>(t));
-						p += 2; str = p;
+						p += 2;
+						str = p;
 						continue;
 					}
-				} else if (i >= 1 && i <= (qint8)ts) {
+				} else if (i >= 1 && i <= static_cast<qint8>(ts)) {
 					msg += QByteArray(str, (int)(p - str));
+					// clang-format off
 					switch (i) {
-						case 1: msg += print(std::get<0             >(t)); break;
+						case 1: msg += print(std::get<         0    >(t)); break;
 						case 2: msg += print(std::get<1 < ts ? 1 : 0>(t)); break;
 						case 3: msg += print(std::get<2 < ts ? 2 : 0>(t)); break;
 						case 4: msg += print(std::get<3 < ts ? 3 : 0>(t)); break;
@@ -243,13 +271,16 @@ static QString printStr(const char * str, const Params & ... params)
 						case 8: msg += print(std::get<7 < ts ? 7 : 0>(t)); break;
 						case 9: msg += print(std::get<8 < ts ? 8 : 0>(t)); break;
 					}
-					p += 2; str = p;
+					// clang-format on
+					p += 2;
+					str = p;
 					continue;
 				}
 			}
 			++p;
 		}
-		if (str != p) msg += QByteArray(str, (int)(p - str));
+		if (str != p)
+			msg += QByteArray(str, (int) (p - str));
 
 		return msg;
 	}

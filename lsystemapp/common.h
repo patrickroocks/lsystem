@@ -23,11 +23,13 @@ struct Definition
 
 inline bool operator==(const Definition & lhs, const Definition & rhs)
 {
+	// clang-format off
 	return     lhs.literal == rhs.literal
 			&& lhs.command == rhs.command
 			&& lhs.color   == rhs.color
 			&& lhs.paint   == rhs.paint
 			&& lhs.move    == rhs.move;
+	// clang-format off
 }
 
 using Definitions = QList<Definition>;
@@ -72,6 +74,7 @@ struct ConfigSet
 	quint32 numIter = 0;
 	double stepSize = 0;
 	bool valid = false;
+	std::optional<int> overrideStackSize;
 };
 
 struct ConfigMap : public QMap<QString, common::ConfigSet>

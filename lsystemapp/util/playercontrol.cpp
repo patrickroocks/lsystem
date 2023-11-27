@@ -27,30 +27,55 @@ PlayerControl::PlayerControl(QWidget * parent)
 void PlayerControl::setValue(int value)
 {
 	valueChanging = true;
+	curValue = value;
 	control_->setProperty("value", value);
 	valueChanging = false;
 }
 
-void PlayerControl::setMaxValueAndValue(int maxValue)
+void PlayerControl::setMaxValueAndValue(int maxValue, int value)
 {
+	curMaxValue = maxValue;
 	control_->setProperty("maxValue", maxValue);
-	setValue(maxValue);
+	setValue(value);
 }
 
 void PlayerControl::setPlaying(bool playing)
 {
+	curPlaying = playing;
 	control_->setProperty("playing", playing);
 }
 
 void PlayerControl::playingChanged()
 {
-	const auto playing = control_->property("playing").toBool();
-	emit playPauseChanged(playing);
+	curPlaying = control_->property("playing").toBool();
+	emit playPauseChanged(curPlaying);
 }
 
 void PlayerControl::valueChanged()
 {
 	if (valueChanging) return;
-	const auto value = control_->property("value").toInt();
-	emit playerValueChanged(value);
+	curValue = control_->property("value").toInt();
+	emit playerValueChanged(curValue);
+}
+
+void PlayerControl::stashState()
+{
+	stashedState = StashedState{.playing = curPlaying, .value = curValue};
+	setPlaying(false);
+
+	emit playPauseChanged(curPlaying);
+	emit playerValueChanged(curValue);
+}
+
+void PlayerControl::unstashState()
+{
+	if (!stashedState) return;
+
+	if (stashedState->value <= curMaxValue) setValue(stashedState->value);
+	setPlaying(stashedState->playing);
+
+	emit playPauseChanged(curPlaying);
+	emit playerValueChanged(curValue);
+
+	stashedState = {};
 }

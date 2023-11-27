@@ -81,7 +81,13 @@ bool Drawing::move(const QPoint & newOffset)
 
 DrawResult Drawing::toDrawResult()
 {
-	return DrawResult{.topLeft = topLeft + offset, .botRight = botRight + offset, .offset = offset, .drawingNum = num, .config = config};
+	return DrawResult{.topLeft = topLeft + offset,
+					  .botRight = botRight + offset,
+					  .offset = offset,
+					  .drawingNum = num,
+					  .segmentsCount = static_cast<int>(segments.count()),
+					  .animStep = animState.inProgress ? animState.curSeg + 1 : static_cast<int>(segments.count()),
+					  .config = config};
 }
 
 void Drawing::drawSegmentRange(int numStart, int numEnd, double opacyFactor, double thickness, bool antiAliasing)
@@ -99,15 +105,15 @@ void Drawing::drawSegmentRange(int numStart, int numEnd, double opacyFactor, dou
 		drawColors.push_back(actionColorCopy);
 	}
 
-	quint8 lastColorNum = 0;
+	int lastColorNum = -1;
 
 	const auto itStart = segments.cbegin() + numStart;
 	const auto itEnd = segments.cbegin() + numEnd + 1;
 
-	for (auto it = itStart ; it != itEnd ; ++it) {
-		const auto& seg = *it;
+	for (auto it = itStart; it != itEnd; ++it) {
+		const auto & seg = *it;
 
-		if (seg.colorNum != lastColorNum) {
+		if (static_cast<int>(seg.colorNum) != lastColorNum) {
 			pen.setColor(drawColors.at(seg.colorNum));
 			lastColorNum = seg.colorNum;
 			painter.setPen(pen);   // this is necessary after setColor!
@@ -231,7 +237,7 @@ void DrawingCollection::redraw(bool keepContent)
 		image.fill(backColor);
 
 	for (qint64 drawNum : std::as_const(zIndexToDrawing)) {
-		drawings[drawNum].drawToImage(image, drawNum == markedDrawing, drawNum == highlightedDrawing);
+		drawings[drawNum].drawToImage(image, !keepContent && drawNum == markedDrawing, !keepContent && drawNum == highlightedDrawing);
 	}
 }
 

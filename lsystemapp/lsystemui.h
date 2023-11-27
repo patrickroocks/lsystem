@@ -68,7 +68,7 @@ private slots:
 
 signals:
 	void simulatorExecActionStr();
-	void simulatorExec(const lsystem::common::ConfigSet & newConfig, const QSharedPointer<lsystem::common::MetaData> & metaData);
+	void simulatorExec(const QSharedPointer<lsystem::common::MetaData> &metaData);
 	void simulatorExecDoubleStackSize(const QSharedPointer<lsystem::common::MetaData> & metaData);
 	void startDraw(const lsystem::common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData);
 
@@ -89,6 +89,7 @@ private slots:
 	// from drawarea
 	void enableUndoRedo(bool undoOrRedo);
 	void highlightDrawing(std::optional<lsystem::ui::DrawResult> drawResult);
+	void markDrawing();
 	void processDrawAction(const QString & link);
 
 	// from different other components

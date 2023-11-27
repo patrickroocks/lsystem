@@ -166,43 +166,43 @@ Rectangle {
             y: sizeBorder
             text: ""
 
-            // play icon
-            Shape {
-                ShapePath {
-                    strokeWidth: 1
-                    strokeColor: "black"
-                    fillColor: "black"
-                    startX: 5; startY: 5
-                    PathLine { x: 5; y: 5 }
-                    PathLine { x: 5; y: 25 }
-                    PathLine { x: 20; y: 15 }
-                }
-                visible: !playing;
-            }
+            // play/pause icon
+            Item {
+                x: 8
+                y: 5
 
-            // pause icon
-            Shape {
-                ShapePath {
-                    strokeWidth: 1
-                    strokeColor: "black"
-                    fillColor: "black"
-                    startX: 5; startY: 5
-                    PathLine { x: 5; y: 5 }
-                    PathLine { x: 5; y: 25 }
-                    PathLine { x: 10; y: 25 }
-                    PathLine { x: 10; y: 5 }
+                // play icon
+                Shape {
+                    ShapePath {
+                        strokeWidth: 1
+                        strokeColor: "black"
+                        fillColor: "black"
+                        startX: 0; startY: 0
+                        PathLine { x: 0; y: 0 }
+                        PathLine { x: 0; y: 20 }
+                        PathLine { x: 15; y: 10 }
+                    }
+                    visible: !playing;
                 }
-                ShapePath {
-                    strokeWidth: 1
-                    strokeColor: "black"
-                    fillColor: "black"
-                    startX: 15; startY: 5
-                    PathLine { x: 15; y: 5 }
-                    PathLine { x: 15; y: 25 }
-                    PathLine { x: 20; y: 25 }
-                    PathLine { x: 20; y: 5 }
+
+                // pause icon
+                Shape {
+                    Rectangle {
+                        x: 0
+                        y: 0
+                        width: 6
+                        height: 20
+                        color: "black"
+                    }
+                    Rectangle {
+                        x: 9
+                        y: 0
+                        width: 6
+                        height: 20
+                        color: "black"
+                    }
+                    visible: playing;
                 }
-                visible: playing;
             }
 
             onClicked:

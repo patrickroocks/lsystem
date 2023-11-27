@@ -13,19 +13,19 @@
 
 #define PROCESS_TESTRESULT(tr, file, line) \
 	if (!tr.success) { \
-		tr.message = QString("%1\n   Loc: [%2(%3)]").arg(tr.message.replace("\n", "\n   ")).arg(file).arg(line); \
+		tr.message = QString("%1\n   Loc: [%2(%3)]").arg(tr.message.replace("\n", "\n   "), QString{file}, QString::number(line)); \
 		return tr; \
 	}
 
 #define CHECK_VERIFY(statement) \
 	{ \
-		auto tr = util::test::impl::verify((bool)statement, #statement); \
+		auto tr = util::test::impl::verify(static_cast<bool>(statement), #statement); \
 		PROCESS_TESTRESULT(tr, __FILE__, __LINE__) \
 	}
 
 #define CHECK_VERIFY2(statement, description) \
 	{ \
-		auto tr = util::test::impl::verify((bool)statement, #statement, description); \
+		auto tr = util::test::impl::verify(static_cast<bool>(statement), #statement, description); \
 		PROCESS_TESTRESULT(tr, __FILE__, __LINE__) \
 	}
 
@@ -136,11 +136,10 @@ template<typename T1, typename T2>
 TestResult generalCompare(const T1 & lhs, const T2 & rhs, const char * lhsName, const char * rhsName, const QString & infoStr = QString())
 {
 	TestResult rv;
-	rv.success = (lhs == (T1)rhs && (T2)lhs == rhs);
+	rv.success = (lhs == static_cast<T1>(rhs) && static_cast<T2>(lhs) == rhs);
 	if (!rv.success) {
-		rv.message = "Compared values are not the same: "
-				+ (infoStr.isEmpty() ? QString() : infoStr)
-				+ generateCompareFail(lhs, rhs, lhsName, rhsName);
+		rv.message = "Compared values are not the same: " + (infoStr.isEmpty() ? QString() : infoStr)
+					 + generateCompareFail(lhs, rhs, lhsName, rhsName);
 	}
 	return rv;
 }
@@ -149,15 +148,20 @@ template<typename T>
 TestResult compareByAddress(const QSharedPointer<T> & lhs, const QSharedPointer<T> & rhs, const char * lhsName, const char * rhsName)
 {
 	TestResult rv;
-	rv.success = ((uintptr_t)lhs.data() == (uintptr_t)rhs.data());
-	if (!rv.success) rv.message = "Compared pointer addresses are not the same: " + generateCompareFail((uintptr_t)lhs.data(), (uintptr_t)rhs.data(), lhsName, rhsName);
+	rv.success = (reinterpret_cast<uintptr_t>(lhs.data()) == reinterpret_cast<uintptr_t>(rhs.data()));
+	if (!rv.success)
+		rv.message = "Compared pointer addresses are not the same: "
+					 + generateCompareFail(reinterpret_cast<uintptr_t>(lhs.data()),
+										   reinterpret_cast<uintptr_t>(rhs.data()),
+										   lhsName,
+										   rhsName);
 	return rv;
 }
 
 template<typename T1>
 TestResult generalCompare(const T1 & lhs, const char * rhs, const char * lhsName, const char * rhsName, const QString & infoStr = QString())
 {
-	return generalCompare(lhs, T1(rhs), lhsName, rhsName, infoStr);
+	return generalCompare(lhs, static_cast<T1>(rhs), lhsName, rhsName, infoStr);
 }
 
 template<typename T>
@@ -169,7 +173,7 @@ TestResult generalCompareSameType(const T & lhs, const T & rhs, const char * lhs
 template<typename T1, typename T2>
 TestResult generalCompareCastToLeft(const T1 & lhs, const T2 & rhs, const char * lhsName, const char * rhsName, const QString & infoStr = QString())
 {
-	return generalCompare<T1,T1>(lhs, (T1)rhs, lhsName, rhsName, infoStr);
+	return generalCompare<T1, T1>(lhs, static_cast<T1>(rhs), lhsName, rhsName, infoStr);
 }
 
 template<typename T1, typename T2, typename T3>
@@ -257,16 +261,16 @@ TestResult setCompare(const QSet<T> & lhs, const QSet<T> & rhs,
 	rv.success = (lhs == rhs);
 	if (!rv.success) {
 		QString & msg = rv.message;
-		msg = QString("\n   Sets '%1' and '%2' are different!\n").arg(lhsName).arg(rhsName);
+		msg = QString("\n   Sets '%1' and '%2' are different!\n").arg(lhsName, rhsName);
 		if (rhs.contains(lhs)) {
-			msg += QString("   The set '%1' is contained in '%2'\n").arg(lhsName).arg(rhsName);
+			msg += QString("   The set '%1' is contained in '%2'\n").arg(lhsName, rhsName);
 		} else {
-			msg += QString("   Diff '%1' - '%2' is: {%3}\n").arg(lhsName).arg(rhsName).arg(print(lhs - rhs));
+			msg += QString("   Diff '%1' - '%2' is: {%3}\n").arg(lhsName, rhsName, print(lhs - rhs));
 		}
 		if (lhs.contains(rhs)) {
-			msg += QString("   The set '%1' is contained in '%2'\n").arg(rhsName).arg(lhsName);
+			msg += QString("   The set '%1' is contained in '%2'\n").arg(rhsName, lhsName);
 		} else {
-			msg += QString("   Diff '%1' - '%2' is: {%3}\n").arg(rhsName).arg(lhsName).arg(print(rhs - lhs));
+			msg += QString("   Diff '%1' - '%2' is: {%3}\n").arg(rhsName, lhsName, print(rhs - lhs));
 		}
 		if (showTime) msg += impl::getTime();
 	}
@@ -304,9 +308,9 @@ TestResult setContains(const T & elem, const QSet<T> & set,
 	TestResult rv;
 	rv.success = set.contains(elem);
 	if (!rv.success) {
-		QString msg = "Searched element is not contained in set:\n"
-				+ impl::getTestDiff({impl::TestExpr("Exp. elem.", elemName, print(elem)),
-									 impl::TestExpr("Actual set", setName,  print(set))});
+		rv.message = "Searched element is not contained in set:\n"
+					 + impl::getTestDiff(
+						 {impl::TestExpr("Exp. elem.", elemName, print(elem)), impl::TestExpr("Actual set", setName, print(set))});
 	}
 	return rv;
 }
@@ -314,7 +318,7 @@ TestResult setContains(const T & elem, const QSet<T> & set,
 template<typename T1, typename T2>
 TestResult setContainsCastToSet(const T1 & elem, const QSet<T2> & set, const char * elemName, const char * setName)
 {
-	return setContains((T2)elem, set, elemName, setName);
+	return setContains(static_cast<T2>(elem), set, elemName, setName);
 }
 
 } // namespace util::test::impl

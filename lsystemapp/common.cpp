@@ -1,7 +1,7 @@
 #include "common.h"
 
-#include <util/qtcontutils.h>
 #include <util/print.h>
+#include <util/qtcontutils.h>
 
 using namespace util;
 
@@ -13,7 +13,7 @@ Definition::Definition(const QJsonObject & obj)
 	literal = literalStr.size() == 1 ? literalStr.data()[0] : '\0';
 	command = obj["command"].toString();
 	color   = obj["color"].toInt();
-	paint   = obj["paint"].toBool();
+	paint = obj["paint"].toBool();
 	move    = obj["move"].toBool();
 }
 
@@ -61,12 +61,11 @@ QPointF LineSeg::pointNegY() const
 // ---------------------------------------------------------------------------
 
 ConfigSet::ConfigSet(const QJsonObject & obj)
-	: turn({     obj["turnLeft"]  .toDouble(),
-				 obj["turnRight"] .toDouble()})
-	, scaling(   obj["scaling"]   .toDouble())
+	: turn({obj["turnLeft"].toDouble(), obj["turnRight"].toDouble()})
+	, scaling(obj["scaling"].toDouble())
 	, startAngle(obj["startAngle"].toDouble())
-	, numIter(   obj["numIter"]   .toInt())
-	, stepSize(  obj["stepSize"]  .toDouble())
+	, numIter(obj["numIter"].toInt())
+	, stepSize(obj["stepSize"].toDouble())
 {
 	for (const auto & jsonDef : obj["definitions"].toArray()) {
 		definitions << Definition(jsonDef.toObject());
@@ -77,12 +76,12 @@ QJsonObject ConfigSet::toJson() const
 {
 	QJsonObject rv;
 
-	rv["turnLeft"]   = turn.left;
-	rv["turnRight"]  = turn.right;
-	rv["scaling"]    = scaling;
+	rv["turnLeft"] = turn.left;
+	rv["turnRight"] = turn.right;
+	rv["scaling"] = scaling;
 	rv["startAngle"] = startAngle;
-	rv["stepSize"]   = stepSize;
-	rv["numIter"]    = (int)numIter;
+	rv["stepSize"] = stepSize;
+	rv["numIter"] = static_cast<int>(numIter);
 
 	QJsonArray jsonDefinitions;
 	for (const Definition & def : definitions) {
@@ -129,7 +128,7 @@ AppSettings::AppSettings(const QJsonObject & obj)
 QJsonObject AppSettings::toJson() const
 {
 	QJsonObject rv;
-	rv["maxStackSize"] = (int)maxStackSize;
+	rv["maxStackSize"] = static_cast<int>(maxStackSize);
 	return rv;
 }
 
@@ -138,7 +137,12 @@ QJsonObject AppSettings::toJson() const
 QString MetaData::toString() const
 {
 	return printStr("MetaData(showLastIter: %1, lastIterOpacy: %2, thickness: %3, opacity: %4, antiAliasing: %5, animLatency: %6)",
-			showLastIter, lastIterOpacy, thickness, opacity, antiAliasing, animLatency);
+					showLastIter,
+					lastIterOpacy,
+					thickness,
+					opacity,
+					antiAliasing,
+					animLatency);
 }
 
 

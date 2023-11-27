@@ -67,9 +67,11 @@ double TurnAction::roundNearWhole(double val)
 
 // -------------------------------------------------------------------------------------
 
-void Simulator::execAndExpand(const common::ConfigSet & newConfig, const QSharedPointer<MetaData> & metaData)
+void Simulator::execAndExpand(const QSharedPointer<MetaData> & metaData)
 {
-	curMaxStackSize = maxStackSize;
+	const common::ConfigSet & newConfig = metaData->config;
+
+	curMaxStackSize = newConfig.overrideStackSize ? *newConfig.overrideStackSize : maxStackSize;
 
 	if (!(validConfig && expansionEqual(newConfig))) {
 		validConfig = parseActions(newConfig);
@@ -83,16 +85,11 @@ void Simulator::execAndExpand(const common::ConfigSet & newConfig, const QShared
 	execIterations(metaData);
 }
 
-void Simulator::execWithDoubleStackSize(const QSharedPointer<MetaData> & metaData)
-{
-	curMaxStackSize *= 2;
-	execIterations(metaData);
-}
-
 void Simulator::execActionStr()
 {
 	QString actionStr;
-    for (const Action * action : std::as_const(currentActions)) actionStr += print(action);
+	for (const Action * action : std::as_const(currentActions))
+		actionStr += print(action);
 	emit actionStrReceived(actionStr);
 }
 

@@ -32,15 +32,15 @@
 	template<typename C> \
 	inline constexpr bool CONCAT(name, _v) = name<C>::value;
 
-#define UNUSED1(x) (void)(x)
-#define UNUSED2(x,y) (void)(x),(void)(y)
-#define UNUSED3(x,y,z) (void)(x),(void)(y),(void)(z)
-#define UNUSED4(a,x,y,z) (void)(a),(void)(x),(void)(y),(void)(z)
-#define UNUSED5(a,b,x,y,z) (void)(a),(void)(b),(void)(x),(void)(y),(void)(z)
-#define UNUSED6(a,b,c,x,y,z) (void)(a),(void)(b),(void)(c),(void)(x),(void)(y),(void)(z)
-#define VA_NUM_ARGS_IMPL(_1,_2,_3,_4,_5,_6,N,...) N
+#define UNUSED1(x) (void) (x)
+#define UNUSED2(x, y) (void) (x), (void) (y)
+#define UNUSED3(x, y, z) (void) (x), (void) (y), (void) (z)
+#define UNUSED4(a, x, y, z) (void) (a), (void) (x), (void) (y), (void) (z)
+#define UNUSED5(a, b, x, y, z) (void) (a), (void) (b), (void) (x), (void) (y), (void) (z)
+#define UNUSED6(a, b, c, x, y, z) (void) (a), (void) (b), (void) (c), (void) (x), (void) (y), (void) (z)
+#define VA_NUM_ARGS_IMPL(_1, _2, _3, _4, _5, _6, N, ...) N
 #define VA_NUM_ARGS(...) VA_NUM_ARGS_IMPL(__VA_ARGS__, 6, 5, 4, 3, 2, 1)
-#define ALL_UNUSED_IMPL_(nargs) UNUSED ## nargs
+#define ALL_UNUSED_IMPL_(nargs) UNUSED##nargs
 #define ALL_UNUSED_IMPL(nargs) ALL_UNUSED_IMPL_(nargs)
 #define ALL_UNUSED(...) ALL_UNUSED_IMPL(VA_NUM_ARGS(__VA_ARGS__))(__VA_ARGS__);
 
@@ -62,7 +62,7 @@ template<typename T>
 T & ref(QSharedPointer<T> & val) { return *val; }
 
 #define ENUM_OR(type) \
-	inline type operator| (type a, type b) { return (type)((int)a | (int)b); }
+	inline type operator|(type a, type b) { return static_cast<type>(static_cast<int>(a) | static_cast<int>(b)); }
 
 inline void quitAndWait(const QList<QThread *> threads)
 {
@@ -73,10 +73,9 @@ inline void quitAndWait(const QList<QThread *> threads)
 inline QString formatFixed(double val, int maxDigits)
 {
 	QString numStr = QString::number(val, 'f', maxDigits); // 2 digits after dec point
-	if (numStr.right(2) == "00") numStr = numStr.left(numStr.length() - 3); // remove ".00" (or ",00")
+	if (numStr.right(2) == "00") numStr = numStr.left(numStr.length() - 3);		// remove ".00" (or ",00")
 	else if (numStr.right(1) == "0") numStr = numStr.left(numStr.length() - 1); // remove one trailing 0, keep comma
 	return numStr;
 }
 
-}
-
+} // namespace util

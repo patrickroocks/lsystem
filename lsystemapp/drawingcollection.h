@@ -15,6 +15,8 @@ struct DrawResult
 	QPoint botRight;
 	QPoint offset;
 	qint64 drawingNum = 0;
+	int segmentsCount = 0;
+	int animStep = 0;
 	lsystem::common::ConfigSet config;
 };
 

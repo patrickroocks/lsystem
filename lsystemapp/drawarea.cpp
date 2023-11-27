@@ -193,7 +193,7 @@ void DrawArea::mousePressEvent(QMouseEvent * event)
 	}
 
 	if (drawings.setMarkedDrawing(clickedDrawing)) {
-		emit markingChanged(drawings.getMarkedDrawingNum() > 0);
+		emit markingChanged();
 		update();
 	}
 
