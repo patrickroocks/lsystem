@@ -26,6 +26,7 @@ PlayerControl::PlayerControl(QWidget * parent)
 
 void PlayerControl::setValue(int value)
 {
+	if (value == curValue) return;
 	valueChanging = true;
 	curValue = value;
 	control_->setProperty("value", value);
@@ -41,12 +42,16 @@ void PlayerControl::setMaxValueAndValue(int maxValue, int value)
 
 void PlayerControl::setPlaying(bool playing)
 {
+	if (playing == curPlaying) return;
+	valueChanging = true;
 	curPlaying = playing;
 	control_->setProperty("playing", playing);
+	valueChanging = false;
 }
 
 void PlayerControl::playingChanged()
 {
+	if (valueChanging) return;
 	curPlaying = control_->property("playing").toBool();
 	emit playPauseChanged(curPlaying);
 }
@@ -74,8 +79,8 @@ void PlayerControl::unstashState()
 	if (stashedState->value <= curMaxValue) setValue(stashedState->value);
 	setPlaying(stashedState->playing);
 
-	emit playPauseChanged(curPlaying);
 	emit playerValueChanged(curValue);
+	emit playPauseChanged(curPlaying);
 
 	stashedState = {};
 }

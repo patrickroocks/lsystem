@@ -129,50 +129,62 @@ void Drawing::drawSegmentRange(int numStart, int numEnd, double opacyFactor, dou
 	animState.curSeg = numEnd;
 }
 
-Drawing::NextStepResult Drawing::nextAnimationStep()
+AnimatorResult Drawing::newAnimationStep(int step, bool relativeStep)
 {
 	bool restarted = false;
+	const int lastStep = animState.curSeg + 1;
+	int newStep = 0;
 
 	if (!animState.inProgress) {
-		image.fill(qRgba(0, 0, 0, 0)); // transparent
-		animState.curSeg = 0;
-		animState.inProgress = true;
+		// Start from begin
+		newStep = relativeStep ? 1 : step;
 		restarted = true;
-	} else if (animState.curSeg == segments.size() - 1) {
-		animState.inProgress = false;
-		return NextStepResult::Stopped;
+		animState.inProgress = true;
+
 	} else {
-		animState.curSeg++;
-	}
+		newStep = relativeStep ? lastStep + step : step;
 
-	drawSegmentRange(animState.curSeg, animState.curSeg, metaData.opacity, metaData.thickness, metaData.antiAliasing);
-
-	return restarted ? NextStepResult::Restart : NextStepResult::Continue;
-}
-
-bool Drawing::goToAnimationStep(int newStep)
-{
-	const int newSegNum = newStep - 1;
-
-	if (newSegNum < 0 || newSegNum >= segments.size())
-		return false;
-
-	if (animState.inProgress) {
-		if (newSegNum > animState.curSeg) {
-			// only draw additional segments
-			drawSegmentRange(animState.curSeg, newSegNum, metaData.opacity, metaData.thickness, metaData.antiAliasing);
-			return true;
-		} else if (newSegNum == animState.curSeg) {
-			return false;
+		if (newStep == lastStep) {
+			return AnimatorResult{.nextStepResult = AnimatorResult::NextStepResult::Continue, .step = newStep};
 		}
 	}
 
-	// start from the begin
-	image.fill(qRgba(0, 0, 0, 0)); // transparent
-	drawSegmentRange(0, newSegNum, metaData.opacity, metaData.thickness, metaData.antiAliasing);
-	animState.inProgress = true;
+	if (newStep < lastStep) restarted = true;
 
-	return true;
+	const int maxStep = segments.size();
+
+	bool stopped = false;
+	if (newStep >= maxStep) {
+		stopped = true;
+		newStep = maxStep;
+	}
+
+	if (restarted) image.fill(qRgba(0, 0, 0, 0)); // transparent
+
+	if (stopped) animState.inProgress = false;
+
+	// If not restarted, we only draw the additional segments.
+	const int newSeg = newStep - 1;
+	const int firstSegToDraw = restarted ? 0 : animState.curSeg;
+	// This runs in the same thread as the main UI. It would be difficult to parallelize this,
+	// as we would have to wait for the drawing to be completed anyway before we could refresh the DrawArea widget.
+	// The widget itself has to run in the same thread as the main UI (widgets are not allowed to be in a own thread in Qt).
+	drawSegmentRange(firstSegToDraw, newSeg, metaData.opacity, metaData.thickness, metaData.antiAliasing);
+
+	animState.curSeg = newSeg;
+
+	AnimatorResult rv;
+	if (stopped) {
+		rv.nextStepResult = AnimatorResult::NextStepResult::Stopped;
+	} else if (restarted) {
+		rv.nextStepResult = AnimatorResult::NextStepResult::Restart;
+	} else {
+		rv.nextStepResult = AnimatorResult::NextStepResult::Continue;
+	}
+
+	rv.step = newStep;
+
+	return rv;
 }
 
 void Drawing::updateRect(double minX, double minY, double maxX, double maxY)

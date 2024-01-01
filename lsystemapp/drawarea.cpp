@@ -125,8 +125,9 @@ void DrawArea::redrawAndUpdate(bool keepContent)
 {
 	drawings.redraw(keepContent);
 	update();
-	if (drawings.getHighlightedDrawingNum() > 0)
+	if (!keepContent && drawings.getHighlightedDrawingNum() > 0) {
 		emit highlightChanged(drawings.getHighlightedDrawResult());
+	}
 }
 
 void DrawArea::setBgColor(const QColor & col)
@@ -154,6 +155,16 @@ std::optional<DrawResult> DrawArea::getMarkedDrawingResult()
 	return drawings.getMarkedDrawResult();
 }
 
+AnimatorResult DrawArea::newAnimationStep(int step, bool relativeStep)
+{
+	auto * currentDrawing = getCurrentDrawing();
+	if (!currentDrawing) return AnimatorResult{.nextStepResult = AnimatorResult::NextStepResult::Stopped};
+
+	const auto res = currentDrawing->newAnimationStep(step, relativeStep);
+	redrawAndUpdate(res.nextStepResult != AnimatorResult::NextStepResult::Restart);
+	return res;
+}
+
 void DrawArea::paintEvent(QPaintEvent * event)
 {
 	QPainter painter(this);
@@ -165,7 +176,7 @@ void DrawArea::resizeEvent(QResizeEvent * event)
 {
 	QImage image = drawings.getImage();
 	if (width() > image.width() || height() > image.height()) {
-		// avoid always resizing, wehen the window size is changed
+		// avoid always resizing, when the window size is changed
 		int newWidth = qMax(width() + 128, image.width());
 		int newHeight = qMax(height() + 128, image.height());
 		const QSize newSize(newWidth, newHeight);
@@ -251,5 +262,4 @@ void DrawArea::setNextUndoRedo(bool undoOrRedo)
 	nextUndoOrRedo = undoOrRedo;
 	emit enableUndoRedo(nextUndoOrRedo);
 }
-
-}
+} // namespace lsystem::ui

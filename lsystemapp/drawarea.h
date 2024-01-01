@@ -1,13 +1,11 @@
 #pragma once
 
-#include <drawingcollection.h>
 #include <common.h>
+#include <drawingcollection.h>
 
 #include <QWidget>
 
 namespace lsystem::ui {
-
-class Drawing;
 
 class DrawArea : public QWidget
 {
@@ -25,7 +23,7 @@ public:
 	void sendToFrontMarked();
 	void sendToBackMarked();
 	void translateHighlighted(const QPoint & newOffset);
-	Drawing* getCurrentDrawing();
+	Drawing * getCurrentDrawing();
 
 	void redrawAndUpdate(bool keepContent = false);
 
@@ -34,6 +32,9 @@ public:
 
 	std::optional<QPoint> getLastOffset() const;
 	std::optional<DrawResult> getMarkedDrawingResult();
+
+public slots:
+	common::AnimatorResult newAnimationStep(int step, bool relativeStep);
 
 signals:
 	void markingChanged();

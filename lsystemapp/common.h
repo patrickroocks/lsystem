@@ -7,6 +7,21 @@
 
 namespace lsystem::common {
 
+class AnimatorResultStructs : public QObject
+{
+	Q_OBJECT
+public:
+	enum class NextStepResult { Stopped, Restart, Continue };
+	Q_ENUM(NextStepResult)
+};
+
+struct AnimatorResult
+{
+	using NextStepResult = AnimatorResultStructs::NextStepResult;
+	NextStepResult nextStepResult;
+	int step = 0;
+};
+
 struct Definition
 {
 	Definition() = default;
@@ -153,6 +168,8 @@ inline void registerCommonTypes()
 	qRegisterMetaType<ExecResult>("common::ExecResult");
 	qRegisterMetaType<LineSegs>("lsystem::common::LineSegs");
 	qRegisterMetaType<LineSegs>("common::LineSegs");
+	qRegisterMetaType<AnimatorResult>("common::AnimatorResult");
+	qRegisterMetaType<AnimatorResult>("lsystem::common::AnimatorResult");
 }
 
 }

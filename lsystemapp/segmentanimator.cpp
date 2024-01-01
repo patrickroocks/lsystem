@@ -2,11 +2,12 @@
 
 #include <drawarea.h>
 
+using namespace lsystem::common;
+
 namespace lsystem {
 
-SegmentAnimator::SegmentAnimator(ui::DrawArea * drawArea)
-	: drawArea(drawArea),
-	  drawTimer(this)
+SegmentAnimator::SegmentAnimator()
+	: drawTimer(this)
 {
 	connect(&drawTimer, &QTimer::timeout, this, &SegmentAnimator::run);
 	drawTimer.setSingleShot(true);
@@ -30,20 +31,17 @@ void SegmentAnimator::stopAnimate()
 
 void SegmentAnimator::run()
 {
-	using NextStepResult = ui::Drawing::NextStepResult;
-	const NextStepResult result = drawArea->getCurrentDrawing()->nextAnimationStep();
-	const bool stopped = result == NextStepResult::Stopped;
-	const bool keepContent = result == NextStepResult::Continue;
-	drawArea->redrawAndUpdate(keepContent);
-	emit newAnimationStep(drawArea->getCurrentDrawing()->animState.curSeg + 1, stopped);
-	if (!stopped)
-		drawTimer.start(latencyMs);
+	const auto startOfRun = QTime::currentTime();
+
+	const auto res = emit newAnimationStep(1, true);
+
+	const bool stopped = res.nextStepResult == AnimatorResult::NextStepResult::Stopped;
+	if (!stopped) {
+		const int reaminingLatencyMs = qMax(0, latencyMs - startOfRun.msecsTo(QTime::currentTime()));
+		drawTimer.start(reaminingLatencyMs);
+	}
 }
 
-void SegmentAnimator::goToAnimationStep(int step)
-{
-	if (drawArea->getCurrentDrawing()->goToAnimationStep(step))
-		drawArea->redrawAndUpdate();
-}
+void SegmentAnimator::goToAnimationStep(int step) { emit newAnimationStep(step, false); }
 
 } // namespace lsystem

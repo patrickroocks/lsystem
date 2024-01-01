@@ -1,5 +1,7 @@
 #pragma once
 
+#include <common.h>
+
 #include <QObject>
 #include <QTimer>
 
@@ -10,12 +12,11 @@ class DrawArea;
 class Drawing;
 };
 
-// Animator has to run in own thread
 class SegmentAnimator : public QObject
 {
 	Q_OBJECT
 public:
-	SegmentAnimator(ui::DrawArea* drawArea);
+	SegmentAnimator();
 
 public slots:
 	void startAnimateCurrentDrawing();
@@ -24,13 +25,13 @@ public slots:
 	void goToAnimationStep(int step);
 
 signals:
-	void newAnimationStep(int step, bool animationDone);
+	// We need the full namespace such that the Qt type system finds the type.
+	lsystem::common::AnimatorResult newAnimationStep(int step, bool relativeStep);
 
 private:
 	void run();
 
 private:
-	ui::DrawArea* const drawArea;
 	QTimer drawTimer;
 	int latencyMs = 500;
 };

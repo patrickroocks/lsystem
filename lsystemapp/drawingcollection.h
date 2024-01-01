@@ -31,10 +31,7 @@ public:
 	bool move(const QPoint & newOffset);
 	DrawResult toDrawResult();
 
-	enum class NextStepResult { Stopped, Restart, Continue };
-
-	NextStepResult nextAnimationStep();
-	bool goToAnimationStep(int newStep);
+	common::AnimatorResult newAnimationStep(int step, bool relativeStep);
 
 public:
 	qint64 zIndex = 0;

@@ -88,6 +88,7 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(&defModel, &DefinitionModel::showError, this, &LSystemUi::showErrorInUi);
 	connect(&defModel, &DefinitionModel::edited, this, &LSystemUi::configLiveEdit);
 
+	// DrawArea is a widget and can't be moved to a new thread
 	drawArea.reset(new DrawArea(ui->wdgOut));
 	drawArea->setMouseTracking(true); // for mouse move event
 	connect(drawArea.data(), &DrawArea::mouseClick, this, &LSystemUi::drawAreaClick);
@@ -152,9 +153,8 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(&segDrawer, &SegmentDrawer::drawDone, this, &LSystemUi::drawDone);
 	segDrawerThread.start();
 
-	// Segment animator
-	segAnimator.reset(new SegmentAnimator(drawArea.get()));
-	segAnimator->moveToThread(&segAnimatorThread);
+	// Segment animator (own thread does not really make sense, drawings have to be in the UI thread)
+	segAnimator.reset(new SegmentAnimator());
 	// clang-format off
 	connect(this, &LSystemUi::startAnimateCurrentDrawing, segAnimator.get(), &SegmentAnimator::startAnimateCurrentDrawing);
 	connect(this, &LSystemUi::setAnimateLatency,          segAnimator.get(), &SegmentAnimator::setAnimateLatency);
@@ -162,7 +162,6 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(this, &LSystemUi::goToAnimationStep,          segAnimator.get(), &SegmentAnimator::goToAnimationStep);
 	// clang-format on
 	connect(segAnimator.get(), &SegmentAnimator::newAnimationStep, this, &LSystemUi::newAnimationStep);
-	segAnimatorThread.start();
 
 	// Player control (UI control for segment animator)
 	connect(ui->playerControl, &PlayerControl::playPauseChanged, this, &LSystemUi::playPauseChanged);
@@ -174,7 +173,7 @@ LSystemUi::LSystemUi(QWidget *parent)
 
 LSystemUi::~LSystemUi()
 {
-	quitAndWait({&simulatorThread, &segDrawerThread, &segAnimatorThread});
+	quitAndWait({&simulatorThread, &segDrawerThread});
 	delete ui;
 }
 
@@ -204,6 +203,21 @@ void LSystemUi::on_cmdRemove_clicked()
 	defModel.remove();
 }
 
+void LSystemUi::invokeExec(const QSharedPointer<DrawMetaData> & execMeta)
+{
+	// prevent that
+	if (execActive) {
+		execPendingMeta = execMeta;
+		return;
+	} else {
+		execPendingMeta = nullptr;
+		execActive = true;
+		emit simulatorExec(execMeta);
+	}
+}
+
+void LSystemUi::endInvokeExec() { execActive = false; }
+
 void LSystemUi::startPaint(int x, int y)
 {
 	const ConfigSet configSet = getConfigSet(true);
@@ -215,7 +229,7 @@ void LSystemUi::startPaint(int x, int y)
 	getAdditionalOptions(execMeta);
 	execMeta->config = configSet;
 
-	emit simulatorExec(execMeta);
+	invokeExec(execMeta);
 }
 
 void LSystemUi::getAdditionalOptions(const QSharedPointer<MetaData> & execMeta)
@@ -626,6 +640,8 @@ void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPoin
 		showMessage(msgPainted, MsgType::Info);
 	}
 
+	endInvokeExec();
+
 	// Needed if drawing was caused by a DrawLinks::Maximize operation.
 	ui->playerControl->unstashState();
 }
@@ -656,7 +672,7 @@ void LSystemUi::execConfig(const ConfigSet& configSet)
 	execMeta->config = configSet;
 	getAdditionalOptions(execMeta);
 
-	emit simulatorExec(execMeta);
+	invokeExec(execMeta);
 }
 
 void LSystemUi::focusAngleEdit(FocusableLineEdit * lineEdit)
@@ -820,7 +836,7 @@ void LSystemUi::on_lblStatus_linkActivated(const QString & link)
 			config.overrideStackSize = configFileStore.getSettings().maxStackSize * 2;
 		}
 		execMeta->config = config;
-		simulatorExec(execMeta);
+		invokeExec(execMeta);
 	} else if (link == Links::ShowSymbols) {
 		emit simulatorExecActionStr();
 	} else if (link == Links::EditSettings) {
@@ -956,7 +972,7 @@ void LSystemUi::processDrawAction(const QString & link)
 			execMeta->config = configSet;
 
 			getAdditionalOptions(execMeta);
-			emit simulatorExec(execMeta);
+			invokeExec(execMeta);
 		}
 
 	} else {
@@ -1025,12 +1041,17 @@ void LSystemUi::playPauseChanged(bool playing)
 	}
 }
 
-void LSystemUi::newAnimationStep(int step, bool animationDone)
+AnimatorResult LSystemUi::newAnimationStep(int step, bool relativeStep)
 {
-	ui->playerControl->setValue(step);
+	// forward to DrawArea (same thread)
+	const auto res = drawArea->newAnimationStep(step, relativeStep);
 
-	if (animationDone)
-		ui->playerControl->setPlaying(false);
+	// Update UI control
+	ui->playerControl->setValue(res.step);
+	const bool animationDone = res.nextStepResult == AnimatorResult::NextStepResult::Stopped;
+	if (animationDone) ui->playerControl->setPlaying(false);
+
+	return res;
 }
 
 void LSystemUi::playerValueChanged(int value) { emit goToAnimationStep(value); }

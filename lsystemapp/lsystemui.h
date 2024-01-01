@@ -93,7 +93,10 @@ private slots:
 	void processDrawAction(const QString & link);
 
 	// from different other components
-	void showErrorInUi(const QString& errString);
+	void showErrorInUi(const QString & errString);
+
+	// from animator
+	lsystem::common::AnimatorResult newAnimationStep(int step, bool relativeStep);
 
 	// from myself (menu)
 	void copyToClipboardMarked();
@@ -165,7 +168,6 @@ private:
 	// player
 	void playPauseChanged(bool playing);
 	void playerValueChanged(int value);
-	void newAnimationStep(int step, bool animationDone);
 
 	// Status
 	void copyStatus();
@@ -183,11 +185,12 @@ private:
 	void removeAllSliders();
 	void clearAll();
 	void toggleHelperFrame(QPushButton * button, QWidget * frame);
+	void invokeExec(const QSharedPointer<DrawMetaData> & execMeta);
+	void endInvokeExec();
 
 private:
 	Ui::LSystemUi * ui;
 	QScopedPointer<lsystem::ui::DrawArea> drawArea;
-	QThread drawAreaThread;
 	DrawPlacement drawPlacement;
 
 	QScopedPointer<TableItemDelegateAutoUpdate> tableItemDelegate;
@@ -202,10 +205,11 @@ private:
 	lsystem::SegmentDrawer segDrawer;
 	QThread segDrawerThread;
 	QScopedPointer<lsystem::SegmentAnimator> segAnimator;
-	QThread segAnimatorThread;
 
 	bool resultAvailable = false;
 	bool disableConfigLiveEdit = false;
+	bool execActive = false;
+	QSharedPointer<DrawMetaData> execPendingMeta;
 
 	QTimer errorDecayTimer;
 
