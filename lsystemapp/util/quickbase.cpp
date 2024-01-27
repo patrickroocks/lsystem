@@ -28,9 +28,6 @@ void QuickBase::placeAt(int x, int y)
 
 void QuickBase::setValue(double newValue)
 {
-	const bool isFine = newValue != qRound(newValue) && fineStepSize() > 0;
-	selector()->setProperty("rangeStepSmall", isFine);
-	QMetaObject::invokeMethod(selector(), "setFineChecked", Q_ARG(QVariant, isFine));
 	QMetaObject::invokeMethod(selector_, "setExtValue", Q_ARG(QVariant, newValue), Q_ARG(QVariant, true));
 }
 
@@ -43,7 +40,8 @@ void QuickBase::setSmallBigStep(double newSmallStep, double newBigStep)
 {
 	smallStep_ = newSmallStep;
 	bigStep_ = newBigStep;
-	selector_->setProperty("rangeStepSize", smallStep_);
+	selector_->setProperty("coarseStepSize", smallStep_);
+	selector_->setProperty("fineStepSize", smallStep_ / 10);
 }
 
 void QuickBase::setMinMaxValue(double newMinValue, double newMaxValue)
@@ -58,7 +56,7 @@ void QuickBase::focusOutEvent(QFocusEvent * event)
 {
 	QMetaObject::invokeMethod(selector_, "lostFocus");
 	QQuickWidget::focusOutEvent(event);
-	focusOut();
+	emit focusOut();
 }
 
 void QuickBase::keyPressEvent(QKeyEvent * event)

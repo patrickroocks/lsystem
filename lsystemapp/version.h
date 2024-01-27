@@ -1,10 +1,7 @@
-#ifndef VERSION_H
-#define VERSION_H
+#pragma once
 
 namespace lsystem::common {
 
-static const constexpr char * Version = "0.6.0-alpha";
+static const constexpr char * Version = "0.6.0-beta";
 
 }
-
-#endif // VERSION_H

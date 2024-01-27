@@ -15,20 +15,26 @@ Rectangle
     property int widthToggleButton: 50
     property int sizeBorder: 10
 
+    // for the C++ class for keyboard input handling (if up/down keys are relevant)
+    property alias textHasFocus: textEdit.focus
+
     // the actual value. induces a signal "valueChanged"
     property alias value: range.value
 
     // used to filter for negative values (-1) or positive values (+1)
     property double valueFilter: 0
 
-    // for keyboard input handling
-    property bool textHasFocus: false
+    // for e.g. granuarity 0.1
+    property alias fineStepSize: range.fineStepSize
 
-    // current step size is rangeStepSize (might be modified with key shift) * rangeStepFactor
-    property double rangeStepSize: 1
-    property double rangeStepFactor: 1
-    property double rangeStepEffective: rangeStepSize * rangeStepFactor
-    property alias rangeStepSmall: toggleStepButton.checked
+    // for usual granularity, e.g. 1
+    property alias coarseStepSize: range.coarseStepSize
+
+    // The actual used step size
+    property alias currentStepSize: range.currentStepSize
+
+    // If fine steps are activated
+    property alias isFineStepSize: range.isFineStepSize
 
     // internal properties (coloring while hover / error handling)
     property bool mousePressed: false
@@ -44,8 +50,19 @@ Rectangle
         id: range
         minimumValue: -180
         maximumValue: 180
-        stepSize: rangeStepEffective
+        fineStepSize: 0.1
         value: 0
+
+        onValueChanged:
+        {
+            if (!textEdit.focus)
+                updateText();
+        }
+
+        onValueErrorChanged:
+        {
+            updateCircleColor();
+        }
     }
 
     Shape
@@ -143,10 +160,10 @@ Rectangle
         x: size/2 + distButtonX
         y: size/2 - sizeButton / 2
         text: "↷"
-        toolTipText: "Increase by " + rangeStepEffective.toFixed(1) + "°"
+        toolTipText: "Increase by " + currentStepSize.toFixed(1) + "°"
         onClicked:
         {
-            setNewValue(value + rangeStepEffective, true)
+            setNewValue(value + currentStepSize, true)
         }
     }
 
@@ -156,17 +173,15 @@ Rectangle
         x: size/2 - distButtonX - width
         y: size/2 - sizeButton / 2
         text: "↶"
-        toolTipText: "Decrease by " + rangeStepEffective.toFixed(1) + "°"
+        toolTipText: "Decrease by " + currentStepSize.toFixed(1) + "°"
         onClicked:
         {
-            setNewValue(value - rangeStepEffective, true)
+            setNewValue(value - currentStepSize, true)
         }
     }
 
     ToggleButton
     {
-        property bool internalCheckedChange: false
-
         id: toggleStepButton
         x: size/2 - widthToggleButton / 2
         y: size/2 + distButtonY - sizeButton
@@ -179,11 +194,10 @@ Rectangle
         }
         text: "±0.1"
         radius: 5
-        onCheckedChanged: {
-            rangeStepFactor = checked ? 0.1 : 1;
-            if (!internalCheckedChange) {
-                updateText();
-            }
+        checked: isFineStepSize
+        onCheckedChanged:
+        {
+            range.isFineStepSize = checked;
         }
     }
 
@@ -202,25 +216,14 @@ Rectangle
         onTextChanged:
         {
             if (focus) {
-                var parsed = parseFloat(text);
-                if (parsed !== Math.round(parsed)) {
-                    toggleStepButton.internalCheckedChange = true
-                    toggleStepButton.checked = true;
-                    toggleStepButton.internalCheckedChange = false
-                }
-                isErr = !setStrValue(text, false);
-                updateCircleColor();
+                range.submitInputString(text);
             }
         }
 
         onFocusChanged:
         {
-            textHasFocus = focus;
             if (!focus) {
-                isErr = !setStrValue(text, true);
-                if (isErr) updateText();
-                isErr = false;
-                updateCircleColor();
+                updateText();
             }
         }
     }
@@ -228,19 +231,6 @@ Rectangle
     function lostFocus()
     {
         textEdit.focus = false;
-    }
-
-    function setStrValue(strVal, updateText)
-    {
-        var parsed = parseFloat(strVal);
-        return !isNaN(parsed) && setNewValue(parsed, updateText);
-    }
-
-    function setFineChecked(isFineChecked)
-    {
-        toggleStepButton.internalCheckedChange = true;
-        toggleStepButton.checked = isFineChecked
-        toggleStepButton.internalCheckedChange = false;
     }
 
     function setExtValue(val, focusToText)
@@ -256,7 +246,9 @@ Rectangle
     {
         while (newVal > 180) newVal -= 360;
         while (newVal < -180) newVal += 360;
-        value = newVal;
+
+        range.submitInputValue(newVal)
+
         if (updText) updateText();
         if (value * valueFilter < 0) return false;
         return true;
@@ -264,7 +256,7 @@ Rectangle
 
     function updateText()
     {
-        if (toggleStepButton.checked) {
+        if (range.currentStepSize < 1) {
             textEdit.text = value.toFixed(1) + "°";
         } else {
             textEdit.text = value.toFixed(0) + "°";
@@ -273,7 +265,7 @@ Rectangle
 
     function updateCircleColor()
     {
-        if (isErr) {
+        if (isErr || range.valueError) {
             shapeCircle.fillColor = "#fc5c00"; // light red
         } else if (mouseOverCircle || mousePressed) {
             shapeCircle.fillColor = "#aadcf7" // light blue

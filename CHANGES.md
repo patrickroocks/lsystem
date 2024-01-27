@@ -2,6 +2,7 @@
 
 - changed to Qt 6.5
 - Player to animate the construction of the fractal
+- Bugfixes in sliders.
 
 # Version 0.5.0
 

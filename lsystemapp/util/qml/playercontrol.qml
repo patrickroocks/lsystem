@@ -27,7 +27,6 @@ Rectangle {
         id: range
         minimumValue: 1
         maximumValue: 10
-        stepSize: 1
         value: 1
     }
 
@@ -154,7 +153,7 @@ Rectangle {
 
             function setValueByMouseX(mouseX)
             {
-                value = minValue + (maxValue - minValue) * ((mouseX - shapeSlider.x) / shapeSlider.width)
+                range.submitInputValue(minValue + (maxValue - minValue) * ((mouseX - shapeSlider.x) / shapeSlider.width))
             }
         }
 

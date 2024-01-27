@@ -10,19 +10,24 @@ Rectangle
     property alias value: range.value
     property alias minValue: range.minimumValue
     property alias maxValue: range.maximumValue
-    // current step size (might be modified with key shift)
-    property double rangeStepSize: 1
-    property double rangeStepFactor: 1
-    property double rangeStepEffective: rangeStepSize * rangeStepFactor
 
-    // for keyboard input handling
-    property bool textHasFocus: false
+    // for e.g. granuarity 0.1
+    property alias fineStepSize: range.fineStepSize
+
+    // for usual granularity, e.g. 1
+    property alias coarseStepSize: range.coarseStepSize
+
+    // The actual used step size
+    property alias currentStepSize: range.currentStepSize
+
+    // If fine steps are activated
+    property alias isFineStepSize: range.isFineStepSize
 
     // multiply max value by this when clicking extension button
     property real extensionFactor: 0
 
-    // for e.g. granuarity 0.1
-    property double fineStepSize: 0
+    // for the C++ class for keyboard input handling (if up/down keys are relevant)
+    property alias textHasFocus: textEdit.focus
 
     // the geometrical size of the control
     property int sizeWidth: 150
@@ -36,7 +41,7 @@ Rectangle
     // internal properties
     property bool mousePressed: false
     property bool mouseOverRect: false
-    property bool isErr: false
+    property alias isErr: range.valueError
 
     width: sizeWidth
     height: sizeHeight
@@ -47,8 +52,19 @@ Rectangle
         id: range
         minimumValue: 1
         maximumValue: 50
-        stepSize: rangeStepEffective
         value: 0
+        fineStepSize: 0.1
+
+        onValueChanged:
+        {
+            if (!textEdit.focus)
+                updateText();
+        }
+
+        onValueErrorChanged:
+        {
+            updateRectColors();
+        }
     }
 
     MouseArea
@@ -60,8 +76,7 @@ Rectangle
         onPositionChanged:
         {
             if (pressed) {
-                isErr = !setNewValue(valueFromPoint(mouseX, mouseY), true);
-                updateRectColors();
+                range.submitInputValue(valueFromPoint(mouseX, mouseY));
             }
         }
 
@@ -176,8 +191,6 @@ Rectangle
 
         ToggleButton
         {
-            property bool internalCheckedChange: false
-
             id: toggleStepButton
             visible: fineStepSize > 0
             x: sizeBorder
@@ -191,11 +204,10 @@ Rectangle
             }
             text: "±0.1"
             radius: 5
-            onCheckedChanged: {
-                rangeStepFactor = checked ? fineStepSize : 1;
-                if (!internalCheckedChange) {
-                    updateText();
-                }
+            checked: isFineStepSize
+            onCheckedChanged:
+            {
+                range.isFineStepSize = checked;
             }
         }
 
@@ -207,7 +219,7 @@ Rectangle
             text: '-'
             onClicked:
             {
-                setNewValue(value - rangeStepEffective, true)
+                range.submitInputValue(value - currentStepSize);
             }
         }
 
@@ -219,7 +231,7 @@ Rectangle
             text: '+'
             onClicked:
             {
-                setNewValue(value + rangeStepEffective, true)
+                range.submitInputValue(value + currentStepSize);
             }
         }
     }
@@ -240,25 +252,14 @@ Rectangle
         onTextChanged:
         {
             if (focus) {
-                var parsed = parseFloat(text);
-                if (fineStepSize > 0 && parsed !== Math.round(parsed)) {
-                    toggleStepButton.internalCheckedChange = true
-                    toggleStepButton.checked = true;
-                    toggleStepButton.internalCheckedChange = false
-                }
-                isErr = !setStrValue(text, false);
-                updateRectColors();
+                range.submitInputString(text);
             }
         }
 
         onFocusChanged:
         {
-            textHasFocus = focus;
             if (!focus) {
-                isErr = !setStrValue(text, true);
-                if (isErr) updateText();
-                isErr = false;
-                updateRectColors();
+                updateText();
             }
         }
     }
@@ -268,44 +269,31 @@ Rectangle
         textEdit.focus = false;
     }
 
-    function setStrValue(strVal, updateText)
-    {
-        var parsed;
-        if (rangeStepEffective < 1) {
-            parsed = parseFloat(strVal);
-        } else {
-            parsed = parseInt(strVal);
-        }
-        return !isNaN(parsed) && setNewValue(parsed, updateText);
-    }
-
+    // called from C++
     function setFineChecked(isFineChecked)
     {
-        toggleStepButton.internalCheckedChange = true;
         toggleStepButton.checked = isFineChecked
-        toggleStepButton.internalCheckedChange = false;
     }
 
     function setExtValue(val, focusToText)
     {
-        setNewValue(val, true);
+        range.submitInputValue(val, true);
+
+        // If the text edit focus is on, we normally assume that the user is editing
+        // and no text update is done after a change of the value.
+        if (textEdit.focus)
+            updateText();
+
         if (focusToText) {
             textEdit.focus = true;
             textEdit.cursorPosition = textEdit.text.length;
         }
     }
 
-    function setNewValue(newVal, updText)
-    {
-        value = newVal;
-        if (updText) updateText();
-        return true;
-    }
-
     function updateText()
     {
-        if (rangeStepEffective < 1) {
-            if (rangeStepEffective == 0.1) {
+        if (range.currentStepSize < 1) {
+            if (range.currentStepSize == 0.1) {
                 textEdit.text = value.toFixed(1);
             } else {
                 textEdit.text = value.toFixed(2);
