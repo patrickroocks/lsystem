@@ -2,6 +2,7 @@
 #include "ui_aboutdialog.h"
 
 #include <version.h>
+
 #include <QDate>
 
 AboutDialog::AboutDialog(QWidget * parent)

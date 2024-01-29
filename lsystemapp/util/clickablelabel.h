@@ -1,9 +1,8 @@
-#ifndef CLICKABLELABEL_H
-#define CLICKABLELABEL_H
+#pragma once
 
 #include <QLabel>
 
-class ClickableLabel : public QLabel
+class ClickableLabel final : public QLabel
 {
 	Q_OBJECT
 
@@ -20,5 +19,3 @@ protected:
 	void mouseMoveEvent(QMouseEvent * event) override;
 	void mouseReleaseEvent(QMouseEvent * event) override;
 };
-
-#endif // CLICKABLELABEL_H

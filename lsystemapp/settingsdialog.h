@@ -1,9 +1,8 @@
-#ifndef SETTINGSDIALOG_H
-#define SETTINGSDIALOG_H
-
-#include <QDialog>
+#pragma once
 
 #include "configfilestore.h"
+
+#include <QDialog>
 
 namespace Ui {
 class settingsdialog;
@@ -22,10 +21,8 @@ private slots:
 	void on_buttonBox_rejected();
 
 private:
-	Ui::settingsdialog * ui;
+	Ui::settingsdialog * const ui;
 	lsystem::ConfigFileStore & cfgStore;
 	lsystem::common::AppSettings settings;
 
 };
-
-#endif // SETTINGSDIALOG_H

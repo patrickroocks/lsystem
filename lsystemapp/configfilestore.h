@@ -1,5 +1,4 @@
-#ifndef CONFIGFILESTORE_H
-#define CONFIGFILESTORE_H
+#pragma once
 
 #include <common.h>
 
@@ -42,6 +41,4 @@ private:
 	AppConfig currentConfig;
 };
 
-}
-
-#endif // CONFIGFILESTORE_H
+} // namespace lsystem

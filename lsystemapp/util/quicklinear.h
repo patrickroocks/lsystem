@@ -1,9 +1,8 @@
-#ifndef QUICKLINEAR_H
-#define QUICKLINEAR_H
+#pragma once
 
 #include "quickbase.h"
 
-class QuickLinear : public QuickBase
+class QuickLinear final : public QuickBase
 {
 	Q_OBJECT
 public:
@@ -22,5 +21,3 @@ private:
 	static const int sizeHeight = 65;
 	static const char * qmlSource;
 };
-
-#endif // QUICKLINEAR_H

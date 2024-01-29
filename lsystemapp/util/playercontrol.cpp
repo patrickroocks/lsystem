@@ -1,12 +1,17 @@
 #include "playercontrol.h"
 
+#include <util/numericutils.h>
+
 #include <QQuickItem>
 
 namespace {
 
-const char * qmlSource = "qrc:/util/playercontrol.qml";
+const char * QmlSource = "qrc:/util/playercontrol.qml";
 
-}
+const int BigStep = 5;
+const int MinValue = 1;
+
+} // namespace
 
 PlayerControl::PlayerControl(QWidget * parent)
 	: QQuickWidget(parent)
@@ -17,7 +22,7 @@ PlayerControl::PlayerControl(QWidget * parent)
 	setClearColor(Qt::transparent);
 
 	setResizeMode(QQuickWidget::SizeRootObjectToView);
-	setSource(QUrl(QString::fromUtf8(qmlSource)));
+	setSource(QUrl(QString::fromUtf8(QmlSource)));
 	control_ = rootObject();
 
 	QObject::connect(control_, SIGNAL(playingChanged()), this, SLOT(playingChanged()));
@@ -31,6 +36,23 @@ void PlayerControl::setValue(int value)
 	curValue = value;
 	control_->setProperty("value", value);
 	valueChanging = false;
+}
+
+void PlayerControl::keyPressEvent(QKeyEvent * event)
+{
+	const bool pressedDown = event->key() == Qt::Key_Down || event->key() == Qt::Key_Minus || event->key() == Qt::Key_Left;
+	const bool pressedUp = event->key() == Qt::Key_Up || event->key() == Qt::Key_Plus || event->key() == Qt::Key_Right;
+	if (pressedDown || pressedUp) {
+		const bool pressedShift = event->modifiers().testFlag(Qt::ShiftModifier);
+		int newValue = curValue + (pressedDown ? -1 : 1) * (pressedShift ? BigStep : 1);
+		if (pressedShift) {
+			newValue = static_cast<int>(qRound(1.0 * newValue / BigStep)) * BigStep;
+		}
+		newValue = util::ensureRange(newValue, MinValue, curMaxValue);
+		control_->setProperty("value", newValue);
+	} else {
+		QQuickWidget::keyPressEvent(event);
+	}
 }
 
 void PlayerControl::setMaxValueAndValue(int maxValue, int value)

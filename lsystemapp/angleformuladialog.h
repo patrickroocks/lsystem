@@ -1,9 +1,8 @@
-#ifndef ANGLEFORMULADIALOG_H
-#define ANGLEFORMULADIALOG_H
+#pragma once
+
+#include <angleevaluator.h>
 
 #include <QDialog>
-
-#include "angleevaluator.h"
 
 namespace Ui {
 class AngleFormulaDialog;
@@ -32,5 +31,3 @@ private:
 	QString& strOut;
 	AngleEvaluator angleEvaluator;
 };
-
-#endif // ANGLEFORMULADIALOG_H

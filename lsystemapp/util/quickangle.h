@@ -1,5 +1,4 @@
-#ifndef QUICKANGLE_H
-#define QUICKANGLE_H
+#pragma once
 
 #include "valuerestriction.h"
 #include "quickbase.h"
@@ -18,5 +17,3 @@ private:
 	static const int size = 180;
 	static const int bigStep = 5;
 };
-
-#endif // QUICKANGLE_H

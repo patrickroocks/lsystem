@@ -1,5 +1,4 @@
-#ifndef CONFIGLIST_H
-#define CONFIGLIST_H
+#pragma once
 
 #include <common.h>
 
@@ -18,7 +17,6 @@ class ConfigList : public QAbstractListModel
 	Q_OBJECT
 public:
 	ConfigList(QWidget * parentWidget = nullptr);
-	~ConfigList() {}
 
 	int rowCount(const QModelIndex & parent = QModelIndex()) const override;
 	QVariant data(const QModelIndex & index, int role) const override;
@@ -51,9 +49,7 @@ private:
 	common::ConfigMap userConfigs;
 	QStringList configNames;
 
-	QWidget * parentWidget;
+	QWidget * const parentWidget;
 };
 
 }
-
-#endif // CONFIGLIST_H

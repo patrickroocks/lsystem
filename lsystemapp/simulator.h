@@ -1,5 +1,4 @@
-#ifndef SIMULATOR_H
-#define SIMULATOR_H
+#pragma once
 
 #include <common.h>
 
@@ -169,5 +168,3 @@ private:
 };
 
 }
-
-#endif // SIMULATOR_H

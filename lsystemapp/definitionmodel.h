@@ -1,5 +1,4 @@
-#ifndef DEFINITIONMODEL_H
-#define DEFINITIONMODEL_H
+#pragma once
 
 #include <common.h>
 
@@ -47,10 +46,8 @@ private:
 
 private:
 	common::Definitions definitions;
-	QWidget * parent;
+	QWidget * const parent;
 	char startSymbol = '\0';
 };
 
 }
-
-#endif // DEFINITIONMODEL_H

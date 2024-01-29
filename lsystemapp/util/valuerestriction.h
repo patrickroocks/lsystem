@@ -1,12 +1,8 @@
-#ifndef VALUERESTRICTION_H
-#define VALUERESTRICTION_H
+#pragma once
 
-enum ValueRestriction {
+enum class ValueRestriction {
 	None,
 	Numbers,
 	PositiveNumbers,
 	NegativeNumbers,
 };
-
-
-#endif // VALUERESTRICTION_H

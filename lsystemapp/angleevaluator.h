@@ -1,16 +1,14 @@
-#ifndef ANGLEEVALUATOR_H
-#define ANGLEEVALUATOR_H
+#pragma once
 
 #include <QJSEngine>
 
-
-class AngleEvaluator
+class AngleEvaluator final
 {
 public:
 	struct Result {
 		bool isOk = false;
 		bool isFormula = false;
-		double angle;
+		double angle = 0;
 		QString error;
 
 		QString toString() const;
@@ -21,5 +19,3 @@ public:
 private:
 	QJSEngine qsEngine;
 };
-
-#endif // ANGLEEVALUATOR_H

@@ -16,6 +16,7 @@ HEADERS = \
 	util/containerutils.h \
 	util/destroyable.h \
 	util/divutils.h \
+	util/numericutils.h \
 	util/print.h \
 	util/qtcontutils.h \
 	util/test/utils.h

@@ -1,11 +1,10 @@
-#ifndef FOCUSABLELINEEDIT_H
-#define FOCUSABLELINEEDIT_H
+#pragma once
 
 #include "valuerestriction.h"
 
 #include <QLineEdit>
 
-class FocusableLineEdit : public QLineEdit
+class FocusableLineEdit final : public QLineEdit
 {
 	Q_OBJECT
 
@@ -31,5 +30,3 @@ private:
 	ValueRestriction valueRestriction_ = ValueRestriction::None;
 
 };
-
-#endif // FOCUSABLELINEEDIT_H

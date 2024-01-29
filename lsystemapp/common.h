@@ -1,5 +1,4 @@
-#ifndef COMMON_H
-#define COMMON_H
+#pragma once
 
 #include <QtCore>
 #include <QColor>
@@ -173,5 +172,3 @@ inline void registerCommonTypes()
 }
 
 }
-
-#endif // COMMON_H

@@ -2,7 +2,7 @@
 
 #include <QQuickWidget>
 
-class PlayerControl : public QQuickWidget
+class PlayerControl final : public QQuickWidget
 {
 	Q_OBJECT
 public:
@@ -14,6 +14,9 @@ public:
 
 	void stashState();
 	void unstashState();
+
+protected:
+	void keyPressEvent(QKeyEvent * event) override;
 
 signals:
 	// when the user clicks in the timeline, first raise playPauseChanged(false), i.e., not playing,

@@ -1,5 +1,4 @@
-#ifndef SEGMENTDRAWER_H
-#define SEGMENTDRAWER_H
+#pragma once
 
 #include <common.h>
 #include <drawingcollection.h>
@@ -18,6 +17,4 @@ signals:
 	void drawDone(const ui::Drawing & drawing, const QSharedPointer<common::MetaData> & metaData);
 };
 
-}
-
-#endif // SEGMENTDRAWER_H
+} // namespace lsystem

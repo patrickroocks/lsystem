@@ -1,5 +1,4 @@
-#ifndef SYMBOLSDIALOG_H
-#define SYMBOLSDIALOG_H
+#pragma once
 
 #include <QDialog>
 
@@ -26,9 +25,7 @@ private slots:
 	void on_cmdCopy_clicked();
 
 private:
-	Ui::SymbolsDialog * ui;
+	Ui::SymbolsDialog * const ui;
 
 	QString lastContent;
 };
-
-#endif // SYMBOLSDIALOG_H

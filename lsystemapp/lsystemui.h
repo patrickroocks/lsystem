@@ -1,5 +1,4 @@
-#ifndef LSYSTEMUI_H
-#define LSYSTEMUI_H
+#pragma once
 
 #include <angleevaluator.h>
 #include <configfilestore.h>
@@ -192,7 +191,7 @@ private:
 	void invokeExecPending();
 
 private:
-	Ui::LSystemUi * ui;
+	Ui::LSystemUi * const ui;
 	QScopedPointer<lsystem::ui::DrawArea> drawArea;
 	DrawPlacement drawPlacement;
 
@@ -257,4 +256,3 @@ private:
 
 	AngleEvaluator angleEvaluator;
 };
-#endif // LSYSTEMUI_H
