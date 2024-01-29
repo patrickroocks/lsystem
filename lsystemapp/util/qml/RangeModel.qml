@@ -7,6 +7,7 @@ Item
     property double currentStepSize: 1
     property double coarseStepSize: 1
     property double fineStepSize: 0   // 0 means: not available
+    property double overrideStepSize: 0
     property double value: 0
     property bool valueError: false
     property bool isFineStepSize: false
@@ -20,10 +21,8 @@ Item
     {
         var newVal = val;
         if (newVal < minimumValue) {
-            valueError = true;
             newVal = minimumValue;
         } else if (newVal > maximumValue) {
-            valueError = true;
             newVal = maximumValue;
         } else {
             valueError = false;
@@ -33,10 +32,14 @@ Item
 
     function submitInputValue(val, modifyIsFine = false)
     {
-        var discretizedValue = applyStep(val);
-        if (modifyIsFine && !isFineStepSize && discretizedValue !== val) {
-            isFineStepSize = true;
+        if (val === value)
             return;
+
+        var discretizedValue = applyStep(val);
+        if (modifyIsFine && overrideStepSize == 0 && fineStepSize > 0 && !isFineStepSize && discretizedValue !== val) {
+            // This will not immediatly change the value - but we need an immediate change!
+            // Do not return here, but change the value.
+            isFineStepSize = true;
         }
 
         value = applyValueLimits(discretizedValue);
@@ -60,10 +63,14 @@ Item
 
     function updateStepSize()
     {
-        currentStepSize = isFineStepSize ? fineStepSize : coarseStepSize;
+        if (overrideStepSize > 0)
+            currentStepSize = overrideStepSize;
+        else
+            currentStepSize = isFineStepSize ? fineStepSize : coarseStepSize;
     }
 
     onIsFineStepSizeChanged: updateStepSize();
     onFineStepSizeChanged: updateStepSize();
     onCoarseStepSizeChanged: updateStepSize();
+    onOverrideStepSizeChanged: updateStepSize();
 }

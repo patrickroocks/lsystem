@@ -185,8 +185,11 @@ private:
 	void removeAllSliders();
 	void clearAll();
 	void toggleHelperFrame(QPushButton * button, QWidget * frame);
+
+	// Execution helpers
 	void invokeExec(const QSharedPointer<DrawMetaData> & execMeta);
 	void endInvokeExec();
+	void invokeExecPending();
 
 private:
 	Ui::LSystemUi * ui;
@@ -208,10 +211,16 @@ private:
 
 	bool resultAvailable = false;
 	bool disableConfigLiveEdit = false;
-	bool execActive = false;
-	QSharedPointer<DrawMetaData> execPendingMeta;
 
-	QTimer errorDecayTimer;
+	struct ExecInfo
+	{
+		bool active = false;
+		bool scheduledPending = false;
+		QSharedPointer<DrawMetaData> pendingMeta;
+		QTimer pendingTimer;
+	} exec;
+
+	QTimer messageDecayTimer;
 
 	class DrawAreaMenu {
 	public:

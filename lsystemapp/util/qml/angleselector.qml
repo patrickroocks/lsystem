@@ -36,6 +36,9 @@ Rectangle
     // If fine steps are activated
     property alias isFineStepSize: range.isFineStepSize
 
+    // For huge steps (when shift is pressed)
+    property alias overrideStepSize: range.overrideStepSize
+
     // internal properties (coloring while hover / error handling)
     property bool mousePressed: false
     property bool mouseOverCircle: false

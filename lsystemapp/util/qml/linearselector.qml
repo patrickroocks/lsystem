@@ -23,6 +23,9 @@ Rectangle
     // If fine steps are activated
     property alias isFineStepSize: range.isFineStepSize
 
+    // For huge steps (when shift is pressed)
+    property alias overrideStepSize: range.overrideStepSize
+
     // multiply max value by this when clicking extension button
     property real extensionFactor: 0
 
@@ -219,7 +222,7 @@ Rectangle
             text: '-'
             onClicked:
             {
-                range.submitInputValue(value - currentStepSize);
+                setValueNonTyping(value - currentStepSize);
             }
         }
 
@@ -231,7 +234,7 @@ Rectangle
             text: '+'
             onClicked:
             {
-                range.submitInputValue(value + currentStepSize);
+                setValueNonTyping(value + currentStepSize);
             }
         }
     }
@@ -275,7 +278,8 @@ Rectangle
         toggleStepButton.checked = isFineChecked
     }
 
-    function setExtValue(val, focusToText)
+    // external value or via button click
+    function setValueNonTyping(val)
     {
         range.submitInputValue(val, true);
 
@@ -283,6 +287,11 @@ Rectangle
         // and no text update is done after a change of the value.
         if (textEdit.focus)
             updateText();
+    }
+
+    function setExtValue(val, focusToText)
+    {
+        setValueNonTyping(val);
 
         if (focusToText) {
             textEdit.focus = true;

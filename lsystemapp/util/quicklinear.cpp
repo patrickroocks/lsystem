@@ -21,4 +21,5 @@ void QuickLinear::setFineStepSize(double fineStepSize)
 {
 	fineStepSize_ = fineStepSize;
 	selector()->setProperty("fineStepSize", fineStepSize);
+	selector()->setProperty("isStepSize", false);
 }

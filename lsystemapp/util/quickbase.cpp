@@ -28,6 +28,10 @@ void QuickBase::placeAt(int x, int y)
 
 void QuickBase::setValue(double newValue)
 {
+	if (newValue > maxValue_) {
+		setMaxValue(qCeil(newValue));
+	}
+	currentValue = newValue;
 	QMetaObject::invokeMethod(selector_, "setExtValue", Q_ARG(QVariant, newValue), Q_ARG(QVariant, true));
 }
 
@@ -41,15 +45,24 @@ void QuickBase::setSmallBigStep(double newSmallStep, double newBigStep)
 	smallStep_ = newSmallStep;
 	bigStep_ = newBigStep;
 	selector_->setProperty("coarseStepSize", smallStep_);
-	selector_->setProperty("fineStepSize", smallStep_ / 10);
+}
+
+void QuickBase::setMinValue(double newMinValue)
+{
+	minValue_ = newMinValue;
+	selector_->setProperty("minValue", newMinValue);
+}
+
+void QuickBase::setMaxValue(double newMaxValue)
+{
+	maxValue_ = newMaxValue;
+	selector_->setProperty("maxValue", newMaxValue);
 }
 
 void QuickBase::setMinMaxValue(double newMinValue, double newMaxValue)
 {
-	minValue_ = newMinValue;
-	maxValue_ = newMaxValue;
-	selector_->setProperty("minValue", newMinValue);
-	selector_->setProperty("maxValue", newMaxValue);
+	setMinValue(newMinValue);
+	setMaxValue(newMaxValue);
 }
 
 void QuickBase::focusOutEvent(QFocusEvent * event)
@@ -62,7 +75,7 @@ void QuickBase::focusOutEvent(QFocusEvent * event)
 void QuickBase::keyPressEvent(QKeyEvent * event)
 {
 	if (event->key() == Qt::Key_Shift) {
-		selector_->setProperty("rangeStepSize", bigStep_);
+		selector_->setProperty("overrideStepSize", bigStep_);
 		QMetaObject::invokeMethod(selector_, "updateText");
 	}
 
@@ -86,7 +99,7 @@ void QuickBase::keyReleaseEvent(QKeyEvent * event)
 	if (event->key() == Qt::Key_Shift) {
 		// freeze last value before setting the step back to small value
 		QMetaObject::invokeMethod(selector_, "setExtValue", Q_ARG(QVariant, currentValue), Q_ARG(QVariant, false));
-		selector_->setProperty("rangeStepSize", smallStep_);
+		selector_->setProperty("overrideStepSize", 0);
 		QMetaObject::invokeMethod(selector_, "updateText");
 	}
 	QQuickWidget::keyPressEvent(event);

@@ -33,9 +33,13 @@ const char * StatusDefaultText = "Left click into the drawing area to draw the f
 const char * SelAngleHintText = "Use up&down keys to modify the angle or drag by mouse. Shift restricts to multiple of 5.";
 const char * SelLinearHintText = "Use up&down keys to modify the value or drag by mouse. Shift restricts to step size %1.";
 
+// After this interval status messages are replaced by the default message.
 const int StatusIntervalMs = 8000;
 
-}
+// After this interval we execute pending operations, if no new input from the user came in.
+const int ExecPendingIntervalMs = 100;
+
+} // namespace
 
 LSystemUi::LSystemUi(QWidget *parent)
 	: QMainWindow(parent)
@@ -48,8 +52,11 @@ LSystemUi::LSystemUi(QWidget *parent)
 	setWindowTitle(util::printStr("lsystem %1 - An interactive simulator for Lindenmayer systems", Version));
 
 	resetStatus();
-	errorDecayTimer.setInterval(StatusIntervalMs);
-	connect(&errorDecayTimer, &QTimer::timeout, this, &LSystemUi::resetStatus);
+	messageDecayTimer.setInterval(StatusIntervalMs);
+	connect(&messageDecayTimer, &QTimer::timeout, this, &LSystemUi::resetStatus);
+
+	exec.pendingTimer.setInterval(ExecPendingIntervalMs);
+	connect(&exec.pendingTimer, &QTimer::timeout, this, &LSystemUi::invokeExecPending);
 
 	connect(&configList, &ConfigList::configMapUpdated, &configFileStore, &ConfigFileStore::newConfigMap);
 	connect(&configFileStore, &ConfigFileStore::loadedPreAndUserConfigs, &configList, &ConfigList::newPreAndUserConfigs);
@@ -205,18 +212,38 @@ void LSystemUi::on_cmdRemove_clicked()
 
 void LSystemUi::invokeExec(const QSharedPointer<DrawMetaData> & execMeta)
 {
-	// prevent that
-	if (execActive) {
-		execPendingMeta = execMeta;
+	exec.scheduledPending = false;
+
+	// prevent that a queue of executions blocks everything.
+	if (exec.active) {
+		exec.pendingMeta = execMeta;
 		return;
 	} else {
-		execPendingMeta = nullptr;
-		execActive = true;
+		exec.pendingMeta = nullptr;
+		exec.active = true;
 		emit simulatorExec(execMeta);
 	}
 }
 
-void LSystemUi::endInvokeExec() { execActive = false; }
+void LSystemUi::endInvokeExec()
+{
+	exec.active = false;
+	if (exec.pendingMeta) {
+		exec.scheduledPending = true;
+		// This restarts the timer, even it was started before.
+		// Don't use singleShot, it would start multiple timers.
+		exec.pendingTimer.start();
+	}
+}
+
+void LSystemUi::invokeExecPending()
+{
+	exec.pendingTimer.stop();
+	if (exec.scheduledPending) {
+		auto copiedPendingMeta = exec.pendingMeta;
+		invokeExec(copiedPendingMeta);
+	}
+}
 
 void LSystemUi::startPaint(int x, int y)
 {
@@ -299,15 +326,18 @@ void LSystemUi::showMessage(const QString & msg, MsgType msgType)
 {
 	ui->lblStatus->setText(msg);
 	ui->lblStatus->setStyleSheet([&msgType]() {
-			switch (msgType) {
-			case MsgType::Info:    return StatusDefaultStyle;
-			case MsgType::Warning: return StatusWarningStyle;
-			case MsgType::Error:   return StatusErrorStyle;
-			}
-			return ""; // prevent compiler warning
-		}());
+		switch (msgType) {
+		case MsgType::Info:
+			return StatusDefaultStyle;
+		case MsgType::Warning:
+			return StatusWarningStyle;
+		case MsgType::Error:
+			return StatusErrorStyle;
+		}
+		return ""; // prevent compiler warning
+	}());
 
-	errorDecayTimer.start();
+	messageDecayTimer.start();
 }
 
 void LSystemUi::showVarError(const QString & errorVar, const QString & extraInfo) {
@@ -318,6 +348,7 @@ void LSystemUi::showVarError(const QString & errorVar, const QString & extraInfo
 
 void LSystemUi::resetStatus()
 {
+	messageDecayTimer.stop();
 	ui->lblStatus->setStyleSheet(StatusDefaultStyle);
 	ui->lblStatus->setText(StatusDefaultText);
 }
@@ -765,16 +796,18 @@ void LSystemUi::focusLinearEdit(FocusableLineEdit * lineEdit)
 		return;
 	}
 
-	// data
+	// meta data (no line edit pointer yet)
 	quickLinear->setLineEdit(nullptr);
 	quickLinear->setSmallBigStep(smallStep, bigStep);
 	quickLinear->setMinMaxValue(minValue, maxValue);
 	quickLinear->setExtensionFactor(extFactor);
 	quickLinear->setFineStepSize(fineStepSize);
+
+	// value date (value changes like rounding should be applied)
+	quickLinear->setLineEdit(lineEdit);
 	quickLinear->setValue(lineEdit->text().toDouble());
 
 	// control
-	quickLinear->setLineEdit(lineEdit);
 	quickLinear->placeAt(x, y);
 	quickLinear->setVisible(true);
 	quickLinear->setFocus();
@@ -957,6 +990,9 @@ void LSystemUi::processDrawAction(const QString & link)
 
 			if (ui->chkAutoPaint->isChecked()) {
 				disableConfigLiveEdit = true;
+				if (quickLinear->getLineEdit() == static_cast<QLineEdit *>(ui->txtStep)) {
+					quickLinear->setValue(newStepSize);
+				}
 				ui->txtStep->setText(util::formatFixed(newStepSize, 2));
 				disableConfigLiveEdit = false;
 				lastValidConfigSet = configSet;

@@ -12,6 +12,7 @@ public:
 	void placeAt(int x, int y);
 	void setValue(double newValue);
 	void setLineEdit(QLineEdit * newLineEdit);
+	QLineEdit * getLineEdit() const { return lineEdit; }
 
 	void setSmallBigStep(double newSmallStep, double newBigStep);
 	void setMinMaxValue(double newMinValue, double newMaxValue);
@@ -39,6 +40,10 @@ protected:
 private slots:
 	// from QML
 	void valueChangedInSelector();
+
+private:
+	void setMinValue(double newMinValue);
+	void setMaxValue(double newMaxValue);
 
 private:
 	double currentValue = 0;
