@@ -42,10 +42,6 @@ void DrawArea::draw(const ui::Drawing & drawing, const QPoint & offset, bool cle
 	}
 	drawings.addDrawing(drawing, offset);
 
-	// hack to ensure that the image is really painted
-	// todo: find out what happens here, it's all in the same thread
-	QThread::msleep(20);
-
 	update();
 
 	setNextUndoRedo(true);
@@ -230,7 +226,6 @@ void DrawArea::mouseReleaseEvent(QMouseEvent * event)
 void DrawArea::mouseMoveEvent(QMouseEvent * event)
 {
 	if (moveMode != MoveState::NoMove) {
-
 		if (moveMode == MoveState::ReadyForMove) {
 			lastDrawings = drawings;
 			setNextUndoRedo(true);
@@ -240,7 +235,6 @@ void DrawArea::mouseMoveEvent(QMouseEvent * event)
 		if (drawings.moveDrawing(drawings.getMarkedDrawingNum(), newOffset)) update();
 
 	} else {
-
 		const qint64 mouseOverDrawing = drawings.getDrawingByPos(event->pos());
 		if (drawings.getMarkedDrawingNum() == 0) {
 			if (mouseOverDrawing > 0) {

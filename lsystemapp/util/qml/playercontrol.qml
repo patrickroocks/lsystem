@@ -146,14 +146,14 @@ Rectangle {
 
             onClicked:
             {
-                // first stop the replayer, then jump to the value
-                playing = false
                 setValueByMouseX(mouseX)
             }
 
             function setValueByMouseX(mouseX)
             {
-                range.submitInputValue(minValue + (maxValue - minValue) * ((mouseX - shapeSlider.x) / shapeSlider.width))
+                // first stop the replayer, then jump to the value
+                playing = false;
+                range.submitInputValue(minValue + (maxValue - minValue) * ((mouseX - shapeSlider.x) / shapeSlider.width));
             }
         }
 
