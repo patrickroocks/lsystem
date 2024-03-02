@@ -40,6 +40,8 @@ auto DefinitionModel::getRow(const QModelIndex & index)
 
 void DefinitionModel::checkForNewStartSymbol()
 {
+	if (definitions.empty()) return;
+
 	const char tmpStartSymbol = definitions.first().literal;
 	if (tmpStartSymbol != startSymbol) {
 		startSymbol = tmpStartSymbol;
@@ -230,7 +232,7 @@ void DefinitionModel::selectionChanged(const QItemSelection & selected, const QI
 bool DefinitionModel::add()
 {
 	if (definitions.size() >= MaxNumDefinitions) {
-		showError(printStr("Reached maximum number of definitions (%1)", MaxNumDefinitions));
+		emit showError(printStr("Reached maximum number of definitions (%1)", MaxNumDefinitions));
 		return false;
 	}
 
@@ -267,9 +269,11 @@ bool DefinitionModel::remove()
 		auto selectedRowIndex = selectedRow - definitions.begin();
 		definitions.erase(selectedRow);
 		removeRow(selectedRowIndex);
+		checkForNewStartSymbol();
+		emit edited();
 		return true;
 	} else {
-		showError("no literal selected");
+		emit showError("no literal selected");
 		return false;
 	}
 }

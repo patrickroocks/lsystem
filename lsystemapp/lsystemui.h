@@ -160,6 +160,7 @@ private:
 
 	// additional options & windows
 	void getAdditionalOptions(const QSharedPointer<lsystem::common::MetaData> & execMeta);
+	void openSymbolsDialog();
 	void showSymbols();
 	void showMarkedConfig();
 	void showRightAngleDialog();

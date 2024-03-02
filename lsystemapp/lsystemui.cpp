@@ -276,16 +276,21 @@ void LSystemUi::getAdditionalOptions(const QSharedPointer<MetaData> & execMeta)
 	execMeta->antiAliasing = ui->chkAntiAliasing->isChecked();
 }
 
-void LSystemUi::showSymbols()
+void LSystemUi::openSymbolsDialog()
 {
 	if (!symbolsDialog) {
-		symbolsDialog.reset(new SymbolsDialog());
-		symbolsDialog->setWindowFlags(Qt::Window);
+		symbolsDialog.reset(new SymbolsDialog(this));
+		symbolsDialog->setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
 	}
 
 	if (!symbolsDialog->isVisible()) {
 		symbolsDialog->open();
 	}
+}
+
+void LSystemUi::showSymbols()
+{
+	openSymbolsDialog();
 
 	if (resultAvailable) {
 		emit simulatorExecActionStr();
@@ -640,14 +645,7 @@ void LSystemUi::processSimulatorResult(const common::ExecResult & execResult, co
 
 void LSystemUi::processActionStr(const QString & actionStr)
 {
-	if (!symbolsDialog) {
-		symbolsDialog.reset(new SymbolsDialog());
-		symbolsDialog->setWindowFlags(Qt::Window);
-	}
-
-	if (!symbolsDialog->isVisible()) {
-		symbolsDialog->open();
-	}
+	openSymbolsDialog();
 
 	symbolsDialog->setContent(actionStr);
 }

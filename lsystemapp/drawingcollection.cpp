@@ -37,7 +37,7 @@ void Drawing::expandSizeToSegments(const common::LineSegs & segs, double thickne
 
 void Drawing::drawSegments(const LineSegs & segs, double opacyFactor, double thickness, bool antiAliasing)
 {
-	drawSegmentRange(0, segs.size() - 1, opacyFactor, thickness, antiAliasing);
+	drawSegmentRange(segs, 0, segs.size() - 1, opacyFactor, thickness, antiAliasing);
 }
 
 void Drawing::drawToImage(QImage & dstImage, bool isMarked, bool isHighlighted)
@@ -90,7 +90,8 @@ DrawResult Drawing::toDrawResult()
 					  .config = config};
 }
 
-void Drawing::drawSegmentRange(int numStart, int numEnd, double opacyFactor, double thickness, bool antiAliasing)
+void Drawing::drawSegmentRange(
+	const common::LineSegs & segs, int numStart, int numEnd, double opacyFactor, double thickness, bool antiAliasing)
 {
 	QPainter painter(&image);
 
@@ -107,8 +108,8 @@ void Drawing::drawSegmentRange(int numStart, int numEnd, double opacyFactor, dou
 
 	int lastColorNum = -1;
 
-	const auto itStart = segments.cbegin() + numStart;
-	const auto itEnd = segments.cbegin() + numEnd + 1;
+	const auto itStart = segs.cbegin() + numStart;
+	const auto itEnd = segs.cbegin() + numEnd + 1;
 
 	for (auto it = itStart; it != itEnd; ++it) {
 		const auto & seg = *it;
@@ -169,7 +170,7 @@ AnimatorResult Drawing::newAnimationStep(int step, bool relativeStep)
 	// This runs in the same thread as the main UI. It would be difficult to parallelize this,
 	// as we would have to wait for the drawing to be completed anyway before we could refresh the DrawArea widget.
 	// The widget itself has to run in the same thread as the main UI (widgets are not allowed to be in a own thread in Qt).
-	drawSegmentRange(firstSegToDraw, newSeg, metaData.opacity, metaData.thickness, metaData.antiAliasing);
+	drawSegmentRange(segments, firstSegToDraw, newSeg, metaData.opacity, metaData.thickness, metaData.antiAliasing);
 
 	animState.curSeg = newSeg;
 

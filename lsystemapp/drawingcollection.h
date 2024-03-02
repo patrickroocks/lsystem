@@ -53,7 +53,7 @@ private:
 	void expandSizeToSegments(const common::LineSegs & segs, double thickness);
 	void drawSegments(const common::LineSegs & segs, double opacyFactor, double thickness, bool antiAliasing);
 	void updateRect(double minX, double minY, double maxX, double maxY);
-	void drawSegmentRange(int numStart, int numEnd, double opacyFactor, double thickness, bool antiAliasing);
+	void drawSegmentRange(const common::LineSegs & segs, int numStart, int numEnd, double opacyFactor, double thickness, bool antiAliasing);
 
 private:
 	QPoint topLeft;
