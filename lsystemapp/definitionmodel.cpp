@@ -251,11 +251,7 @@ bool DefinitionModel::add()
 			if (!currentLiterals.contains(nextChar)) break;
 		}
 	}
-	Definition newDefinition;
-	newDefinition.literal = nextChar;
-	newDefinition.color = QColor(0, 0, 0);
-	newDefinition.paint = true;
-	definitions << newDefinition;
+	definitions << Definition{nextChar, ""};
 	insertRow(addRowNum);
 	return true;
 }

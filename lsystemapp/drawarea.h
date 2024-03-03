@@ -50,6 +50,7 @@ protected:
 	void mouseMoveEvent(QMouseEvent * event) override;
 
 private:
+	void clearAllDrawings();
 	void resizeImage(QImage * image, const QSize & newSize);
 	void setNextUndoRedo(bool undoOrRedo);
 

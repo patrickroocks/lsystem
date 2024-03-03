@@ -76,7 +76,7 @@ void Simulator::execAndExpand(const QSharedPointer<MetaData> & metaData)
 	if (!(validConfig && expansionEqual(newConfig))) {
 		validConfig = parseActions(newConfig);
 		if (!validConfig) {
-			emit resultReceived(ExecResult::ExecResultKind::InvalidConfig, metaData);
+			emit resultReceived(ExecResult{ExecResult::ExecResultKind::InvalidConfig}, metaData);
 			return;
 		}
 	}

@@ -88,9 +88,8 @@ LSystemUi::LSystemUi(QWidget *parent)
 
 	connect(ui->tblDefinitions->selectionModel(), &QItemSelectionModel::selectionChanged,
 			&defModel, &DefinitionModel::selectionChanged);
-	connect(&defModel, &DefinitionModel::deselect, [&]() { ui->tblDefinitions->setCurrentIndex(QModelIndex()); });
-	connect(&defModel, &DefinitionModel::getSelection,
-			[&]() { return ui->tblDefinitions->currentIndex(); });
+	connect(&defModel, &DefinitionModel::deselect, [this]() { ui->tblDefinitions->setCurrentIndex(QModelIndex()); });
+	connect(&defModel, &DefinitionModel::getSelection, [this]() { return ui->tblDefinitions->currentIndex(); });
 	connect(&defModel, &DefinitionModel::newStartSymbol, ui->lblStartSymbol, &QLabel::setText);
 	connect(&defModel, &DefinitionModel::showError, this, &LSystemUi::showErrorInUi);
 	connect(&defModel, &DefinitionModel::edited, this, &LSystemUi::configLiveEdit);
@@ -612,13 +611,13 @@ void LSystemUi::copyToClipboardMarked()
 		bool doNotAskAnymore = false;
 		// QMessageBox will take ownership (will delete the checkbox)
 		QCheckBox * chkTransparency = new QCheckBox("Don't ask anymore until restart of lsystem");
-		connect(chkTransparency, &QCheckBox::stateChanged, [&doNotAskAnymore](int state) { doNotAskAnymore = (Qt::CheckState)(state); });
+		connect(chkTransparency, &QCheckBox::stateChanged, [&doNotAskAnymore](int state) { doNotAskAnymore = static_cast<bool>(state); });
 
 		QMessageBox msgBox(QMessageBox::Icon::Question, "Transparency", "Do you want to export the drawing with transparent background (will not work in all programs)?",
 						QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, parentWidget());
 		msgBox.setDefaultButton(QMessageBox::Yes);
 		msgBox.setCheckBox(chkTransparency);
-		QMessageBox::StandardButton res = (QMessageBox::StandardButton)msgBox.exec();
+		QMessageBox::StandardButton res = static_cast<QMessageBox::StandardButton>(msgBox.exec());
 		if (res == QMessageBox::Cancel) return;
 		transparent = (res == QMessageBox::Yes);
 		if (doNotAskAnymore) {
@@ -631,14 +630,18 @@ void LSystemUi::copyToClipboardMarked()
 
 void LSystemUi::processSimulatorResult(const common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData)
 {
+	QSharedPointer<DrawMetaData> drawMetaData = qSharedPointerDynamicCast<DrawMetaData>(metaData);
+
 	if (execResult.resultKind == common::ExecResult::ExecResultKind::InvalidConfig) {
 		resultAvailable = false;
+		endInvokeExec();
+		if (drawMetaData->clearAll) drawArea->clear();
 		return;
 	}
 	resultAvailable = true;
-	QSharedPointer<DrawMetaData> drawMetaData = qSharedPointerDynamicCast<DrawMetaData>(metaData);
 	drawMetaData->resultOk = (execResult.resultKind == ExecResult::ExecResultKind::Ok);
 	emit startDraw(execResult, metaData);
+	// drawDone causes finally endInvokeExec
 
 	if (symbolsDialog && symbolsDialog->isVisible()) emit simulatorExecActionStr();
 }

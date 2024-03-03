@@ -9,11 +9,13 @@ TableItemDelegateAutoUpdate::TableItemDelegateAutoUpdate(QObject * parent)
 
 QWidget * TableItemDelegateAutoUpdate::createEditor(QWidget * parent, const QStyleOptionViewItem & option, const QModelIndex & index) const
 {
-	QWidget* editor = QStyledItemDelegate::createEditor(parent, option, index);
-	if (QLineEdit* castedEditor = qobject_cast<QLineEdit*>(editor)) {
+	QWidget * editor = QStyledItemDelegate::createEditor(parent, option, index);
 
+	if (QLineEdit * castedEditor = qobject_cast<QLineEdit *>(editor)) {
 		// createEditor must be const, such that it is called. commitData is non-const
-		connect(castedEditor, &QLineEdit::textEdited, [&](const QString&) { const_cast<TableItemDelegateAutoUpdate*>(this)->commitData(editor); });
+		connect(castedEditor, &QLineEdit::textEdited, [this, editor](const QString &) {
+			emit const_cast<TableItemDelegateAutoUpdate *>(this)->commitData(editor);
+		});
 	}
 	return editor;
 }

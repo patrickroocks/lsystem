@@ -122,7 +122,7 @@ struct ExecResult
 	using ExecResultKind = ExecResultStructs::ExecResultKind;
 
 	ExecResult() = default;
-	ExecResult(ExecResultKind resultKind)
+	explicit ExecResult(ExecResultKind resultKind)
 		: resultKind(resultKind)
 	{}
 	ExecResultKind resultKind = ExecResultKind::Null;

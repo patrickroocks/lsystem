@@ -20,9 +20,18 @@ void DrawArea::clear()
 {
 	lastDrawings = drawings;
 
-	drawings.clearAll();
+	clearAllDrawings();
+
 	update();
 	setNextUndoRedo(true);
+}
+
+void DrawArea::clearAllDrawings()
+{
+	if (drawings.highlightDrawing(0)) {
+		emit highlightChanged({});
+	}
+	drawings.clearAll();
 }
 
 void DrawArea::draw(const ui::Drawing & drawing, const QPoint & offset, bool clearAll, bool clearLast)
@@ -43,7 +52,6 @@ void DrawArea::draw(const ui::Drawing & drawing, const QPoint & offset, bool cle
 	drawings.addDrawing(drawing, offset);
 
 	update();
-
 	setNextUndoRedo(true);
 }
 
