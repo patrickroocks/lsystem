@@ -175,6 +175,7 @@ private:
 	// Config-List
 	lsystem::common::ConfigSet getConfigSet(bool storeAsLastValid);
 	void setConfigSet(const lsystem::common::ConfigSet & configSet);
+	void showConfigSet(const lsystem::common::ConfigSet & configSet);
 	void loadConfigByLstIndex(const QModelIndex & index);
 
 	// Common helpers
@@ -185,6 +186,7 @@ private:
 	void removeAllSliders();
 	void clearAll();
 	void toggleHelperFrame(QPushButton * button, QWidget * frame);
+	void undoRedo();
 
 	// Execution helpers
 	void invokeExec(const QSharedPointer<DrawMetaData> & execMeta);

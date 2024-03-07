@@ -60,11 +60,7 @@ private:
 
 	bool nextUndoOrRedo = true;
 
-	enum MoveState {
-		NoMove,
-		ReadyForMove,
-		MoveStarted
-	};
+	enum class MoveState { NoMove, ReadyForMove, MoveStarted };
 
 	MoveState moveMode = MoveState::NoMove;
 	QPoint moveStart;

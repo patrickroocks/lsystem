@@ -1,14 +1,13 @@
 #include "lsystemui.h"
 #include "ui_lsystemui.h"
-#include "util/tableitemdelegate.h"
-#include "version.h"
 
-#include "aboutdialog.h"
-#include "angleformuladialog.h"
-#include "settingsdialog.h"
-
+#include <aboutdialog.h>
+#include <angleformuladialog.h>
+#include <settingsdialog.h>
 #include <util/containerutils.h>
 #include <util/print.h>
+#include <util/tableitemdelegate.h>
+#include <version.h>
 
 #include <QClipboard>
 #include <QColorDialog>
@@ -278,12 +277,14 @@ void LSystemUi::getAdditionalOptions(const QSharedPointer<MetaData> & execMeta)
 void LSystemUi::openSymbolsDialog()
 {
 	if (!symbolsDialog) {
+		// Ensure that the symbols window is in foreground of us, but the main window can be still used.
 		symbolsDialog.reset(new SymbolsDialog(this));
+		symbolsDialog->setWindowModality(Qt::WindowModality::NonModal);
 		symbolsDialog->setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
 	}
 
 	if (!symbolsDialog->isVisible()) {
-		symbolsDialog->open();
+		symbolsDialog->show();
 	}
 }
 
@@ -438,7 +439,7 @@ ConfigSet LSystemUi::getConfigSet(bool storeAsLastValid)
 	return configSet;
 }
 
-void LSystemUi::setConfigSet(const ConfigSet & configSet)
+void LSystemUi::showConfigSet(const ConfigSet & configSet)
 {
 	disableConfigLiveEdit = true;
 	defModel.setDefinitions(configSet.definitions);
@@ -451,6 +452,10 @@ void LSystemUi::setConfigSet(const ConfigSet & configSet)
 	ui->txtStep      ->setText(QString::number(configSet.stepSize));
 	// clang-format on
 	disableConfigLiveEdit = false;
+}
+void LSystemUi::setConfigSet(const ConfigSet & configSet)
+{
+	showConfigSet(configSet);
 
 	// still initialization phase => do not draw
 	if (!drawArea) return;
@@ -1098,6 +1103,13 @@ void LSystemUi::on_cmdRightFormula_clicked()
 	showRightAngleDialog();
 }
 
+void LSystemUi::undoRedo()
+{
+	drawArea->restoreLastImage();
+	if (ui->chkAutoPaint->isChecked() && drawArea->getCurrentDrawing()) {
+		showConfigSet(drawArea->getCurrentDrawing()->config);
+	}
+}
 
 // -------------------- DrawAreaMenu --------------------
 
@@ -1114,9 +1126,9 @@ LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
 
 	setDrawingActionsVisible(false);
 
-	undoAction = menu.addAction("Undo", Qt::CTRL | Qt::Key_Z, &*parent->drawArea, &DrawArea::restoreLastImage);
+	undoAction = menu.addAction("Undo", Qt::CTRL | Qt::Key_Z, parent, &LSystemUi::undoRedo);
 	undoAction->setEnabled(false);
-	redoAction = menu.addAction("Redo", Qt::CTRL | Qt::Key_Y, &*parent->drawArea, &DrawArea::restoreLastImage);
+	redoAction = menu.addAction("Redo", Qt::CTRL | Qt::Key_Y, parent, &LSystemUi::undoRedo);
 	redoAction->setEnabled(false);
 	menu.addSeparator();
 
