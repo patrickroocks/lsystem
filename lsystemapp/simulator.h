@@ -133,12 +133,11 @@ class Simulator : public QObject, public impl::SimlatorInterface
 
 signals:
 	void errorReceived(const QString & errStr);
-	void resultReceived(const common::ExecResult & execResult, const QSharedPointer<common::MetaData> & metaData);
+	void segmentsReceived(const common::ExecResult & execResult, const QSharedPointer<common::MetaData> & metaData);
 	void actionStrReceived(const QString & actionStr);
 
 public slots:
-	void execAndExpand(const QSharedPointer<common::MetaData> &metaData);
-	void execActionStr();
+	void exec(const QSharedPointer<common::MetaData> & metaData);
 	void setMaxStackSize(int newMaxStackSize);
 
 private:
@@ -147,20 +146,25 @@ private:
 
 	bool parseActions(const common::ConfigSet & newConfig);
 	bool expansionEqual(const common::ConfigSet & newConfig) const;
-	void execIterations(const QSharedPointer<common::MetaData> & metaData);
-	bool execIter();
+
+	void execIterations(const QSharedPointer<common::MetaData> & metaData, common::ExecResult & res);
+	bool execOneIteration();
+
 	common::LineSegs getSegments();
+	void composeActionStr();
 
 private:
 	bool validConfig = false;
 	common::ConfigSet config;
 	common::LineSegs segments;
+	QString actionStr;
 
 	QList<const impl::Action *> currentActions;
 	QList<const impl::Action *> nextActions;
 
 	int maxStackSize = 0;
 	int curMaxStackSize = 0;
+	bool stackSizeLimitReached = false;
 
 	QMap<char, impl::DynProcessLiteralAction> mainActions;
 	QVector<QColor> actionColors;

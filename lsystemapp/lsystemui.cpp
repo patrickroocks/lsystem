@@ -63,9 +63,8 @@ LSystemUi::LSystemUi(QWidget *parent)
 	connect(&configFileStore, &ConfigFileStore::newStackSize, &simulator, &Simulator::setMaxStackSize);
 
 	simulator.moveToThread(&simulatorThread);
-	connect(this, &LSystemUi::simulatorExecActionStr, &simulator, &Simulator::execActionStr);
-	connect(this, &LSystemUi::simulatorExec, &simulator, &Simulator::execAndExpand);
-	connect(&simulator, &Simulator::resultReceived, this, &LSystemUi::processSimulatorResult);
+	connect(this, &LSystemUi::simulatorExec, &simulator, &Simulator::exec);
+	connect(&simulator, &Simulator::segmentsReceived, this, &LSystemUi::processSimulatorSegments);
 	connect(&simulator, &Simulator::actionStrReceived, this, &LSystemUi::processActionStr);
 	connect(&simulator, &Simulator::errorReceived, this, &LSystemUi::showErrorInUi);
 	simulatorThread.start();
@@ -214,23 +213,34 @@ void LSystemUi::invokeExec(const QSharedPointer<DrawMetaData> & execMeta)
 
 	// prevent that a queue of executions blocks everything.
 	if (exec.active) {
+		// When overwriting pending Meta, ensure that no tasks are lost.
+		if (exec.pendingMeta) {
+			execMeta->execActionStr |= exec.pendingMeta->execActionStr;
+			execMeta->execSegments |= exec.pendingMeta->execSegments;
+		}
 		exec.pendingMeta = execMeta;
 		return;
 	} else {
 		exec.pendingMeta = nullptr;
 		exec.active = true;
+		if (execMeta->execActionStr) exec.waitForExecTasks.insert(ExecKind::ActionStr);
+		if (execMeta->execSegments) exec.waitForExecTasks.insert(ExecKind::Segments);
 		emit simulatorExec(execMeta);
 	}
 }
 
-void LSystemUi::endInvokeExec()
+void LSystemUi::endInvokeExec(ExecKind execKind)
 {
-	exec.active = false;
-	if (exec.pendingMeta) {
-		exec.scheduledPending = true;
-		// This restarts the timer, even it was started before.
-		// Don't use singleShot, it would start multiple timers.
-		exec.pendingTimer.start();
+	exec.waitForExecTasks.remove(execKind);
+
+	if (exec.waitForExecTasks.empty()) {
+		exec.active = false;
+		if (exec.pendingMeta) {
+			exec.scheduledPending = true;
+			// This restarts the timer, even it was started before.
+			// Don't use singleShot, it would start multiple timers.
+			exec.pendingTimer.start();
+		}
 	}
 }
 
@@ -251,14 +261,17 @@ void LSystemUi::startPaint(int x, int y)
 	QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
 	execMeta->offset = QPoint{x, y};
 	execMeta->clearAll = drawAreaMenu->autoClearToggle->isChecked() || ui->chkAutoPaint->isChecked();
-	getAdditionalOptions(execMeta);
+	getAdditionalOptionsForSegmentsMeta(execMeta);
 	execMeta->config = configSet;
 
 	invokeExec(execMeta);
 }
 
-void LSystemUi::getAdditionalOptions(const QSharedPointer<MetaData> & execMeta)
+void LSystemUi::getAdditionalOptionsForSegmentsMeta(const QSharedPointer<MetaData> & execMeta)
 {
+	execMeta->execSegments = true;
+	execMeta->execActionStr = symbolsVisible();
+
 	execMeta->showLastIter = ui->chkShowLastIter->isChecked();
 
 	bool ok;
@@ -274,8 +287,9 @@ void LSystemUi::getAdditionalOptions(const QSharedPointer<MetaData> & execMeta)
 	execMeta->antiAliasing = ui->chkAntiAliasing->isChecked();
 }
 
-void LSystemUi::openSymbolsDialog()
+void LSystemUi::showSymbols()
 {
+	// Open dialog
 	if (!symbolsDialog) {
 		// Ensure that the symbols window is in foreground of us, but the main window can be still used.
 		symbolsDialog.reset(new SymbolsDialog(this));
@@ -286,20 +300,23 @@ void LSystemUi::openSymbolsDialog()
 	if (!symbolsDialog->isVisible()) {
 		symbolsDialog->show();
 	}
-}
-
-void LSystemUi::showSymbols()
-{
-	openSymbolsDialog();
 
 	if (resultAvailable) {
-		emit simulatorExecActionStr();
+
+		QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
+		execMeta->config = getConfigSet(true);
+		execMeta->execActionStr = true;
+		invokeExec(execMeta);
 	}
 }
 
+bool LSystemUi::symbolsVisible() const { return symbolsDialog && symbolsDialog->isVisible(); }
+
 void LSystemUi::showMarkedConfig()
 {
-	setConfigSet(drawArea->getMarkedDrawingResult()->config);
+	if (ui->chkAutoPaint->isChecked() && drawArea->getCurrentDrawing()) {
+		setConfigSet(drawArea->getMarkedDrawingResult()->config);
+	}
 }
 
 void LSystemUi::setBgColor()
@@ -633,33 +650,36 @@ void LSystemUi::copyToClipboardMarked()
 	drawArea->copyToClipboardMarked(transparent);
 }
 
-void LSystemUi::processSimulatorResult(const common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData)
+void LSystemUi::processSimulatorSegments(const common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData)
 {
+	endInvokeExec(ExecKind::Segments);
+
 	QSharedPointer<DrawMetaData> drawMetaData = qSharedPointerDynamicCast<DrawMetaData>(metaData);
 
 	if (execResult.resultKind == common::ExecResult::ExecResultKind::InvalidConfig) {
 		resultAvailable = false;
-		endInvokeExec();
 		if (drawMetaData->clearAll) drawArea->clear();
 		return;
 	}
+
 	resultAvailable = true;
 	drawMetaData->resultOk = (execResult.resultKind == ExecResult::ExecResultKind::Ok);
-	emit startDraw(execResult, metaData);
-	// drawDone causes finally endInvokeExec
 
-	if (symbolsDialog && symbolsDialog->isVisible()) emit simulatorExecActionStr();
+	exec.waitForExecTasks.insert(ExecKind::Draw);
+	emit startDraw(execResult, metaData); // drawDone also calls endInvokeExec
 }
 
 void LSystemUi::processActionStr(const QString & actionStr)
 {
-	openSymbolsDialog();
+	endInvokeExec(ExecKind::ActionStr);
 
-	symbolsDialog->setContent(actionStr);
+	if (symbolsVisible()) symbolsDialog->setContent(actionStr);
 }
 
 void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPointer<MetaData> & metaData)
 {
+	endInvokeExec(ExecKind::Draw);
+
 	QSharedPointer<DrawMetaData> drawMetaData = qSharedPointerDynamicCast<DrawMetaData>(metaData);
 	if (drawMetaData.isNull()) {
 		showMessage("got wrong meta data", MsgType::Error);
@@ -677,8 +697,6 @@ void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPoin
 		showMessage(msgPainted, MsgType::Info);
 	}
 
-	endInvokeExec();
-
 	// Needed if drawing was caused by a DrawLinks::Maximize operation.
 	ui->playerControl->unstashState();
 }
@@ -691,10 +709,10 @@ void LSystemUi::configLiveEdit()
 	ConfigSet configSet = getConfigSet(true);
 	if (!configSet.valid) return;
 
-	execConfig(configSet);
+	execConfigLive(configSet);
 }
 
-void LSystemUi::execConfig(const ConfigSet& configSet)
+void LSystemUi::execConfigLive(const ConfigSet & configSet)
 {
 	auto optOffset = drawArea->getLastOffset();
 
@@ -707,7 +725,7 @@ void LSystemUi::execConfig(const ConfigSet& configSet)
 
 	execMeta->clearAll = true;
 	execMeta->config = configSet;
-	getAdditionalOptions(execMeta);
+	getAdditionalOptionsForSegmentsMeta(execMeta);
 
 	invokeExec(execMeta);
 }
@@ -877,7 +895,7 @@ void LSystemUi::on_lblStatus_linkActivated(const QString & link)
 		execMeta->config = config;
 		invokeExec(execMeta);
 	} else if (link == Links::ShowSymbols) {
-		emit simulatorExecActionStr();
+		showSymbols();
 	} else if (link == Links::EditSettings) {
 		showSettings();
 	} else {
@@ -1013,7 +1031,7 @@ void LSystemUi::processDrawAction(const QString & link)
 			}
 			execMeta->config = configSet;
 
-			getAdditionalOptions(execMeta);
+			getAdditionalOptionsForSegmentsMeta(execMeta);
 			invokeExec(execMeta);
 		}
 
@@ -1108,6 +1126,8 @@ void LSystemUi::undoRedo()
 	drawArea->restoreLastImage();
 	if (ui->chkAutoPaint->isChecked() && drawArea->getCurrentDrawing()) {
 		showConfigSet(drawArea->getCurrentDrawing()->config);
+
+		if (symbolsVisible()) showSymbols();
 	}
 }
 

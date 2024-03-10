@@ -1,9 +1,7 @@
 #include "simulator.h"
 
-#include <util/qtcontutils.h>
 #include <util/print.h>
-
-#include <math.h>
+#include <util/qtcontutils.h>
 
 using namespace util;
 
@@ -14,7 +12,7 @@ using namespace impl;
 
 void ProcessLiteralAction::expand() const
 {
-    for (const DynAction & act : std::as_const(subActions)) {
+	for (const DynAction & act : std::as_const(subActions)) {
 		simInt.addAction(act.data());
 	}
 }
@@ -28,27 +26,21 @@ void ProcessLiteralAction::exec(State & state) const
 	}
 
 	if (paint) {
-		simInt.addSegment(LineSeg {.start = lastState,
-								   .end = state.cur,
-								   .colorNum = colorNum});
+		simInt.addSegment(LineSeg{.start = lastState, .end = state.cur, .colorNum = colorNum});
 	}
 }
 
 void ScaleStartAction::exec(State & state) const
 {
-	state.subStates.push((StateGeom &)state);
+	state.subStates.push((StateGeom &) state);
 	state.d *= scaleFct;
 }
 
-void ScaleStopAction::exec(State & state) const
-{
-	(StateGeom &)state = state.subStates.pop();
-}
+void ScaleStopAction::exec(State & state) const { (StateGeom &) state = state.subStates.pop(); }
 
 void TurnAction::exec(State & state) const
 {
-	const double newDx =
-				 tCos * state.d.x() - tSin * state.d.y();
+	const double newDx = tCos * state.d.x() - tSin * state.d.y();
 	state.d.setY(tSin * state.d.x() + tCos * state.d.y());
 	state.d.setX(newDx);
 }
@@ -67,70 +59,120 @@ double TurnAction::roundNearWhole(double val)
 
 // -------------------------------------------------------------------------------------
 
-void Simulator::execAndExpand(const QSharedPointer<MetaData> & metaData)
+void Simulator::exec(const QSharedPointer<MetaData> & metaData)
 {
+	if (!metaData->execActionStr && !metaData->execSegments) {
+		emit errorReceived("Nothing to execute, neither segments nor action string is requested to calculate.");
+		return;
+	}
+
+	// Executes the config with the given meta data.
+	// Instead of a naive recalculation, we try to use as much as we can from the
+	// previous results
+
 	const common::ConfigSet & newConfig = metaData->config;
 
+	// set stack size for current execution, might be overridden
 	curMaxStackSize = newConfig.overrideStackSize ? *newConfig.overrideStackSize : maxStackSize;
 
-	if (!(validConfig && expansionEqual(newConfig))) {
+	const bool expandedActionsEqual = expansionEqual(newConfig);
+
+	// The actual expansion is equal if:
+	// * the expanded actions are equal,
+	// * and the execution was not stopped due to StackSize.
+	const bool executedSameExpansion = expandedActionsEqual && !stackSizeLimitReached;
+
+	if (!executedSameExpansion) actionStr = "";
+
+	// Check for valid config and parse the actions.
+	if (!(validConfig && expandedActionsEqual)) {
+		// parseAction raises errorReceived
 		validConfig = parseActions(newConfig);
 		if (!validConfig) {
-			emit resultReceived(ExecResult{ExecResult::ExecResultKind::InvalidConfig}, metaData);
+			if (metaData->execSegments) emit segmentsReceived(ExecResult{ExecResult::ExecResultKind::InvalidConfig}, metaData);
+			if (metaData->execActionStr) emit actionStrReceived("(error occurred)");
 			return;
 		}
 	}
 
-	config = newConfig;
-	execIterations(metaData);
+	// We don't need the full execIterations if:
+	// * we don't show the last iteration (for this we need the loop in `execIterations`),
+	//  - only relevant if segments are shown, there is no "show last iteration for action strings"
+	// * and the actual expansion is equal (see above).
+
+	ExecResult res{ExecResult::ExecResultKind::Ok, actionColors};
+	res.iterNum = config.numIter;
+
+	if (executedSameExpansion && !(metaData->showLastIter && metaData->execSegments)) {
+		if (config == newConfig) {
+			// If the configs are completely identical, we just use the last result:
+			res.segments = segments;
+		} else {
+			// We take the new config, but don't have to do the expansion again.
+			// Recalulating the segments is enough, if, e.g., the step size or start angle changes.
+			config = newConfig;
+			res.segments = getSegments();
+		}
+		// Action String cannot change in this case, only recalculate if not present.
+		if (metaData->execActionStr && actionStr.isEmpty()) composeActionStr();
+	} else {
+		// We have to reprocess everything.
+		// Iterations are needed for segments and action string.
+		config = newConfig;
+		execIterations(metaData, res);
+
+		if (metaData->execActionStr) composeActionStr();
+	}
+
+	// Finally report the results.
+	if (metaData->execSegments) emit segmentsReceived(res, metaData);
+	if (metaData->execActionStr) emit actionStrReceived(actionStr);
 }
 
-void Simulator::execActionStr()
+void Simulator::composeActionStr()
 {
-	QString actionStr;
-	for (const Action * action : std::as_const(currentActions))
-		actionStr += print(action);
-	emit actionStrReceived(actionStr);
+	actionStr = "";
+	for (const Action * action : std::as_const(currentActions)) actionStr += print(action);
 }
 
-void Simulator::execIterations(const QSharedPointer<MetaData> & metaData)
+void Simulator::execIterations(const QSharedPointer<MetaData> & metaData, ExecResult & res)
 {
-	ExecResult res;
-	res.actionColors = actionColors;
-
 	currentActions = {startAction.data()};
 	nextActions.clear();
 
-	const bool showLastIter = metaData && metaData->showLastIter;
-
-	for (quint32 curIter = 1 ; curIter <= config.numIter ; ++curIter) {
-		if (!execIter()) {
+	for (quint32 curIter = 1; curIter <= config.numIter; ++curIter) {
+		if (!execOneIteration()) {
 			res.resultKind = ExecResult::ExecResultKind::ExceedStackSize;
 			res.segments = getSegments();
 			res.iterNum = curIter;
-			emit errorReceived(QString("Exceeded maximum stack size (%1) at iteration %2, <a href=\"%3\">Paint with stack size %4</a>, <a href=\"%5\">Edit settings</a>")
-					.arg(curMaxStackSize).arg(res.iterNum).arg(Links::NextIterations).arg(2 * curMaxStackSize).arg(Links::EditSettings));
-			emit resultReceived(res, metaData);
+			stackSizeLimitReached = true;
+			emit errorReceived(QString("Exceeded maximum stack size (%1) at iteration %2, <a "
+									   "href=\"%3\">Paint with stack size %4</a>, <a "
+									   "href=\"%5\">Edit settings</a>")
+								   .arg(curMaxStackSize)
+								   .arg(res.iterNum)
+								   .arg(Links::NextIterations)
+								   .arg(2 * curMaxStackSize)
+								   .arg(Links::EditSettings));
 			return;
-		} else if (showLastIter && curIter == config.numIter - 1) {
+		} else if (metaData->showLastIter && curIter == config.numIter - 1) {
 			res.segmentsLastIter = getSegments();
 		}
 	}
 
-	res.resultKind = ExecResult::ExecResultKind::Ok;
+	stackSizeLimitReached = false;
 	res.iterNum = config.numIter;
 	res.segments = getSegments();
-	emit resultReceived(res, metaData);
 }
 
-bool Simulator::execIter()
+bool Simulator::execOneIteration()
 {
 	const auto takeNextActions = [&]() {
 		currentActions.clear();
 		qSwap(currentActions, nextActions);
 	};
 
-    for (const Action * actPtr : std::as_const(currentActions)) {
+	for (const Action * actPtr : std::as_const(currentActions)) {
 		if (nextActions.size() > curMaxStackSize) {
 			takeNextActions();
 			return false;
@@ -152,27 +194,18 @@ LineSegs Simulator::getSegments()
 	state.d.setX(config.stepSize);
 	initialTurnAct.exec(state);
 
-    for (const Action * act : std::as_const(currentActions)) {
+	for (const Action * act : std::as_const(currentActions)) {
 		act->exec(state);
 	}
 
 	return segments;
 }
 
-void Simulator::setMaxStackSize(int newMaxStackSize)
-{
-	maxStackSize = newMaxStackSize;
-}
+void Simulator::setMaxStackSize(int newMaxStackSize) { maxStackSize = newMaxStackSize; }
 
-void Simulator::addAction(const Action * action)
-{
-	nextActions << action;
-}
+void Simulator::addAction(const Action * action) { nextActions << action; }
 
-void Simulator::addSegment(const LineSeg & seg)
-{
-	segments << seg;
-}
+void Simulator::addSegment(const LineSeg & seg) { segments << seg; }
 
 bool Simulator::parseActions(const ConfigSet & newConfig)
 {
@@ -180,21 +213,26 @@ bool Simulator::parseActions(const ConfigSet & newConfig)
 	mainActions.clear();
 	startAction = nullptr;
 
+	if (!newConfig.valid) {
+		// should not happen, ConfigSets with "valid == false" are semantically
+		// NULL-configs.
+		emit errorReceived("Received NULL-config (valid == false)");
+		return false;
+	}
+
 	if (newConfig.definitions.isEmpty()) {
 		emit errorReceived("No literals given");
 		return false;
 	}
 
 	QMap<char, DynAction> allActions;
-	auto addAction = [&allActions](const DynAction & action) {
-		allActions[action->getLiteral()] = action;
-	};
+	auto addAction = [&allActions](const DynAction & action) { allActions[action->getLiteral()] = action; };
 
 	// * turns
-	const double radTurnLeft  = qDegreesToRadians(newConfig.turn.left);
+	const double radTurnLeft = qDegreesToRadians(newConfig.turn.left);
 	const double radTurnRight = qDegreesToRadians(newConfig.turn.right);
-	DynTurnAction turnLeft(new  TurnAction(*this, std::cos(radTurnLeft),  std::sin(radTurnLeft),  '+'));
-	DynTurnAction turnRight(new TurnAction(*this, std::cos(radTurnRight), std::sin(radTurnRight), '-' ));
+	DynTurnAction turnLeft(new TurnAction(*this, std::cos(radTurnLeft), std::sin(radTurnLeft), '+'));
+	DynTurnAction turnRight(new TurnAction(*this, std::cos(radTurnRight), std::sin(radTurnRight), '-'));
 	addAction(turnLeft);
 	addAction(turnRight);
 
@@ -241,13 +279,15 @@ bool Simulator::parseActions(const ConfigSet & newConfig)
 			}
 
 			literalAction->subActions << allActions[c];
-			if      (c == '[') ++scaleLevel;
+			if (c == '[') ++scaleLevel;
 			else if (c == ']') --scaleLevel;
 		}
 
 		if (scaleLevel != 0) {
-			emit errorReceived(printStr("Scale down/up, i.e., '[' and ']' symbols do not match in actions for literal '%1': %2",
-					def.literal, def.command));
+			emit errorReceived(printStr("Scale down/up, i.e., '[' and ']' symbols do "
+										"not match in actions for literal '%1': %2",
+										def.literal,
+										def.command));
 			return false;
 		}
 	}
@@ -257,15 +297,10 @@ bool Simulator::parseActions(const ConfigSet & newConfig)
 
 bool Simulator::expansionEqual(const ConfigSet & newConfig) const
 {
-	return     newConfig.definitions == config.definitions
-			&& newConfig.numIter     == config.numIter
-			&& newConfig.turn        == config.turn
-			&& newConfig.scaling     == config.scaling;
+	return newConfig.definitions == config.definitions && newConfig.numIter == config.numIter && newConfig.turn == config.turn
+		   && newConfig.scaling == config.scaling;
 }
 
-void Action::expand() const
-{
-	simInt.addAction(this);
-}
+void Action::expand() const { simInt.addAction(this); }
 
-}
+} // namespace lsystem

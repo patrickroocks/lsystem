@@ -51,7 +51,6 @@ protected:
 
 private:
 	void clearAllDrawings();
-	void resizeImage(QImage * image, const QSize & newSize);
 	void setNextUndoRedo(bool undoOrRedo);
 
 private:
@@ -60,11 +59,16 @@ private:
 
 	bool nextUndoOrRedo = true;
 
-	enum class MoveState { NoMove, ReadyForMove, MoveStarted };
+	enum class MoveState
+	{
+		NoMove,
+		ReadyForMove,
+		MoveStarted
+	};
 
 	MoveState moveMode = MoveState::NoMove;
 	QPoint moveStart;
 	QPoint moveStartOffset;
 };
 
-}
+}		 // namespace lsystem::ui

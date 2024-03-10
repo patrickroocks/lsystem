@@ -6,13 +6,11 @@
 #include <QColorDialog>
 
 namespace {
-
 const int MaxNumDefinitions = 10;
-
 }
 
-using namespace lsystem::common;
 using namespace util;
+using namespace lsystem::common;
 
 namespace lsystem {
 
@@ -28,15 +26,9 @@ DefinitionModel::DefinitionModel(QWidget * parent)
 	checkForNewStartSymbol();
 }
 
-auto DefinitionModel::getRow(const QModelIndex & index) const
-{
-	return definitions.begin() + index.row();
-}
+auto DefinitionModel::getRow(const QModelIndex & index) const { return definitions.begin() + index.row(); }
 
-auto DefinitionModel::getRow(const QModelIndex & index)
-{
-	return definitions.begin() + index.row();
-}
+auto DefinitionModel::getRow(const QModelIndex & index) { return definitions.begin() + index.row(); }
 
 void DefinitionModel::checkForNewStartSymbol()
 {
@@ -64,16 +56,13 @@ int DefinitionModel::columnCount(const QModelIndex & parent) const
 QVariant DefinitionModel::data(const QModelIndex & index, int role) const
 {
 	if (role == Qt::DisplayRole || role == Qt::EditRole) {
-		if      (index.column() == 0) return QString(getRow(index)->literal);
+		if (index.column() == 0) return QString(getRow(index)->literal);
 		else if (index.column() == 1) return getRow(index)->command;
-
 	} else if (role == Qt::BackgroundRole) {
 		if (index.column() == 2) return QBrush(getRow(index)->color);
-
 	} else if (role == Qt::CheckStateRole) {
-		if      (index.column() == 3) return getRow(index)->paint ? Qt::Checked : Qt::Unchecked;
+		if (index.column() == 3) return getRow(index)->paint ? Qt::Checked : Qt::Unchecked;
 		else if (index.column() == 4) return getRow(index)->move ? Qt::Checked : Qt::Unchecked;
-
 	}
 
 	return QVariant();
@@ -99,8 +88,8 @@ Qt::ItemFlags DefinitionModel::flags(const QModelIndex & index) const
 {
 	if (index.isValid()) {
 		Qt::ItemFlags rv = QAbstractTableModel::flags(index);
-		if      (index.column() <= 1) rv |= Qt::ItemIsEditable;       // Literal, Command
-		else if (index.column() >= 3) rv |= Qt::ItemIsUserCheckable;  // Move, Paint
+		if (index.column() <= 1) rv |= Qt::ItemIsEditable;					// Literal, Command
+		else if (index.column() >= 3) rv |= Qt::ItemIsUserCheckable;		// Move, Paint
 		return rv | Qt::ItemIsDragEnabled;
 	} else {
 		return Qt::ItemIsDropEnabled;
@@ -111,13 +100,17 @@ QVariant DefinitionModel::headerData(int section, Qt::Orientation orientation, i
 {
 	if (role == Qt::DisplayRole && orientation == Qt::Horizontal) {
 		switch (section) {
-		case 0: return QString("Literal");
-		case 1: return QString("Command");
-		case 2: return QString("Color");
-		case 3: return QString("Paint");
-		case 4: return QString("Move");
+			case 0:
+				return QString("Literal");
+			case 1:
+				return QString("Command");
+			case 2:
+				return QString("Color");
+			case 3:
+				return QString("Paint");
+			case 4:
+				return QString("Move");
 		}
-
 	}
 	return QVariant();
 }
@@ -137,7 +130,7 @@ bool DefinitionModel::setData(const QModelIndex & index, const QVariant & value,
 				return false;
 			}
 			const char newChar = value.toString()[0].toLatin1();
-			if (newChar < 'A' || newChar > 'Z')  {
+			if (newChar < 'A' || newChar > 'Z') {
 				emit showError(QString("Literal '%1' is not allowed, expected one char [A-Z]").arg(literalStr));
 				return false;
 			}
@@ -153,7 +146,6 @@ bool DefinitionModel::setData(const QModelIndex & index, const QVariant & value,
 			}
 		}
 	} else if (role == Qt::CheckStateRole) {
-
 		const bool newChecked = (Qt::CheckState)value.toInt() == Qt::Checked;
 
 		if (index.column() == 3) {
@@ -184,10 +176,10 @@ bool DefinitionModel::dropMimeData(const QMimeData * data, Qt::DropAction action
 	const QByteArray encoded = data->data(mimeTypesRef.first());
 	QDataStream stream(encoded);
 
-	if (stream.atEnd()) return false; // no data
+	if (stream.atEnd()) return false;		 // no data
 
 	int srcRow, srcCol;
-	QMap<int,  QVariant> roleDataMap;
+	QMap<int, QVariant> roleDataMap;
 	stream >> srcRow >> srcCol >> roleDataMap;
 
 	// too much data? there should be only one single cell selectable
@@ -200,9 +192,9 @@ bool DefinitionModel::dropMimeData(const QMimeData * data, Qt::DropAction action
 		return false;
 	}
 	definitions.insert(row, *getRow(srcIndex));
-	if (srcRow > row) { // delete below insertion
+	if (srcRow > row) {		   // delete below insertion
 		++srcRow;
-	} else { // delete above insertion
+	} else {		// delete above insertion
 		--row;
 	}
 	definitions.removeAt(srcRow);
@@ -239,19 +231,19 @@ bool DefinitionModel::add()
 	const int addRowNum = definitions.size();
 
 	QSet<char> currentLiterals;
-    for (const Definition & def : std::as_const(definitions)) currentLiterals << def.literal;
+	for (const Definition & def : std::as_const(definitions)) currentLiterals << def.literal;
 	char nextChar;
 	if (definitions.empty()) {
 		nextChar = 'A';
 	} else {
-		nextChar =  definitions.last().literal;
+		nextChar = definitions.last().literal;
 		while (true) {
 			nextChar++;
 			if (nextChar == 'Z') nextChar = 'A';
 			if (!currentLiterals.contains(nextChar)) break;
 		}
 	}
-	definitions << Definition{nextChar, ""};
+	definitions << Definition {nextChar, ""};
 	insertRow(addRowNum);
 	return true;
 }
@@ -260,7 +252,6 @@ bool DefinitionModel::remove()
 {
 	auto selection = emit getSelection();
 	if (selection.isValid()) {
-
 		auto selectedRow = getRow(selection);
 		auto selectedRowIndex = selectedRow - definitions.begin();
 		definitions.erase(selectedRow);
@@ -285,4 +276,4 @@ void DefinitionModel::setDefinitions(const Definitions & newDefinitions)
 	checkForNewStartSymbol();
 }
 
-}
+}		 // namespace lsystem

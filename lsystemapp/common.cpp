@@ -12,9 +12,9 @@ Definition::Definition(const QJsonObject & obj)
 	const QByteArray literalStr = obj["literal"].toString().toLatin1();
 	literal = literalStr.size() == 1 ? literalStr.data()[0] : '\0';
 	command = obj["command"].toString();
-	color   = obj["color"].toInt();
+	color = obj["color"].toInt();
 	paint = obj["paint"].toBool();
-	move    = obj["move"].toBool();
+	move = obj["move"].toBool();
 }
 
 Definition::Definition(char literal, const QString & command)
@@ -22,41 +22,28 @@ Definition::Definition(char literal, const QString & command)
 	, command(command)
 	, paint(true)
 	, move(true)
-{
-}
+{}
 
 QJsonObject Definition::toJson() const
 {
 	QJsonObject rv;
 	rv["literal"] = QString(literal);
 	rv["command"] = command;
-	rv["color"]   = color.value();
-	rv["paint"]   = paint;
-	rv["move"]    = paint;
+	rv["color"] = color.value();
+	rv["paint"] = paint;
+	rv["move"] = paint;
 	return rv;
 }
 
 // ---------------------------------------------------------------------------
 
-QString LineSeg::toString() const
-{
-	return printStr("L(%1, %2)", start, end);
-}
+QString LineSeg::toString() const { return printStr("L(%1, %2)", start, end); }
 
-QLine LineSeg::lineNegY() const
-{
-	return QLine(start.x(), -start.y(), end.x(), -end.y());
-}
+QLine LineSeg::lineNegY() const { return QLine(start.x(), -start.y(), end.x(), -end.y()); }
 
-bool LineSeg::isPoint() const
-{
-	return start == end;
-}
+bool LineSeg::isPoint() const { return start == end; }
 
-QPointF LineSeg::pointNegY() const
-{
-	return QPoint(start.x(), -start.y());
-}
+QPointF LineSeg::pointNegY() const { return QPoint(start.x(), -start.y()); }
 
 // ---------------------------------------------------------------------------
 
@@ -113,17 +100,13 @@ QJsonObject ConfigMap::toJson() const
 
 // ----------------------------------------------------------------------------
 
-QString ExecResult::toString() const
-{
-	return printStr("ExecResult(%1, segments: %2, iterations: %3)", resultKind, segments, iterNum);
-}
+QString ExecResult::toString() const { return printStr("ExecResult(%1, segments: %2, iterations: %3)", resultKind, segments, iterNum); }
 
 // ----------------------------------------------------------------------------
 
 AppSettings::AppSettings(const QJsonObject & obj)
 	: maxStackSize(obj["maxStackSize"].toInt())
-{
-}
+{}
 
 QJsonObject AppSettings::toJson() const
 {
@@ -136,7 +119,10 @@ QJsonObject AppSettings::toJson() const
 
 QString MetaData::toString() const
 {
-	return printStr("MetaData(showLastIter: %1, lastIterOpacy: %2, thickness: %3, opacity: %4, antiAliasing: %5, animLatency: %6)",
+	return printStr("MetaData(execSegments: %1, execActionStr: %2, showLastIter: %3, lastIterOpacy: %4, thickness: %5, opacity: %6, "
+					"antiAliasing: %7, animLatency: %8)",
+					execSegments,
+					execActionStr,
 					showLastIter,
 					lastIterOpacy,
 					thickness,
@@ -145,5 +131,4 @@ QString MetaData::toString() const
 					animLatency);
 }
 
-
-}
+} // namespace lsystem::common

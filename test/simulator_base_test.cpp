@@ -34,8 +34,7 @@ private slots:
 	{
 		simulator.setMaxStackSize(StackSize);
 		simulator.moveToThread(&simulatorThread);
-		connect(this, &SimulatorBaseTest::execAndExpand, &simulator, &Simulator::execAndExpand);
-		connect(this, &SimulatorBaseTest::execActionStr, &simulator, &Simulator::execActionStr);
+		connect(this, &SimulatorBaseTest::exec, &simulator, &Simulator::exec);
 		simulatorThread.start();
 	}
 
@@ -47,8 +46,7 @@ private slots:
 	}
 
 signals:
-	void execAndExpand(const QSharedPointer<common::MetaData> & metaData);
-	void execActionStr();
+	void exec(const QSharedPointer<common::MetaData> & metaData);
 
 
 private:
@@ -58,13 +56,30 @@ private:
 
 void SimulatorBaseTest::baseTest()
 {
-	SIG_WATCHER(recResult, &simulator, &Simulator::resultReceived);
+	SIG_WATCHER(recResult, &simulator, &Simulator::segmentsReceived);
 	SIG_WATCHER(recActionStr, &simulator, &Simulator::actionStrReceived);
 	SIG_WATCHER(recErrorStr, &simulator, &Simulator::errorReceived);
 
+	// Base data
+	QSharedPointer<common::MetaData> inputMeta(new common::MetaData());
+	inputMeta->config.valid = true;
+
+	// * Test missing execution task
+
+	SIG_EXPECT(recErrorStr, CHECK([](const QString & errStr) {
+				   CHECK_COMPARE_REGEXP(errStr, ".*(N|n)othing to execute.*")
+				   CHECK_RETURN
+			   }))
+
+	emit exec(inputMeta);
+
+	SIG_CHECK
+
+	// * Set execution task segments from here
+	inputMeta->execSegments = true;
+
 	// * Test: wrong config
 
-	QSharedPointer<common::MetaData> inputMeta(new common::MetaData());
 	inputMeta->config.definitions = {Definition('A', "AX")};
 
 	SIG_EXPECT(recResult, CHECK_AT(1, [](const ExecResult & res) {
@@ -81,7 +96,7 @@ void SimulatorBaseTest::baseTest()
 				   CHECK_RETURN
 			   }))
 
-	emit execAndExpand(inputMeta);
+	emit exec(inputMeta);
 
 	SIG_CHECK
 
@@ -101,9 +116,12 @@ void SimulatorBaseTest::baseTest()
 			   }))
 
 	inputMeta->config.definitions = {Definition('A', "A"), Definition('A', "B")};
-	emit execAndExpand(inputMeta);
+	emit exec(inputMeta);
 
 	SIG_CHECK
+
+	// * From here we test with action strings.
+	inputMeta->execActionStr = true;
 
 	// * Test: just one iteration
 
@@ -118,8 +136,7 @@ void SimulatorBaseTest::baseTest()
 	auto & configSet = inputMeta->config;
 	configSet.definitions = {Definition('A', "A[A]")};
 	configSet.numIter = 1;
-	emit execAndExpand(inputMeta);
-	emit execActionStr();
+	emit exec(inputMeta);
 
 	SIG_CHECK
 
@@ -143,10 +160,12 @@ void SimulatorBaseTest::baseTest()
 	configSet.startAngle = -90;
 	configSet.numIter = 2;
 	configSet.stepSize = 1;
-	emit execAndExpand(inputMeta);
-	emit execActionStr();
+	emit exec(inputMeta);
 
 	SIG_CHECK
+
+	// * From here we stop testing with action strings.
+	inputMeta->execActionStr = false;
 
 	// * Test: Check max stack size
 
@@ -165,7 +184,7 @@ void SimulatorBaseTest::baseTest()
 	configSet.definitions = {Definition('A', "AA")};
 	configSet.numIter = std::numeric_limits<quint32>::max();
 
-	emit execAndExpand(inputMeta);
+	emit exec(inputMeta);
 
 	SIG_CHECK
 
@@ -185,7 +204,7 @@ void SimulatorBaseTest::baseTest()
 				   CHECK_RETURN
 			   }))
 
-	emit execAndExpand(inputMeta);
+	emit exec(inputMeta);
 
 	SIG_CHECK
 }

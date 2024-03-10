@@ -1,8 +1,8 @@
 #pragma once
 
-#include <QtCore>
 #include <QColor>
 #include <QPointF>
+#include <QtCore>
 
 namespace lsystem::common {
 
@@ -10,7 +10,12 @@ class AnimatorResultStructs : public QObject
 {
 	Q_OBJECT
 public:
-	enum class NextStepResult { Stopped, Restart, Continue };
+	enum class NextStepResult
+	{
+		Stopped,
+		Restart,
+		Continue
+	};
 	Q_ENUM(NextStepResult)
 };
 
@@ -43,7 +48,7 @@ inline bool operator==(const Definition & lhs, const Definition & rhs)
 			&& lhs.color   == rhs.color
 			&& lhs.paint   == rhs.paint
 			&& lhs.move    == rhs.move;
-	// clang-format off
+	// clang-format on
 }
 
 using Definitions = QList<Definition>;
@@ -63,8 +68,8 @@ struct LineSeg
 
 	QString toString() const;
 
-	// start/end with negated Y; when painting, the positive y-axis points downward
-	// but mathematically positive y-values point upward
+	// start/end with negated Y; when painting, the positive y-axis points
+	// downward but mathematically positive y-values point upward
 	QLine lineNegY() const;
 	bool isPoint() const;
 	QPointF pointNegY() const;
@@ -79,10 +84,13 @@ struct ConfigSet
 	QJsonObject toJson() const;
 
 	Definitions definitions;
-	struct TurnDegree {
+
+	struct TurnDegree
+	{
 		double left = 0;
 		double right = 0;
 	} turn;
+
 	double scaling = 0;
 	double startAngle = 0;
 	quint32 numIter = 0;
@@ -100,15 +108,29 @@ struct ConfigMap : public QMap<QString, common::ConfigSet>
 
 inline bool operator==(const ConfigSet::TurnDegree & lhs, const ConfigSet::TurnDegree & rhs)
 {
-	return     lhs.left  == rhs.left
-			&& lhs.right == rhs.right;
+	return lhs.left == rhs.left && lhs.right == rhs.right;
+}
+
+inline bool operator==(const ConfigSet & lhs, const ConfigSet & rhs)
+{
+	// clang-format off
+	return     lhs.definitions       == rhs.definitions
+			&& lhs.turn              == rhs.turn
+			&& lhs.scaling           == rhs.scaling
+			&& lhs.startAngle        == rhs.startAngle
+			&& lhs.numIter           == rhs.numIter
+			&& lhs.stepSize          == rhs.stepSize
+			&& lhs.valid             == rhs.valid
+			&& lhs.overrideStackSize == rhs.overrideStackSize;
+	// clang-format on
 }
 
 class ExecResultStructs : public QObject
 {
 	Q_OBJECT
 public:
-	enum class ExecResultKind {
+	enum class ExecResultKind
+	{
 		Null,
 		Ok,
 		InvalidConfig,
@@ -121,10 +143,14 @@ struct ExecResult
 {
 	using ExecResultKind = ExecResultStructs::ExecResultKind;
 
-	ExecResult() = default;
 	explicit ExecResult(ExecResultKind resultKind)
 		: resultKind(resultKind)
 	{}
+	explicit ExecResult(ExecResultKind resultKind, const QVector<QColor> & actionColors)
+		: resultKind(resultKind)
+		, actionColors(actionColors)
+	{}
+
 	ExecResultKind resultKind = ExecResultKind::Null;
 	common::LineSegs segments;
 	common::LineSegs segmentsLastIter;
@@ -146,7 +172,11 @@ struct AppSettings
 struct MetaData
 {
 	virtual ~MetaData() {}
+
 	virtual QString toString() const;
+
+	bool execSegments = false;
+	bool execActionStr = false;
 
 	bool showLastIter = false;
 	double lastIterOpacy = 0;
@@ -171,4 +201,4 @@ inline void registerCommonTypes()
 	qRegisterMetaType<AnimatorResult>("lsystem::common::AnimatorResult");
 }
 
-}
+} // namespace lsystem::common

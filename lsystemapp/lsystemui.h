@@ -15,16 +15,18 @@
 #include <util/quicklinear.h>
 #include <util/tableitemdelegate.h>
 
+#include <QCheckBox>
 #include <QMainWindow>
-#include <QTimer>
 #include <QMenu>
 #include <QShortcut>
-#include <QCheckBox>
+#include <QTimer>
 
 #include <optional>
 
 QT_BEGIN_NAMESPACE
-namespace Ui { class LSystemUi; }
+namespace Ui {
+class LSystemUi;
+}
 QT_END_NAMESPACE
 
 class LSystemUi : public QMainWindow
@@ -39,13 +41,15 @@ protected:
 	void resizeEvent(QResizeEvent * event) override;
 
 private:
-	enum class MsgType {
+	enum class MsgType
+	{
 		Info,
 		Warning,
 		Error
 	};
 
-	struct DrawMetaData : public lsystem::common::MetaData {
+	struct DrawMetaData : public lsystem::common::MetaData
+	{
 		QPoint offset;
 		bool clearAll = false;
 		bool clearLast = false;
@@ -66,8 +70,7 @@ private slots:
 	void on_lblStatus_mousePressed(QMouseEvent * event);
 
 signals:
-	void simulatorExecActionStr();
-	void simulatorExec(const QSharedPointer<lsystem::common::MetaData> &metaData);
+	void simulatorExec(const QSharedPointer<lsystem::common::MetaData> & metaData);
 	void simulatorExecDoubleStackSize(const QSharedPointer<lsystem::common::MetaData> & metaData);
 	void startDraw(const lsystem::common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData);
 
@@ -79,7 +82,8 @@ signals:
 private slots:
 
 	// from simulator
-	void processSimulatorResult(const lsystem::common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData);
+	void processSimulatorSegments(const lsystem::common::ExecResult & execResult,
+								  const QSharedPointer<lsystem::common::MetaData> & metaData);
 	void processActionStr(const QString & actionStr);
 
 	// from segdrawer
@@ -141,7 +145,6 @@ private:
 	};
 
 private:
-
 	// Draw Area
 	void drawAreaClick(int x, int y, Qt::MouseButton button, bool drawingMarked);
 	void startPaint(int x, int y);
@@ -150,7 +153,7 @@ private:
 
 	// current Config
 	void configLiveEdit();
-	void execConfig(const lsystem::common::ConfigSet& configSet);
+	void execConfigLive(const lsystem::common::ConfigSet & configSet);
 	void focusAngleEdit(FocusableLineEdit * lineEdit);
 	void focusLinearEdit(FocusableLineEdit * lineEdit);
 	void unfocusAngleEdit();
@@ -159,9 +162,9 @@ private:
 	void latencyChanged();
 
 	// additional options & windows
-	void getAdditionalOptions(const QSharedPointer<lsystem::common::MetaData> & execMeta);
-	void openSymbolsDialog();
+	void getAdditionalOptionsForSegmentsMeta(const QSharedPointer<lsystem::common::MetaData> & execMeta);
 	void showSymbols();
+	bool symbolsVisible() const;
 	void showMarkedConfig();
 	void showRightAngleDialog();
 
@@ -189,8 +192,15 @@ private:
 	void undoRedo();
 
 	// Execution helpers
+	enum class ExecKind
+	{
+		Segments,
+		ActionStr,
+		Draw
+	};
+
 	void invokeExec(const QSharedPointer<DrawMetaData> & execMeta);
-	void endInvokeExec();
+	void endInvokeExec(ExecKind execKind);
 	void invokeExecPending();
 
 private:
@@ -216,6 +226,7 @@ private:
 
 	struct ExecInfo
 	{
+		QSet<ExecKind> waitForExecTasks;
 		bool active = false;
 		bool scheduledPending = false;
 		QSharedPointer<DrawMetaData> pendingMeta;
@@ -224,7 +235,8 @@ private:
 
 	QTimer messageDecayTimer;
 
-	class DrawAreaMenu {
+	class DrawAreaMenu
+	{
 	public:
 		DrawAreaMenu(LSystemUi * parent);
 		QMenu menu;
@@ -239,7 +251,8 @@ private:
 	};
 	QScopedPointer<DrawAreaMenu> drawAreaMenu;
 
-	struct StatusMenu {
+	struct StatusMenu
+	{
 		StatusMenu(LSystemUi * parent);
 		QMenu menu;
 	};
@@ -249,11 +262,13 @@ private:
 	std::optional<lsystem::ui::DrawResult> highlightedDrawing;
 	QScopedPointer<ClickableLabel> lblDrawActions;
 
-	enum class TransparencyOpt {
+	enum class TransparencyOpt
+	{
 		Ask = 0,
 		NoTransparency = 1,
 		Transparency = 2
-	} transparencyOpt = TransparencyOpt::Ask;
+	} transparencyOpt
+		= TransparencyOpt::Ask;
 
 	QScopedPointer<SymbolsDialog> symbolsDialog;
 
