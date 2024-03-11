@@ -248,6 +248,7 @@ void LSystemUi::invokeExecPending()
 {
 	exec.pendingTimer.stop();
 	if (exec.scheduledPending) {
+		// pendingMeta is deleted in invokeExec, preserve shared pointer (passed by reference)
 		auto copiedPendingMeta = exec.pendingMeta;
 		invokeExec(copiedPendingMeta);
 	}
@@ -893,6 +894,7 @@ void LSystemUi::on_lblStatus_linkActivated(const QString & link)
 			config.overrideStackSize = configFileStore.getSettings().maxStackSize * 2;
 		}
 		execMeta->config = config;
+		getAdditionalOptionsForSegmentsMeta(execMeta);
 		invokeExec(execMeta);
 	} else if (link == Links::ShowSymbols) {
 		showSymbols();
