@@ -38,9 +38,15 @@ const int StatusIntervalMs = 8000;
 // After this interval we execute pending operations, if no new input from the user came in.
 const int ExecPendingIntervalMs = 100;
 
+QString generateBgColorStyle(const QColor & col)
+{
+	return QString("background-color: rgb(") + QString::number(col.red()) + "," + QString::number(col.green()) + ","
+		   + QString::number(col.blue()) + ");\nborder: 1px solid black;";
+}
+
 } // namespace
 
-LSystemUi::LSystemUi(QWidget *parent)
+LSystemUi::LSystemUi(QWidget * parent)
 	: QMainWindow(parent)
 	, ui(new Ui::LSystemUi)
 	, defModel(this)
@@ -49,6 +55,11 @@ LSystemUi::LSystemUi(QWidget *parent)
 	ui->setupUi(this);
 
 	setWindowTitle(util::printStr("lsystem %1 - An interactive simulator for Lindenmayer systems", Version));
+
+	connect(ui->lblGradientStart, &ClickableLabel::mousePressed, this, &LSystemUi::onLblGradientStartMousePressed);
+	connect(ui->lblGradientEnd, &ClickableLabel::mousePressed, this, &LSystemUi::onLblGradientEndMousePressed);
+	gradientPreview.reset(new GradientPreview(colorGradient, ui->wdgGradientPreview));
+	updateGradientStyle();
 
 	resetStatus();
 	messageDecayTimer.setInterval(StatusIntervalMs);
@@ -84,8 +95,7 @@ LSystemUi::LSystemUi(QWidget *parent)
 	tableItemDelegate.reset(new TableItemDelegateAutoUpdate);
 	ui->tblDefinitions->setItemDelegate(tableItemDelegate.data());
 
-	connect(ui->tblDefinitions->selectionModel(), &QItemSelectionModel::selectionChanged,
-			&defModel, &DefinitionModel::selectionChanged);
+	connect(ui->tblDefinitions->selectionModel(), &QItemSelectionModel::selectionChanged, &defModel, &DefinitionModel::selectionChanged);
 	connect(&defModel, &DefinitionModel::deselect, [this]() { ui->tblDefinitions->setCurrentIndex(QModelIndex()); });
 	connect(&defModel, &DefinitionModel::getSelection, [this]() { return ui->tblDefinitions->currentIndex(); });
 	connect(&defModel, &DefinitionModel::newStartSymbol, ui->lblStartSymbol, &QLabel::setText);
@@ -124,16 +134,15 @@ LSystemUi::LSystemUi(QWidget *parent)
 	ui->txtRight->setValueRestriction(ValueRestriction::NegativeNumbers);
 
 	// * connections for live edits
-	const std::vector<FocusableLineEdit*> configEditsLinear = {
-			ui->txtIter, ui->txtStep, ui->txtScaleDown,
-			ui->txtLastIterOpacity, ui->txtThickness, ui->txtOpacity};
+	const std::vector<FocusableLineEdit *> configEditsLinear
+		= {ui->txtIter, ui->txtStep, ui->txtScaleDown, ui->txtLastIterOpacity, ui->txtThickness, ui->txtOpacity};
 
-	const std::vector<FocusableLineEdit*> allLinearEdits =  util::concatenateVectors(configEditsLinear, {ui->txtLatency});
+	const std::vector<FocusableLineEdit *> allLinearEdits = util::concatenateVectors(configEditsLinear, {ui->txtLatency});
 
-	const std::vector<FocusableLineEdit*> configEditsAngle = {ui->txtStartAngle, ui->txtLeft, ui->txtRight};
+	const std::vector<FocusableLineEdit *> configEditsAngle = {ui->txtStartAngle, ui->txtLeft, ui->txtRight};
 
-	const std::vector<FocusableLineEdit*> allEdits = util::concatenateVectors(allLinearEdits, configEditsAngle);
-	const std::vector<FocusableLineEdit*> allConfigEdits = util::concatenateVectors(configEditsLinear, configEditsAngle);
+	const std::vector<FocusableLineEdit *> allEdits = util::concatenateVectors(allLinearEdits, configEditsAngle);
+	const std::vector<FocusableLineEdit *> allConfigEdits = util::concatenateVectors(configEditsLinear, configEditsAngle);
 
 	for (FocusableLineEdit * lineEdit : allConfigEdits) {
 		connect(lineEdit, &FocusableLineEdit::textChanged, this, &LSystemUi::configLiveEdit);
@@ -183,6 +192,8 @@ LSystemUi::~LSystemUi()
 
 void LSystemUi::resizeEvent(QResizeEvent * event)
 {
+	static bool firstRun = true;
+
 	const int border = 5;
 	const int wdt = event->size().width() - border;
 	const int hgt = event->size().height() - border;
@@ -193,19 +204,18 @@ void LSystemUi::resizeEvent(QResizeEvent * event)
 	// size of wdgOut is not available at start
 	drawArea->resize(ui->layPaintFrameWidget->size().width() - 20, ui->layPaintFrameWidget->size().height() - 50);
 
+	if (firstRun) {
+		gradientPreview->resize(ui->wdgGradientPreview->geometry().width(), ui->wdgGradientPreview->geometry().height());
+		firstRun = false;
+	}
+
 	// repaint during resize will fail!
 	removeAllSliders();
 }
 
-void LSystemUi::on_cmdAdd_clicked()
-{
-	defModel.add();
-}
+void LSystemUi::on_cmdAdd_clicked() { defModel.add(); }
 
-void LSystemUi::on_cmdRemove_clicked()
-{
-	defModel.remove();
-}
+void LSystemUi::on_cmdRemove_clicked() { defModel.remove(); }
 
 void LSystemUi::invokeExec(const QSharedPointer<DrawMetaData> & execMeta)
 {
@@ -331,7 +341,7 @@ LSystemUi::DrawPlacement LSystemUi::getDrawPlacement() const
 	LSystemUi::DrawPlacement rv;
 
 	const auto drawing = highlightedDrawing.value();
-	const auto& drawGeom = drawArea->geometry();
+	const auto & drawGeom = drawArea->geometry();
 	rv.drawingSize = drawing.botRight - drawing.topLeft;
 	rv.areaTopLeft = DrawPlacement::outerDist;
 	rv.areaWidthHeight = QPoint(drawGeom.width(), drawArea->height());
@@ -350,12 +360,12 @@ void LSystemUi::showMessage(const QString & msg, MsgType msgType)
 	ui->lblStatus->setText(msg);
 	ui->lblStatus->setStyleSheet([&msgType]() {
 		switch (msgType) {
-		case MsgType::Info:
-			return StatusDefaultStyle;
-		case MsgType::Warning:
-			return StatusWarningStyle;
-		case MsgType::Error:
-			return StatusErrorStyle;
+			case MsgType::Info:
+				return StatusDefaultStyle;
+			case MsgType::Warning:
+				return StatusWarningStyle;
+			case MsgType::Error:
+				return StatusErrorStyle;
 		}
 		return ""; // prevent compiler warning
 	}());
@@ -363,10 +373,9 @@ void LSystemUi::showMessage(const QString & msg, MsgType msgType)
 	messageDecayTimer.start();
 }
 
-void LSystemUi::showVarError(const QString & errorVar, const QString & extraInfo) {
-	showErrorInUi(QString("Invalid value for variable '%1'%2").arg(
-		errorVar,
-		extraInfo.isEmpty() ? "" : (" (" + extraInfo + ")")));
+void LSystemUi::showVarError(const QString & errorVar, const QString & extraInfo)
+{
+	showErrorInUi(QString("Invalid value for variable '%1'%2").arg(errorVar, extraInfo.isEmpty() ? "" : (" (" + extraInfo + ")")));
 }
 
 void LSystemUi::resetStatus()
@@ -488,28 +497,21 @@ void LSystemUi::on_cmdStore_clicked()
 
 	ConfigNameKind currentConfig = configList.getConfigNameKindByIndex(ui->lstConfigs->currentIndex());
 	bool ok;
-	QString configName = QInputDialog::getText(this, "Config name",
-			"Enter a name for the config:", QLineEdit::Normal,
-			currentConfig.configName, &ok);
+	QString configName
+		= QInputDialog::getText(this, "Config name", "Enter a name for the config:", QLineEdit::Normal, currentConfig.configName, &ok);
 
 	if (!ok) return;
 
 	configList.storeConfig(configName, c);
 }
 
-void LSystemUi::on_cmdLoad_clicked()
-{
-	loadConfigByLstIndex(ui->lstConfigs->currentIndex());
-}
+void LSystemUi::on_cmdLoad_clicked() { loadConfigByLstIndex(ui->lstConfigs->currentIndex()); }
 
-void LSystemUi::on_lstConfigs_doubleClicked(const QModelIndex & index)
-{
-	loadConfigByLstIndex(index);
-}
+void LSystemUi::on_lstConfigs_doubleClicked(const QModelIndex & index) { loadConfigByLstIndex(index); }
 
 void LSystemUi::drawAreaClick(int x, int y, Qt::MouseButton button, bool drawingMarked)
 {
-	ui->tblDefinitions->setFocus(); // removes focus from text fields
+	ui->tblDefinitions->setFocus();						// removes focus from text fields
 	ui->tblDefinitions->setCurrentIndex(QModelIndex()); // finishes editing
 
 	if (button == Qt::MouseButton::LeftButton && !drawingMarked) {
@@ -542,7 +544,7 @@ void LSystemUi::on_cmdDelete_clicked()
 
 void LSystemUi::enableUndoRedo(bool undoOrRedo)
 {
-	drawAreaMenu->undoAction->setEnabled( undoOrRedo);
+	drawAreaMenu->undoAction->setEnabled(undoOrRedo);
 	drawAreaMenu->redoAction->setEnabled(!undoOrRedo);
 }
 
@@ -556,10 +558,10 @@ void LSystemUi::highlightDrawing(std::optional<DrawResult> drawResult)
 	}
 
 	drawPlacement = getDrawPlacement();
-	const auto& dp = drawPlacement;
+	const auto & dp = drawPlacement;
 
 	// first guess label pos
-	const auto& drawing = drawResult.value();
+	const auto & drawing = drawResult.value();
 	QPoint labelPos = drawing.topLeft + DrawPlacement::outerDist;
 
 	// Always display maxize button
@@ -583,14 +585,14 @@ void LSystemUi::highlightDrawing(std::optional<DrawResult> drawResult)
 
 	// codes like "&searr;" are not supported
 	if (moveRight && moveDown) addLink("&#8600;", DrawLinks::MoveRightDown, "Move right&down");
-	if (moveLeft  && moveDown) addLink("&#8601;", DrawLinks::MoveLeftDown,  "Move left&down");
-	if (moveRight && moveUp)   addLink("&#8599;", DrawLinks::MoveRightUp,   "Move right&up");
-	if (moveLeft  && moveUp)   addLink("&#8598;", DrawLinks::MoveLeftUp,    "Move left&up");
+	if (moveLeft && moveDown) addLink("&#8601;", DrawLinks::MoveLeftDown, "Move left&down");
+	if (moveRight && moveUp) addLink("&#8599;", DrawLinks::MoveRightUp, "Move right&up");
+	if (moveLeft && moveUp) addLink("&#8598;", DrawLinks::MoveLeftUp, "Move left&up");
 
-	if (moveDown)  addLink("&darr;", DrawLinks::MoveDown,  "Move down");
-	if (moveLeft)  addLink("&larr;", DrawLinks::MoveLeft,  "Move left");
+	if (moveDown) addLink("&darr;", DrawLinks::MoveDown, "Move down");
+	if (moveLeft) addLink("&larr;", DrawLinks::MoveLeft, "Move left");
 	if (moveRight) addLink("&rarr;", DrawLinks::MoveRight, "Move right");
-	if (moveUp)    addLink("&uarr;", DrawLinks::MoveUp,    "Move up");
+	if (moveUp) addLink("&uarr;", DrawLinks::MoveUp, "Move up");
 
 	lblDrawActions->setText(texts.join("&nbsp;"));
 	lblDrawActions->setToolTip(toolTips.join(" | "));
@@ -620,10 +622,7 @@ void LSystemUi::markDrawing()
 	}
 }
 
-void LSystemUi::showErrorInUi(const QString & errString)
-{
-	showMessage(errString, MsgType::Error);
-}
+void LSystemUi::showErrorInUi(const QString & errString) { showMessage(errString, MsgType::Error); }
 
 void LSystemUi::copyToClipboardMarked()
 {
@@ -636,8 +635,11 @@ void LSystemUi::copyToClipboardMarked()
 		QCheckBox * chkTransparency = new QCheckBox("Don't ask anymore until restart of lsystem");
 		connect(chkTransparency, &QCheckBox::stateChanged, [&doNotAskAnymore](int state) { doNotAskAnymore = static_cast<bool>(state); });
 
-		QMessageBox msgBox(QMessageBox::Icon::Question, "Transparency", "Do you want to export the drawing with transparent background (will not work in all programs)?",
-						QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, parentWidget());
+		QMessageBox msgBox(QMessageBox::Icon::Question,
+						   "Transparency",
+						   "Do you want to export the drawing with transparent background (will not work in all programs)?",
+						   QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,
+						   parentWidget());
 		msgBox.setDefaultButton(QMessageBox::Yes);
 		msgBox.setCheckBox(chkTransparency);
 		QMessageBox::StandardButton res = static_cast<QMessageBox::StandardButton>(msgBox.exec());
@@ -693,7 +695,9 @@ void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPoin
 
 	if (drawMetaData->resultOk) {
 		const QString msgPainted = printStr("Painted %1 segments, size is %2 px, <a href=\"%3\">show symbols</a>",
-				drawing.segments.size(), drawing.size(), Links::ShowSymbols);
+											drawing.segments.size(),
+											drawing.size(),
+											Links::ShowSymbols);
 
 		showMessage(msgPainted, MsgType::Info);
 	}
@@ -704,8 +708,7 @@ void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPoin
 
 void LSystemUi::configLiveEdit()
 {
-	if (!ui->chkAutoPaint->isChecked() || disableConfigLiveEdit)
-		return;
+	if (!ui->chkAutoPaint->isChecked() || disableConfigLiveEdit) return;
 
 	ConfigSet configSet = getConfigSet(true);
 	if (!configSet.valid) return;
@@ -912,6 +915,36 @@ void LSystemUi::on_lblStatus_mousePressed(QMouseEvent * event)
 	}
 }
 
+void LSystemUi::updateGradientStyle()
+{
+	ui->lblGradientStart->setStyleSheet(generateBgColorStyle(colorGradient.startColor));
+	ui->lblGradientEnd->setStyleSheet(generateBgColorStyle(colorGradient.endColor));
+}
+
+void LSystemUi::onLblGradientStartMousePressed(QMouseEvent * event)
+{
+	if (event->button() != Qt::LeftButton) return;
+
+	const QColor newColor = QColorDialog::getColor(colorGradient.startColor, this);
+	if (newColor.isValid() && newColor != colorGradient.startColor) {
+		colorGradient.startColor = newColor;
+		gradientPreview->updateGradient();
+		updateGradientStyle();
+	}
+}
+
+void LSystemUi::onLblGradientEndMousePressed(QMouseEvent * event)
+{
+	if (event->button() != Qt::LeftButton) return;
+
+	const QColor newColor = QColorDialog::getColor(colorGradient.endColor, this);
+	if (newColor.isValid() && newColor != colorGradient.endColor) {
+		colorGradient.endColor = newColor;
+		gradientPreview->updateGradient();
+		updateGradientStyle();
+	}
+}
+
 void LSystemUi::on_cmdAbout_clicked()
 {
 	AboutDialog dia(this);
@@ -919,33 +952,24 @@ void LSystemUi::on_cmdAbout_clicked()
 	dia.exec();
 }
 
-void LSystemUi::on_cmdSettings_clicked()
-{
-	showSettings();
-}
+void LSystemUi::on_cmdSettings_clicked() { showSettings(); }
 
 void LSystemUi::toggleHelperFrame(QPushButton * button, QWidget * frame)
 {
 	if (!frame->isVisible()) {
 		const auto butBottomLeft = ui->wdgConfig->mapTo(ui->centralwidget, button->geometry().bottomLeft());
 		const auto & frameGeom = frame->geometry();
-		frame->setGeometry(butBottomLeft.x() - frameGeom.width(), butBottomLeft.y() - frameGeom.height(), frameGeom.width(), frameGeom.height());
+		frame->setGeometry(
+			butBottomLeft.x() - frameGeom.width(), butBottomLeft.y() - frameGeom.height(), frameGeom.width(), frameGeom.height());
 		frame->setVisible(true);
 	} else {
 		frame->setVisible(false);
 	}
-
 }
 
-void LSystemUi::on_cmdAdditionalOptions_clicked()
-{
-	toggleHelperFrame(ui->cmdAdditionalOptions, ui->frmAdditionalOptions);
-}
+void LSystemUi::on_cmdAdditionalOptions_clicked() { toggleHelperFrame(ui->cmdAdditionalOptions, ui->frmAdditionalOptions); }
 
-void LSystemUi::on_cmdPlayer_clicked()
-{
-	toggleHelperFrame(ui->cmdPlayer, ui->frmPlayer);
-}
+void LSystemUi::on_cmdPlayer_clicked() { toggleHelperFrame(ui->cmdPlayer, ui->frmPlayer); }
 
 void LSystemUi::on_chkShowLastIter_stateChanged()
 {
@@ -953,23 +977,14 @@ void LSystemUi::on_chkShowLastIter_stateChanged()
 
 	const bool checked = ui->chkShowLastIter->isChecked();
 	ui->txtLastIterOpacity->setEnabled(checked);
-	ui->lblOpacity->setEnabled(checked);
+	ui->lblLastIterOpacity->setEnabled(checked);
 }
 
-void LSystemUi::on_cmdCloseAdditionalSettings_clicked()
-{
-	ui->frmAdditionalOptions->setVisible(false);
-}
+void LSystemUi::on_cmdCloseAdditionalSettings_clicked() { ui->frmAdditionalOptions->setVisible(false); }
 
-void LSystemUi::on_cmdClosePlayer_clicked()
-{
-	ui->frmPlayer->setVisible(false);
-}
+void LSystemUi::on_cmdClosePlayer_clicked() { ui->frmPlayer->setVisible(false); }
 
-void LSystemUi::on_chkAntiAliasing_stateChanged()
-{
-	configLiveEdit();
-}
+void LSystemUi::on_chkAntiAliasing_stateChanged() { configLiveEdit(); }
 
 void LSystemUi::processDrawAction(const QString & link)
 {
@@ -1065,9 +1080,9 @@ void LSystemUi::processDrawAction(const QString & link)
 			moveLeft = true;
 		}
 
-		if (moveDown)  yOff += dp.areaTopLeft .y() - drawing.topLeft .y();
-		if (moveUp)    yOff += dp.areaBotRight.y() - drawing.botRight.y();
-		if (moveLeft)  xOff += dp.areaBotRight.x() - drawing.botRight.x();
+		if (moveDown) yOff += dp.areaTopLeft.y() - drawing.topLeft.y();
+		if (moveUp) yOff += dp.areaBotRight.y() - drawing.botRight.y();
+		if (moveLeft) xOff += dp.areaBotRight.x() - drawing.botRight.x();
 		if (moveRight) xOff += dp.areaTopLeft.x() - drawing.topLeft.x();
 
 		drawArea->translateHighlighted(QPoint(xOff, yOff));
@@ -1118,10 +1133,7 @@ AnimatorResult LSystemUi::newAnimationStep(int step, bool relativeStep)
 
 void LSystemUi::playerValueChanged(int value) { emit goToAnimationStep(value); }
 
-void LSystemUi::on_cmdRightFormula_clicked()
-{
-	showRightAngleDialog();
-}
+void LSystemUi::on_cmdRightFormula_clicked() { showRightAngleDialog(); }
 
 void LSystemUi::undoRedo()
 {
@@ -1138,13 +1150,12 @@ void LSystemUi::undoRedo()
 LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
 	: menu(parent)
 {
-	drawingActions
-		<< menu.addAction("Delete drawing", Qt::Key_Delete, &*parent->drawArea, &DrawArea::deleteMarked)
-		<< menu.addAction("Copy drawing", Qt::CTRL | Qt::Key_C, parent, &LSystemUi::copyToClipboardMarked)
-		<< menu.addAction("Send to front", &*parent->drawArea, &DrawArea::sendToFrontMarked)
-		<< menu.addAction("Send to back", &*parent->drawArea, &DrawArea::sendToBackMarked)
-		<< menu.addAction("Show config", Qt::CTRL | Qt::SHIFT | Qt::Key_C, parent, &LSystemUi::showMarkedConfig)
-		<< menu.addSeparator();
+	drawingActions << menu.addAction("Delete drawing", Qt::Key_Delete, &*parent->drawArea, &DrawArea::deleteMarked)
+				   << menu.addAction("Copy drawing", Qt::CTRL | Qt::Key_C, parent, &LSystemUi::copyToClipboardMarked)
+				   << menu.addAction("Send to front", &*parent->drawArea, &DrawArea::sendToFrontMarked)
+				   << menu.addAction("Send to back", &*parent->drawArea, &DrawArea::sendToBackMarked)
+				   << menu.addAction("Show config", Qt::CTRL | Qt::SHIFT | Qt::Key_C, parent, &LSystemUi::showMarkedConfig)
+				   << menu.addSeparator();
 
 	setDrawingActionsVisible(false);
 
@@ -1193,10 +1204,11 @@ LSystemUi::StatusMenu::StatusMenu(LSystemUi * parent)
 QString LSystemUi::DrawMetaData::toString() const
 {
 	return printStr("[%1,DrawMetaData(offset: %2, clearAll: %3, clearLast: %4, resultOk: %5)]",
-			MetaData::toString(), offset, clearAll, clearLast, resultOk);
+					MetaData::toString(),
+					offset,
+					clearAll,
+					clearLast,
+					resultOk);
 }
 
 // ------------------------------------------------------
-
-
-

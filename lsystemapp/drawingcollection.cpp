@@ -30,8 +30,10 @@ void Drawing::expandSizeToSegments(const common::LineSegs & segs, double thickne
 	const int off = qCeil(thickness / 2.);
 	for (const LineSeg & seg : segs) {
 		const QLine ln = seg.lineNegY();
+		// clang-format off
 		updateRect(qMin(ln.x1(), ln.x2()) - off, qMin(ln.y1(), ln.y2()) - off,
 				   qMax(ln.x1(), ln.x2()) + off, qMax(ln.y1(), ln.y2()) + off);
+		// clang-format on
 	}
 }
 
@@ -62,15 +64,9 @@ void Drawing::drawToImage(QImage & dstImage, bool isMarked, bool isHighlighted)
 	}
 }
 
-QPoint Drawing::size() const
-{
-	return botRight - topLeft;
-}
+QPoint Drawing::size() const { return botRight - topLeft; }
 
-bool Drawing::withinArea(const QPoint & pos)
-{
-	return pos >= topLeft + offset && pos <= botRight + offset;
-}
+bool Drawing::withinArea(const QPoint & pos) { return pos >= topLeft + offset && pos <= botRight + offset; }
 
 bool Drawing::move(const QPoint & newOffset)
 {
@@ -117,7 +113,7 @@ void Drawing::drawSegmentRange(
 		if (static_cast<int>(seg.colorNum) != lastColorNum) {
 			pen.setColor(drawColors.at(seg.colorNum));
 			lastColorNum = seg.colorNum;
-			painter.setPen(pen);   // this is necessary after setColor!
+			painter.setPen(pen); // this is necessary after setColor!
 		}
 
 		if (seg.isPoint()) {
@@ -190,8 +186,8 @@ AnimatorResult Drawing::newAnimationStep(int step, bool relativeStep)
 
 void Drawing::updateRect(double minX, double minY, double maxX, double maxY)
 {
-	if (minX < topLeft .x()) topLeft .setX(minX);
-	if (minY < topLeft .y()) topLeft .setY(minY);
+	if (minX < topLeft.x()) topLeft.setX(minX);
+	if (minY < topLeft.y()) topLeft.setY(minY);
 	if (maxX > botRight.x()) botRight.setX(maxX);
 	if (maxY > botRight.y()) botRight.setY(maxY);
 }
@@ -201,7 +197,7 @@ void Drawing::updateRect(double minX, double minY, double maxX, double maxY)
 void DrawingCollection::addDrawing(Drawing newDrawing, const QPoint & off)
 {
 	newDrawing.zIndex = zIndexToDrawing.isEmpty() ? 1 : (zIndexToDrawing.lastKey() + 1);
-	newDrawing.num    = drawings       .isEmpty() ? 1 : (drawings       .lastKey() + 1);
+	newDrawing.num = drawings.isEmpty() ? 1 : (drawings.lastKey() + 1);
 	newDrawing.offset = off;
 
 	zIndexToDrawing[newDrawing.zIndex] = newDrawing.num;
@@ -246,8 +242,7 @@ void DrawingCollection::redraw(bool keepContent)
 {
 	dirty = false;
 
-	if (!keepContent)
-		image.fill(backColor);
+	if (!keepContent) image.fill(backColor);
 
 	for (qint64 drawNum : std::as_const(zIndexToDrawing)) {
 		drawings[drawNum].drawToImage(image, !keepContent && drawNum == markedDrawing, !keepContent && drawNum == highlightedDrawing);
@@ -286,17 +281,11 @@ QPoint DrawingCollection::getDrawingSize(qint64 drawingNum)
 	return drawings[drawingNum].size();
 }
 
-QImage & DrawingCollection::getDrawingImage(qint64 drawingNum)
-{
-	return drawings[drawingNum].image;
-}
+QImage & DrawingCollection::getDrawingImage(qint64 drawingNum) { return drawings[drawingNum].image; }
 
-QImage DrawingCollection::getImage()
-{
-	return image;
-}
+QImage DrawingCollection::getImage() { return image; }
 
-Drawing* DrawingCollection::getCurrentDrawing()
+Drawing * DrawingCollection::getCurrentDrawing()
 {
 	if (markedDrawing > 0) return &drawings[markedDrawing];
 	if (drawings.isEmpty()) return nullptr;
@@ -386,4 +375,4 @@ bool DrawingCollection::sendToZIndex(qint64 drawingNum, qint64 newZIndex)
 	return true;
 }
 
-}
+} // namespace lsystem::ui

@@ -169,6 +169,14 @@ struct AppSettings
 	QJsonObject toJson() const;
 };
 
+struct ColorGradient final
+{
+	ColorGradient();
+	QColor colorAt(double t) const;
+	QColor startColor;
+	QColor endColor;
+};
+
 struct MetaData
 {
 	virtual ~MetaData() {}
@@ -184,6 +192,8 @@ struct MetaData
 	double opacity = 0;
 	bool antiAliasing = false;
 	std::optional<std::chrono::milliseconds> animLatency;
+	ColorGradient colorGradient;
+
 	ConfigSet config;
 };
 

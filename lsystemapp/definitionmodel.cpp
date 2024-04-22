@@ -250,10 +250,10 @@ bool DefinitionModel::add()
 
 bool DefinitionModel::remove()
 {
-	auto selection = emit getSelection();
+	const auto selection = emit getSelection();
 	if (selection.isValid()) {
-		auto selectedRow = getRow(selection);
-		auto selectedRowIndex = selectedRow - definitions.begin();
+		const auto selectedRow = static_cast<const DefinitionModel *>(this)->getRow(selection);
+		const auto selectedRowIndex = selectedRow - definitions.constBegin();
 		definitions.erase(selectedRow);
 		removeRow(selectedRowIndex);
 		checkForNewStartSymbol();

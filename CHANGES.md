@@ -1,3 +1,7 @@
+# Version 0.7.0
+
+- added color gradient
+
 # Version 0.6.0
 
 - changed to Qt 6.5

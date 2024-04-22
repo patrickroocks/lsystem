@@ -3,6 +3,8 @@
 #include <util/print.h>
 #include <util/qtcontutils.h>
 
+#include <QtMath>
+
 using namespace util;
 
 namespace lsystem::common {
@@ -113,6 +115,21 @@ QJsonObject AppSettings::toJson() const
 	QJsonObject rv;
 	rv["maxStackSize"] = static_cast<int>(maxStackSize);
 	return rv;
+}
+
+// ----------------------------------------------------------------------------
+
+ColorGradient::ColorGradient()
+	: startColor(QColor(255, 0, 0))
+	, endColor(QColor(0, 0, 255))
+{}
+
+QColor ColorGradient::colorAt(double t) const
+{
+	const double u = 1.0 - t;
+	return QColor(static_cast<int>(qFloor(startColor.red() * u + endColor.red() * t)),
+				  static_cast<int>(qFloor(startColor.green() * u + endColor.green() * t)),
+				  static_cast<int>(qFloor(startColor.blue() * u + endColor.blue() * t)));
 }
 
 // ----------------------------------------------------------------------------

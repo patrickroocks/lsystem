@@ -11,6 +11,7 @@
 #include <symbolsdialog.h>
 #include <util/clickablelabel.h>
 #include <util/focusablelineedit.h>
+#include <util/gradientpreview.h>
 #include <util/quickangle.h>
 #include <util/quicklinear.h>
 #include <util/tableitemdelegate.h>
@@ -68,6 +69,9 @@ private slots:
 	void on_lstConfigs_doubleClicked(const QModelIndex & index);
 	void on_lblStatus_linkActivated(const QString & link);
 	void on_lblStatus_mousePressed(QMouseEvent * event);
+
+	void onLblGradientStartMousePressed(QMouseEvent * event);
+	void onLblGradientEndMousePressed(QMouseEvent * event);
 
 signals:
 	void simulatorExec(const QSharedPointer<lsystem::common::MetaData> & metaData);
@@ -167,6 +171,7 @@ private:
 	bool symbolsVisible() const;
 	void showMarkedConfig();
 	void showRightAngleDialog();
+	void updateGradientStyle();
 
 	// player
 	void playPauseChanged(bool playing);
@@ -206,6 +211,7 @@ private:
 private:
 	Ui::LSystemUi * const ui;
 	QScopedPointer<lsystem::ui::DrawArea> drawArea;
+	QScopedPointer<lsystem::ui::GradientPreview> gradientPreview;
 	DrawPlacement drawPlacement;
 
 	QScopedPointer<TableItemDelegateAutoUpdate> tableItemDelegate;
@@ -273,4 +279,6 @@ private:
 	QScopedPointer<SymbolsDialog> symbolsDialog;
 
 	AngleEvaluator angleEvaluator;
+
+	lsystem::common::ColorGradient colorGradient;
 };
