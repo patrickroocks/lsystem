@@ -10,7 +10,6 @@ Drawing::Drawing(const ExecResult & execResult, const QSharedPointer<MetaData> &
 	: segments(execResult.segments)
 	, actionColors(execResult.actionColors)
 	, config(metaData->config)
-	, metaData(*metaData)
 {
 	const bool paintLastIter = !execResult.segmentsLastIter.isEmpty() && metaData->lastIterOpacy > 0;
 
@@ -21,8 +20,20 @@ Drawing::Drawing(const ExecResult & execResult, const QSharedPointer<MetaData> &
 	image = QImage(QSize(pSize.x(), pSize.y()), QImage::Format_ARGB32);
 	image.fill(qRgba(0, 0, 0, 0)); // transparent
 
-	if (paintLastIter) drawSegments(execResult.segmentsLastIter, metaData->lastIterOpacy, metaData->thickness, metaData->antiAliasing);
-	drawSegments(segments, metaData->opacity, metaData->thickness, metaData->antiAliasing);
+	InternalMeta meta;
+	meta.antiAliasing = metaData->antiAliasing;
+	meta.thickness = metaData->thickness;
+	meta.colorGradient = metaData->colorGradient;
+
+	if (paintLastIter) {
+		lastIterMeta = meta;
+		lastIterMeta->opacityFactor = metaData->lastIterOpacy;
+		drawSegments(execResult.segmentsLastIter, *lastIterMeta);
+		lastIterImage = image;
+	}
+	mainMeta = meta;
+	mainMeta.opacityFactor = metaData->opacity;
+	drawSegments(segments, mainMeta);
 }
 
 void Drawing::expandSizeToSegments(const common::LineSegs & segs, double thickness)
@@ -37,10 +48,7 @@ void Drawing::expandSizeToSegments(const common::LineSegs & segs, double thickne
 	}
 }
 
-void Drawing::drawSegments(const LineSegs & segs, double opacyFactor, double thickness, bool antiAliasing)
-{
-	drawSegmentRange(segs, 0, segs.size() - 1, opacyFactor, thickness, antiAliasing);
-}
+void Drawing::drawSegments(const LineSegs & segs, const InternalMeta & meta) { drawSegmentRange(segs, 0, segs.size() - 1, meta); }
 
 void Drawing::drawToImage(QImage & dstImage, bool isMarked, bool isHighlighted)
 {
@@ -86,19 +94,18 @@ DrawResult Drawing::toDrawResult()
 					  .config = config};
 }
 
-void Drawing::drawSegmentRange(
-	const common::LineSegs & segs, int numStart, int numEnd, double opacyFactor, double thickness, bool antiAliasing)
+void Drawing::drawSegmentRange(const common::LineSegs & segs, int numStart, int numEnd, const InternalMeta & meta)
 {
 	QPainter painter(&image);
 
-	if (antiAliasing) painter.setRenderHint(QPainter::Antialiasing);
+	if (meta.antiAliasing) painter.setRenderHint(QPainter::Antialiasing);
 	QPen pen;
-	pen.setWidthF(thickness);
+	pen.setWidthF(meta.thickness);
 	pen.setCapStyle(Qt::RoundCap);
 
 	QVector<QColor> drawColors;
 	for (QColor actionColorCopy : actionColors) {
-		actionColorCopy.setAlphaF(opacyFactor);
+		actionColorCopy.setAlphaF(meta.opacityFactor);
 		drawColors.push_back(actionColorCopy);
 	}
 
@@ -110,7 +117,15 @@ void Drawing::drawSegmentRange(
 	for (auto it = itStart; it != itEnd; ++it) {
 		const auto & seg = *it;
 
-		if (static_cast<int>(seg.colorNum) != lastColorNum) {
+		if (meta.colorGradient) {
+			// color gradient mode
+			const double normalizedSegNum = static_cast<double>(it - segs.cbegin()) / static_cast<double>(segs.size());
+			auto color = meta.colorGradient->colorAt(normalizedSegNum);
+			if (meta.opacityFactor < 1) color.setAlphaF(meta.opacityFactor);
+			pen.setColor(color);
+			painter.setPen(pen); // this is necessary after setColor!
+		} else if (static_cast<int>(seg.colorNum) != lastColorNum) {
+			// use colors from the config, which were written to the segments
 			pen.setColor(drawColors.at(seg.colorNum));
 			lastColorNum = seg.colorNum;
 			painter.setPen(pen); // this is necessary after setColor!
@@ -124,6 +139,16 @@ void Drawing::drawSegmentRange(
 	}
 
 	animState.curSeg = numEnd;
+
+	usesOpacity = (mainMeta.opacityFactor > 0 && mainMeta.opacityFactor < 1)
+				  || (lastIterMeta.has_value() && lastIterMeta->opacityFactor > 0 && lastIterMeta->opacityFactor < 1);
+}
+
+void Drawing::drawBasicImage()
+{
+	image.fill(qRgba(0, 0, 0, 0));
+	QPainter painter(&image);
+	if (lastIterMeta.has_value()) painter.drawImage(QPoint(0, 0), lastIterImage);
 }
 
 AnimatorResult Drawing::newAnimationStep(int step, bool relativeStep)
@@ -142,7 +167,7 @@ AnimatorResult Drawing::newAnimationStep(int step, bool relativeStep)
 		newStep = relativeStep ? lastStep + step : step;
 
 		if (newStep == lastStep) {
-			return AnimatorResult{.nextStepResult = AnimatorResult::NextStepResult::Continue, .step = newStep};
+			return AnimatorResult{.nextStepResult = AnimatorResult::NextStepResult::Unchanged, .step = newStep};
 		}
 	}
 
@@ -156,7 +181,7 @@ AnimatorResult Drawing::newAnimationStep(int step, bool relativeStep)
 		newStep = maxStep;
 	}
 
-	if (restarted) image.fill(qRgba(0, 0, 0, 0)); // transparent
+	if (restarted) drawBasicImage();
 
 	if (stopped) animState.inProgress = false;
 
@@ -166,7 +191,7 @@ AnimatorResult Drawing::newAnimationStep(int step, bool relativeStep)
 	// This runs in the same thread as the main UI. It would be difficult to parallelize this,
 	// as we would have to wait for the drawing to be completed anyway before we could refresh the DrawArea widget.
 	// The widget itself has to run in the same thread as the main UI (widgets are not allowed to be in a own thread in Qt).
-	drawSegmentRange(segments, firstSegToDraw, newSeg, metaData.opacity, metaData.thickness, metaData.antiAliasing);
+	drawSegmentRange(segments, firstSegToDraw, newSeg, mainMeta);
 
 	animState.curSeg = newSeg;
 
@@ -176,7 +201,8 @@ AnimatorResult Drawing::newAnimationStep(int step, bool relativeStep)
 	} else if (restarted) {
 		rv.nextStepResult = AnimatorResult::NextStepResult::Restart;
 	} else {
-		rv.nextStepResult = AnimatorResult::NextStepResult::Continue;
+		// The optimization that the contents are kept is only available if opacity is disabled.
+		rv.nextStepResult = usesOpacity ? AnimatorResult::NextStepResult::Restart : AnimatorResult::NextStepResult::AddedOnly;
 	}
 
 	rv.step = newStep;

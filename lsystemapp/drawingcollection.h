@@ -34,14 +34,27 @@ public:
 	common::AnimatorResult newAnimationStep(int step, bool relativeStep);
 
 public:
+	void drawBasicImage();
+
+	struct InternalMeta
+	{
+		double opacityFactor = 0;
+		double thickness = 0;
+		bool antiAliasing = false;
+		std::optional<lsystem::common::ColorGradient> colorGradient;
+	};
+
 	qint64 zIndex = 0;
 	qint64 num = 0;
 	QPoint offset;
 	common::LineSegs segments;
 	QVector<QColor> actionColors;
+	QImage lastIterImage;
 	QImage image;
 	lsystem::common::ConfigSet config;
-	common::MetaData metaData;
+	InternalMeta mainMeta;
+	std::optional<InternalMeta> lastIterMeta;
+	bool usesOpacity = false;
 
 	struct AnimState
 	{
@@ -51,9 +64,9 @@ public:
 
 private:
 	void expandSizeToSegments(const common::LineSegs & segs, double thickness);
-	void drawSegments(const common::LineSegs & segs, double opacyFactor, double thickness, bool antiAliasing);
+	void drawSegments(const common::LineSegs & segs, const InternalMeta & meta);
 	void updateRect(double minX, double minY, double maxX, double maxY);
-	void drawSegmentRange(const common::LineSegs & segs, int numStart, int numEnd, double opacyFactor, double thickness, bool antiAliasing);
+	void drawSegmentRange(const common::LineSegs & segs, int numStart, int numEnd, const InternalMeta & meta);
 
 private:
 	QPoint topLeft;
@@ -79,7 +92,7 @@ public:
 	QImage getImage();
 	int getMarkedDrawingNum() const { return markedDrawing; }
 	int getHighlightedDrawingNum() const { return highlightedDrawing; }
-	Drawing* getCurrentDrawing();
+	Drawing * getCurrentDrawing();
 	int getLastDrawingNum() const { return drawings.empty() ? 0 : drawings.lastKey(); }
 	bool setMarkedDrawing(qint64 newMarkedDrawing);
 	bool moveDrawing(qint64 drawingNum, const QPoint & newOffset);
@@ -108,4 +121,4 @@ private:
 	qint64 highlightedDrawing = 0;
 };
 
-}
+} // namespace lsystem::ui

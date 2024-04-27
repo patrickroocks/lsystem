@@ -58,6 +58,7 @@ LSystemUi::LSystemUi(QWidget * parent)
 
 	connect(ui->lblGradientStart, &ClickableLabel::mousePressed, this, &LSystemUi::onLblGradientStartMousePressed);
 	connect(ui->lblGradientEnd, &ClickableLabel::mousePressed, this, &LSystemUi::onLblGradientEndMousePressed);
+	connect(ui->chkColorGradient, &QCheckBox::stateChanged, this, &LSystemUi::chkColorGradientChanged);
 	gradientPreview.reset(new GradientPreview(colorGradient, ui->wdgGradientPreview));
 	updateGradientStyle();
 
@@ -284,6 +285,9 @@ void LSystemUi::getAdditionalOptionsForSegmentsMeta(const QSharedPointer<MetaDat
 	execMeta->execActionStr = symbolsVisible();
 
 	execMeta->showLastIter = ui->chkShowLastIter->isChecked();
+
+	if (ui->chkColorGradient->isChecked()) execMeta->colorGradient = colorGradient;
+	else execMeta->colorGradient = {};
 
 	bool ok;
 	const double lastIterOpacityPercent = ui->txtLastIterOpacity->text().toDouble(&ok);
@@ -915,10 +919,15 @@ void LSystemUi::on_lblStatus_mousePressed(QMouseEvent * event)
 	}
 }
 
-void LSystemUi::updateGradientStyle()
+void LSystemUi::updateGradientStyle(bool updateAfterClick)
 {
 	ui->lblGradientStart->setStyleSheet(generateBgColorStyle(colorGradient.startColor));
 	ui->lblGradientEnd->setStyleSheet(generateBgColorStyle(colorGradient.endColor));
+
+	if (updateAfterClick) {
+		if (!ui->chkColorGradient->isChecked()) ui->chkColorGradient->setCheckState(Qt::Checked); // raises liveEdit
+		else configLiveEdit();
+	}
 }
 
 void LSystemUi::onLblGradientStartMousePressed(QMouseEvent * event)
@@ -929,7 +938,7 @@ void LSystemUi::onLblGradientStartMousePressed(QMouseEvent * event)
 	if (newColor.isValid() && newColor != colorGradient.startColor) {
 		colorGradient.startColor = newColor;
 		gradientPreview->updateGradient();
-		updateGradientStyle();
+		updateGradientStyle(true);
 	}
 }
 
@@ -941,9 +950,11 @@ void LSystemUi::onLblGradientEndMousePressed(QMouseEvent * event)
 	if (newColor.isValid() && newColor != colorGradient.endColor) {
 		colorGradient.endColor = newColor;
 		gradientPreview->updateGradient();
-		updateGradientStyle();
+		updateGradientStyle(true);
 	}
 }
+
+void LSystemUi::chkColorGradientChanged() { configLiveEdit(); }
 
 void LSystemUi::on_cmdAbout_clicked()
 {

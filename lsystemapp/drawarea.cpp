@@ -165,7 +165,8 @@ AnimatorResult DrawArea::newAnimationStep(int step, bool relativeStep)
 	if (!currentDrawing) return AnimatorResult{.nextStepResult = AnimatorResult::NextStepResult::Stopped};
 
 	const auto res = currentDrawing->newAnimationStep(step, relativeStep);
-	redrawAndUpdate(res.nextStepResult != AnimatorResult::NextStepResult::Restart);
+	if (res.nextStepResult == AnimatorResult::NextStepResult::Unchanged) return res; // no painting
+	redrawAndUpdate(res.nextStepResult == AnimatorResult::NextStepResult::AddedOnly);
 	return res;
 }
 

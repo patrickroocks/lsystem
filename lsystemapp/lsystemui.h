@@ -171,7 +171,8 @@ private:
 	bool symbolsVisible() const;
 	void showMarkedConfig();
 	void showRightAngleDialog();
-	void updateGradientStyle();
+	void updateGradientStyle(bool updateAfterClick = false);
+	void chkColorGradientChanged();
 
 	// player
 	void playPauseChanged(bool playing);

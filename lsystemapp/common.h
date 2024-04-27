@@ -14,7 +14,8 @@ public:
 	{
 		Stopped,
 		Restart,
-		Continue
+		AddedOnly,
+		Unchanged
 	};
 	Q_ENUM(NextStepResult)
 };
@@ -192,7 +193,7 @@ struct MetaData
 	double opacity = 0;
 	bool antiAliasing = false;
 	std::optional<std::chrono::milliseconds> animLatency;
-	ColorGradient colorGradient;
+	std::optional<ColorGradient> colorGradient;
 
 	ConfigSet config;
 };
