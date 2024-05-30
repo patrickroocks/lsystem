@@ -59,31 +59,6 @@ private:
 	};
 
 private slots:
-	void on_cmdAdd_clicked();
-	void on_cmdRemove_clicked();
-	void on_cmdStore_clicked();
-	void on_cmdLoad_clicked();
-	void on_cmdDelete_clicked();
-	void on_cmdAbout_clicked();
-
-	void on_lstConfigs_doubleClicked(const QModelIndex & index);
-	void on_lblStatus_linkActivated(const QString & link);
-	void on_lblStatus_mousePressed(QMouseEvent * event);
-
-	void onLblGradientStartMousePressed(QMouseEvent * event);
-	void onLblGradientEndMousePressed(QMouseEvent * event);
-
-signals:
-	void simulatorExec(const QSharedPointer<lsystem::common::MetaData> & metaData);
-	void simulatorExecDoubleStackSize(const QSharedPointer<lsystem::common::MetaData> & metaData);
-	void startDraw(const lsystem::common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData);
-
-	void setAnimateLatency(std::chrono::milliseconds latency);
-	void startAnimateCurrentDrawing();
-	void stopAnimate();
-	void goToAnimationStep(int step);
-
-private slots:
 
 	// from simulator
 	void processSimulatorSegments(const lsystem::common::ExecResult & execResult,
@@ -109,17 +84,30 @@ private slots:
 	void copyToClipboardMarked();
 
 	// controls
-	void on_cmdSettings_clicked();
-	void on_cmdCloseAdditionalSettings_clicked();
-	void on_cmdAdditionalOptions_clicked();
-	void on_chkShowLastIter_stateChanged();
-	void on_chkAntiAliasing_stateChanged();
+	void onLblGradientStartMousePressed(QMouseEvent * event);
+	void onLblGradientEndMousePressed(QMouseEvent * event);
+	void onCmdAboutClicked();
+	void onCmdAdditionalOptionsClicked();
+	void onCmdCloseAdditionalOptionsClicked();
+	void onCmdPlayerClicked();
+	void onCmdClosePlayerClicked();
+	void onChkShowLastIterStateChanged();
+	void onCmdStoreClicked();
+	void onCmdLoadClicked();
+	void onCmdDeleteClicked();
+	void onLstConfigsDoubleClicked(const QModelIndex & index);
+	void onLblStatusLinkActivated(const QString & link);
+	void onLblStatusMousePressed(QMouseEvent * event);
 
-	void on_cmdRightFormula_clicked();
+signals:
+	void simulatorExec(const QSharedPointer<lsystem::common::MetaData> & metaData);
+	void simulatorExecDoubleStackSize(const QSharedPointer<lsystem::common::MetaData> & metaData);
+	void startDraw(const lsystem::common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData);
 
-	void on_cmdPlayer_clicked();
-
-	void on_cmdClosePlayer_clicked();
+	void setAnimateLatency(std::chrono::milliseconds latency);
+	void startAnimateCurrentDrawing();
+	void stopAnimate();
+	void goToAnimationStep(int step);
 
 private:
 	struct DrawPlacement
@@ -149,6 +137,15 @@ private:
 	};
 
 private:
+	// Setup phases
+	void setupConfigList();
+	void setupServices();
+	void setupMainControls();
+	void setupHelperControls();
+	void setupStatusAndTimers();
+	void setupInteractiveControls();
+	void setupDrawArea();
+
 	// Draw Area
 	void drawAreaClick(int x, int y, Qt::MouseButton button, bool drawingMarked);
 	void startPaint(int x, int y);
@@ -162,7 +159,7 @@ private:
 	void focusLinearEdit(FocusableLineEdit * lineEdit);
 	void unfocusAngleEdit();
 	void unfocusLinearEdit();
-	void checkAutoPaintChanged(int state);
+	void onChkAutoPaintChanged(int state);
 	void latencyChanged();
 
 	// additional options & windows
@@ -172,7 +169,6 @@ private:
 	void showMarkedConfig();
 	void showRightAngleDialog();
 	void updateGradientStyle(bool updateAfterClick = false);
-	void chkColorGradientChanged();
 
 	// player
 	void playPauseChanged(bool playing);

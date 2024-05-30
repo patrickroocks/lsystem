@@ -37,9 +37,9 @@ Item
 
         var discretizedValue = applyStep(val);
         if (modifyIsFine && overrideStepSize == 0 && fineStepSize > 0 && !isFineStepSize && discretizedValue !== val) {
-            // This will not immediatly change the value - but we need an immediate change!
-            // Do not return here, but change the value.
+            // We need the fine step size to represt the value more accurate.
             isFineStepSize = true;
+            discretizedValue = applyStep(val);
         }
 
         value = applyValueLimits(discretizedValue);
@@ -63,6 +63,9 @@ Item
 
     function updateStepSize()
     {
+        if (fineStepSize == 0) // fine step size not available!
+            isFineStepSize = false;
+
         if (overrideStepSize > 0)
             currentStepSize = overrideStepSize;
         else

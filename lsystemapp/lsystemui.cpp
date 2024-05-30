@@ -56,24 +56,18 @@ LSystemUi::LSystemUi(QWidget * parent)
 
 	setWindowTitle(util::printStr("lsystem %1 - An interactive simulator for Lindenmayer systems", Version));
 
-	connect(ui->lblGradientStart, &ClickableLabel::mousePressed, this, &LSystemUi::onLblGradientStartMousePressed);
-	connect(ui->lblGradientEnd, &ClickableLabel::mousePressed, this, &LSystemUi::onLblGradientEndMousePressed);
-	connect(ui->chkColorGradient, &QCheckBox::stateChanged, this, &LSystemUi::chkColorGradientChanged);
-	gradientPreview.reset(new GradientPreview(colorGradient, ui->wdgGradientPreview));
-	updateGradientStyle();
+	setupServices();
+	setupConfigList();
+	setupMainControls();
+	setupHelperControls();
+	setupStatusAndTimers();
+	setupInteractiveControls();
+	setupDrawArea();
+}
 
-	resetStatus();
-	messageDecayTimer.setInterval(StatusIntervalMs);
-	connect(&messageDecayTimer, &QTimer::timeout, this, &LSystemUi::resetStatus);
-
-	exec.pendingTimer.setInterval(ExecPendingIntervalMs);
-	connect(&exec.pendingTimer, &QTimer::timeout, this, &LSystemUi::invokeExecPending);
-
-	connect(&configList, &ConfigList::configMapUpdated, &configFileStore, &ConfigFileStore::newConfigMap);
-	connect(&configFileStore, &ConfigFileStore::loadedPreAndUserConfigs, &configList, &ConfigList::newPreAndUserConfigs);
-	connect(&configFileStore, &ConfigFileStore::showError, this, &LSystemUi::showErrorInUi);
-	connect(&configFileStore, &ConfigFileStore::newStackSize, &simulator, &Simulator::setMaxStackSize);
-
+void LSystemUi::setupServices()
+{
+	// setup the background service for generating/animating the fractals
 	simulator.moveToThread(&simulatorThread);
 	connect(this, &LSystemUi::simulatorExec, &simulator, &Simulator::exec);
 	connect(&simulator, &Simulator::segmentsReceived, this, &LSystemUi::processSimulatorSegments);
@@ -81,9 +75,42 @@ LSystemUi::LSystemUi(QWidget * parent)
 	connect(&simulator, &Simulator::errorReceived, this, &LSystemUi::showErrorInUi);
 	simulatorThread.start();
 
+	segDrawer.moveToThread(&segDrawerThread);
+	connect(this, &LSystemUi::startDraw, &segDrawer, &SegmentDrawer::startDraw);
+	connect(&segDrawer, &SegmentDrawer::drawDone, this, &LSystemUi::drawDone);
+	segDrawerThread.start();
+
+	// Segment animator (own thread does not really make sense, drawings have to be in the UI thread)
+	segAnimator.reset(new SegmentAnimator());
+	// clang-format off
+	connect(this, &LSystemUi::startAnimateCurrentDrawing, segAnimator.get(), &SegmentAnimator::startAnimateCurrentDrawing);
+	connect(this, &LSystemUi::setAnimateLatency,          segAnimator.get(), &SegmentAnimator::setAnimateLatency);
+	connect(this, &LSystemUi::stopAnimate,                segAnimator.get(), &SegmentAnimator::stopAnimate);
+	connect(this, &LSystemUi::goToAnimationStep,          segAnimator.get(), &SegmentAnimator::goToAnimationStep);
+	// clang-format on
+	connect(segAnimator.get(), &SegmentAnimator::newAnimationStep, this, &LSystemUi::newAnimationStep);
+}
+
+void LSystemUi::setupConfigList()
+{
+	connect(&configList, &ConfigList::configMapUpdated, &configFileStore, &ConfigFileStore::newConfigMap);
+	connect(&configFileStore, &ConfigFileStore::loadedPreAndUserConfigs, &configList, &ConfigList::newPreAndUserConfigs);
+	connect(&configFileStore, &ConfigFileStore::showError, this, &LSystemUi::showErrorInUi);
+	connect(&configFileStore, &ConfigFileStore::newStackSize, &simulator, &Simulator::setMaxStackSize);
+
 	ui->lstConfigs->setModel(&configList);
 	configFileStore.loadConfig();
 	loadConfigByLstIndex(configList.index(0, 0));
+
+	connect(ui->cmdStore, &QPushButton::clicked, this, &LSystemUi::onCmdStoreClicked);
+	connect(ui->cmdLoad, &QPushButton::clicked, this, &LSystemUi::onCmdLoadClicked);
+	connect(ui->cmdDelete, &QPushButton::clicked, this, &LSystemUi::onCmdDeleteClicked);
+	connect(ui->lstConfigs, &QListView::doubleClicked, this, &LSystemUi::onLstConfigsDoubleClicked);
+}
+
+void LSystemUi::setupMainControls()
+{
+	// connections/initialization for the main controls
 
 	ui->tblDefinitions->setModel(&defModel);
 	ui->tblDefinitions->setColumnWidth(0, 20);
@@ -103,24 +130,64 @@ LSystemUi::LSystemUi(QWidget * parent)
 	connect(&defModel, &DefinitionModel::showError, this, &LSystemUi::showErrorInUi);
 	connect(&defModel, &DefinitionModel::edited, this, &LSystemUi::configLiveEdit);
 
-	// DrawArea is a widget and can't be moved to a new thread
-	drawArea.reset(new DrawArea(ui->wdgOut));
-	drawArea->setMouseTracking(true); // for mouse move event
-	connect(drawArea.data(), &DrawArea::mouseClick, this, &LSystemUi::drawAreaClick);
-	connect(drawArea.data(), &DrawArea::enableUndoRedo, this, &LSystemUi::enableUndoRedo);
+	connect(ui->cmdAdd, &QPushButton::clicked, &defModel, &DefinitionModel::add);
+	connect(ui->cmdRemove, &QPushButton::clicked, &defModel, &DefinitionModel::remove);
+	connect(ui->cmdRightFormula, &QPushButton::clicked, this, &LSystemUi::showRightAngleDialog);
+}
 
-	lblDrawActions.reset(new ClickableLabel(drawArea.data()));
-	lblDrawActions->setVisible(false);
-	lblDrawActions->setMouseTracking(true);
-	lblDrawActions->setTextInteractionFlags(Qt::LinksAccessibleByMouse);
-	lblDrawActions->setStyleSheet("QLabel { background-color: white; border: 2px solid white;}");
-	connect(lblDrawActions.data(), &ClickableLabel::linkActivated, this, &LSystemUi::processDrawAction);
+void LSystemUi::setupHelperControls()
+{
+	// Color gradient
+	connect(ui->lblGradientStart, &ClickableLabel::mousePressed, this, &LSystemUi::onLblGradientStartMousePressed);
+	connect(ui->lblGradientEnd, &ClickableLabel::mousePressed, this, &LSystemUi::onLblGradientEndMousePressed);
+	connect(ui->chkColorGradient, &QCheckBox::stateChanged, this, &LSystemUi::configLiveEdit);
+	gradientPreview.reset(new GradientPreview(colorGradient, ui->wdgGradientPreview));
+	updateGradientStyle();
 
-	drawAreaMenu.reset(new DrawAreaMenu(this)); // needs drawArea
+	// Player control (UI control for segment animator)
+	connect(ui->playerControl, &PlayerControl::playPauseChanged, this, &LSystemUi::playPauseChanged);
+	connect(ui->playerControl, &PlayerControl::playerValueChanged, this, &LSystemUi::playerValueChanged);
+
+	// Show/hide Popups
+	connect(ui->cmdAdditionalOptions, &QPushButton::clicked, this, &LSystemUi::onCmdAdditionalOptionsClicked);
+	connect(ui->cmdCloseAdditionalOptions, &QPushButton::clicked, this, &LSystemUi::onCmdCloseAdditionalOptionsClicked);
+	connect(ui->cmdPlayer, &QPushButton::clicked, this, &LSystemUi::onCmdPlayerClicked);
+	connect(ui->cmdClosePlayer, &QPushButton::clicked, this, &LSystemUi::onCmdClosePlayerClicked);
+
+	// CheckBoxes
+	connect(ui->chkAutoPaint, &QCheckBox::stateChanged, this, &LSystemUi::onChkAutoPaintChanged);
+	connect(ui->chkShowLastIter, &QCheckBox::stateChanged, this, &LSystemUi::onChkShowLastIterStateChanged);
+	connect(ui->chkAntiAliasing, &QCheckBox::stateChanged, this, &LSystemUi::configLiveEdit);
+
+	// Helper popups are invisible by default
+	ui->frmAdditionalOptions->setVisible(false);
+	ui->frmPlayer->setVisible(false);
+
+	// Buttons not related to config
+	connect(ui->cmdSettings, &QPushButton::clicked, this, &LSystemUi::showSettings);
+	connect(ui->cmdAbout, &QPushButton::clicked, this, &LSystemUi::onCmdAboutClicked);
+}
+
+void LSystemUi::setupStatusAndTimers()
+{
 	statusMenu.reset(new StatusMenu(this));
+	resetStatus();
 
-	connect(drawArea.data(), &DrawArea::markingChanged, this, &LSystemUi::markDrawing);
-	connect(drawArea.data(), &DrawArea::highlightChanged, this, &LSystemUi::highlightDrawing);
+	messageDecayTimer.setInterval(StatusIntervalMs);
+	connect(&messageDecayTimer, &QTimer::timeout, this, &LSystemUi::resetStatus);
+
+	exec.pendingTimer.setInterval(ExecPendingIntervalMs);
+	connect(&exec.pendingTimer, &QTimer::timeout, this, &LSystemUi::invokeExecPending);
+
+	connect(ui->lblStatus, &ClickableLabel::linkActivated, this, &LSystemUi::onLblStatusLinkActivated);
+	connect(ui->lblStatus, &ClickableLabel::mousePressed, this, &LSystemUi::onLblStatusMousePressed);
+}
+
+void LSystemUi::setupInteractiveControls()
+{
+	ui->txtStartAngle->setValueRestriction(ValueRestriction::Numbers);
+	ui->txtLeft->setValueRestriction(ValueRestriction::PositiveNumbers);
+	ui->txtRight->setValueRestriction(ValueRestriction::NegativeNumbers);
 
 	quickAngle.reset(new QuickAngle(ui->centralwidget));
 	quickAngle->setVisible(false);
@@ -130,11 +197,6 @@ LSystemUi::LSystemUi(QWidget * parent)
 	quickLinear->setVisible(false);
 	connect(quickLinear.data(), &QuickLinear::focusOut, this, &LSystemUi::unfocusLinearEdit);
 
-	ui->txtStartAngle->setValueRestriction(ValueRestriction::Numbers);
-	ui->txtLeft->setValueRestriction(ValueRestriction::PositiveNumbers);
-	ui->txtRight->setValueRestriction(ValueRestriction::NegativeNumbers);
-
-	// * connections for live edits
 	const std::vector<FocusableLineEdit *> configEditsLinear
 		= {ui->txtIter, ui->txtStep, ui->txtScaleDown, ui->txtLastIterOpacity, ui->txtThickness, ui->txtOpacity};
 
@@ -159,30 +221,27 @@ LSystemUi::LSystemUi(QWidget * parent)
 	}
 
 	connect(ui->txtLatency, &FocusableLineEdit::textChanged, this, &LSystemUi::latencyChanged);
+}
 
-	connect(ui->chkAutoPaint, &QCheckBox::stateChanged, this, &LSystemUi::checkAutoPaintChanged);
+void LSystemUi::setupDrawArea()
+{
+	// DrawArea is a widget and can't be moved to a new thread
+	drawArea.reset(new DrawArea(ui->wdgOut));
+	drawArea->setMouseTracking(true); // for mouse move event
+	connect(drawArea.data(), &DrawArea::mouseClick, this, &LSystemUi::drawAreaClick);
+	connect(drawArea.data(), &DrawArea::enableUndoRedo, this, &LSystemUi::enableUndoRedo);
+	connect(drawArea.data(), &DrawArea::markingChanged, this, &LSystemUi::markDrawing);
+	connect(drawArea.data(), &DrawArea::highlightChanged, this, &LSystemUi::highlightDrawing);
 
-	segDrawer.moveToThread(&segDrawerThread);
-	connect(this, &LSystemUi::startDraw, &segDrawer, &SegmentDrawer::startDraw);
-	connect(&segDrawer, &SegmentDrawer::drawDone, this, &LSystemUi::drawDone);
-	segDrawerThread.start();
+	// Label for move/maximize commands
+	lblDrawActions.reset(new ClickableLabel(drawArea.data()));
+	lblDrawActions->setVisible(false);
+	lblDrawActions->setMouseTracking(true);
+	lblDrawActions->setTextInteractionFlags(Qt::LinksAccessibleByMouse);
+	lblDrawActions->setStyleSheet("QLabel { background-color: white; border: 2px solid white;}");
+	connect(lblDrawActions.data(), &ClickableLabel::linkActivated, this, &LSystemUi::processDrawAction);
 
-	// Segment animator (own thread does not really make sense, drawings have to be in the UI thread)
-	segAnimator.reset(new SegmentAnimator());
-	// clang-format off
-	connect(this, &LSystemUi::startAnimateCurrentDrawing, segAnimator.get(), &SegmentAnimator::startAnimateCurrentDrawing);
-	connect(this, &LSystemUi::setAnimateLatency,          segAnimator.get(), &SegmentAnimator::setAnimateLatency);
-	connect(this, &LSystemUi::stopAnimate,                segAnimator.get(), &SegmentAnimator::stopAnimate);
-	connect(this, &LSystemUi::goToAnimationStep,          segAnimator.get(), &SegmentAnimator::goToAnimationStep);
-	// clang-format on
-	connect(segAnimator.get(), &SegmentAnimator::newAnimationStep, this, &LSystemUi::newAnimationStep);
-
-	// Player control (UI control for segment animator)
-	connect(ui->playerControl, &PlayerControl::playPauseChanged, this, &LSystemUi::playPauseChanged);
-	connect(ui->playerControl, &PlayerControl::playerValueChanged, this, &LSystemUi::playerValueChanged);
-
-	ui->frmAdditionalOptions->setVisible(false);
-	ui->frmPlayer->setVisible(false);
+	drawAreaMenu.reset(new DrawAreaMenu(this)); // needs drawArea
 }
 
 LSystemUi::~LSystemUi()
@@ -213,10 +272,6 @@ void LSystemUi::resizeEvent(QResizeEvent * event)
 	// repaint during resize will fail!
 	removeAllSliders();
 }
-
-void LSystemUi::on_cmdAdd_clicked() { defModel.add(); }
-
-void LSystemUi::on_cmdRemove_clicked() { defModel.remove(); }
 
 void LSystemUi::invokeExec(const QSharedPointer<DrawMetaData> & execMeta)
 {
@@ -494,7 +549,7 @@ void LSystemUi::setConfigSet(const ConfigSet & configSet)
 	configLiveEdit();
 }
 
-void LSystemUi::on_cmdStore_clicked()
+void LSystemUi::onCmdStoreClicked()
 {
 	const ConfigSet c = getConfigSet(false);
 	if (!c.valid) return;
@@ -509,9 +564,9 @@ void LSystemUi::on_cmdStore_clicked()
 	configList.storeConfig(configName, c);
 }
 
-void LSystemUi::on_cmdLoad_clicked() { loadConfigByLstIndex(ui->lstConfigs->currentIndex()); }
+void LSystemUi::onCmdLoadClicked() { loadConfigByLstIndex(ui->lstConfigs->currentIndex()); }
 
-void LSystemUi::on_lstConfigs_doubleClicked(const QModelIndex & index) { loadConfigByLstIndex(index); }
+void LSystemUi::onLstConfigsDoubleClicked(const QModelIndex & index) { loadConfigByLstIndex(index); }
 
 void LSystemUi::drawAreaClick(int x, int y, Qt::MouseButton button, bool drawingMarked)
 {
@@ -535,7 +590,7 @@ void LSystemUi::loadConfigByLstIndex(const QModelIndex & index)
 	}
 }
 
-void LSystemUi::on_cmdDelete_clicked()
+void LSystemUi::onCmdDeleteClicked()
 {
 	ConfigNameKind currentConfig = configList.getConfigNameKindByIndex(ui->lstConfigs->currentIndex());
 
@@ -862,7 +917,7 @@ void LSystemUi::unfocusLinearEdit()
 	quickLinear->setLineEdit(nullptr);
 }
 
-void LSystemUi::checkAutoPaintChanged(int state)
+void LSystemUi::onChkAutoPaintChanged(int state)
 {
 	if (state == Qt::CheckState::Checked) {
 		configLiveEdit();
@@ -886,7 +941,7 @@ void LSystemUi::copyStatus()
 	clipboard->setText(ui->lblStatus->text());
 }
 
-void LSystemUi::on_lblStatus_linkActivated(const QString & link)
+void LSystemUi::onLblStatusLinkActivated(const QString & link)
 {
 	if (link == Links::NextIterations) {
 		QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
@@ -912,7 +967,7 @@ void LSystemUi::on_lblStatus_linkActivated(const QString & link)
 	}
 }
 
-void LSystemUi::on_lblStatus_mousePressed(QMouseEvent * event)
+void LSystemUi::onLblStatusMousePressed(QMouseEvent * event)
 {
 	if (event->button() == Qt::RightButton) {
 		statusMenu->menu.exec(event->globalPosition().toPoint());
@@ -954,16 +1009,12 @@ void LSystemUi::onLblGradientEndMousePressed(QMouseEvent * event)
 	}
 }
 
-void LSystemUi::chkColorGradientChanged() { configLiveEdit(); }
-
-void LSystemUi::on_cmdAbout_clicked()
+void LSystemUi::onCmdAboutClicked()
 {
 	AboutDialog dia(this);
 	dia.setModal(true);
 	dia.exec();
 }
-
-void LSystemUi::on_cmdSettings_clicked() { showSettings(); }
 
 void LSystemUi::toggleHelperFrame(QPushButton * button, QWidget * frame)
 {
@@ -978,11 +1029,15 @@ void LSystemUi::toggleHelperFrame(QPushButton * button, QWidget * frame)
 	}
 }
 
-void LSystemUi::on_cmdAdditionalOptions_clicked() { toggleHelperFrame(ui->cmdAdditionalOptions, ui->frmAdditionalOptions); }
+void LSystemUi::onCmdAdditionalOptionsClicked() { toggleHelperFrame(ui->cmdAdditionalOptions, ui->frmAdditionalOptions); }
 
-void LSystemUi::on_cmdPlayer_clicked() { toggleHelperFrame(ui->cmdPlayer, ui->frmPlayer); }
+void LSystemUi::onCmdPlayerClicked() { toggleHelperFrame(ui->cmdPlayer, ui->frmPlayer); }
 
-void LSystemUi::on_chkShowLastIter_stateChanged()
+void LSystemUi::onCmdCloseAdditionalOptionsClicked() { ui->frmAdditionalOptions->setVisible(false); }
+
+void LSystemUi::onCmdClosePlayerClicked() { ui->frmPlayer->setVisible(false); }
+
+void LSystemUi::onChkShowLastIterStateChanged()
 {
 	configLiveEdit();
 
@@ -991,11 +1046,6 @@ void LSystemUi::on_chkShowLastIter_stateChanged()
 	ui->lblLastIterOpacity->setEnabled(checked);
 }
 
-void LSystemUi::on_cmdCloseAdditionalSettings_clicked() { ui->frmAdditionalOptions->setVisible(false); }
-
-void LSystemUi::on_cmdClosePlayer_clicked() { ui->frmPlayer->setVisible(false); }
-
-void LSystemUi::on_chkAntiAliasing_stateChanged() { configLiveEdit(); }
 
 void LSystemUi::processDrawAction(const QString & link)
 {
@@ -1143,8 +1193,6 @@ AnimatorResult LSystemUi::newAnimationStep(int step, bool relativeStep)
 }
 
 void LSystemUi::playerValueChanged(int value) { emit goToAnimationStep(value); }
-
-void LSystemUi::on_cmdRightFormula_clicked() { showRightAngleDialog(); }
 
 void LSystemUi::undoRedo()
 {

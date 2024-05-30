@@ -813,7 +813,7 @@ border: 1px solid black;</string>
       <string>Line thickness:</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="cmdCloseAdditionalSettings">
+    <widget class="QPushButton" name="cmdCloseAdditionalOptions">
      <property name="geometry">
       <rect>
        <x>400</x>

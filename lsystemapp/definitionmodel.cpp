@@ -212,13 +212,15 @@ void DefinitionModel::selectionChanged(const QItemSelection & selected, const QI
 	QModelIndex ind = selected.indexes().first();
 	if (ind.column() != 2) return;
 	auto row = getRow(ind);
+	// deselect immediatly, otherwise the color becomes the the "marked cell" color w
+	emit deselect();
+
 	QColorDialog diag;
 	const QColor newColor = QColorDialog::getColor(row->color, parent);
 	if (newColor.isValid() && newColor != row->color) {
 		row->color = newColor;
 		emit edited();
 	}
-	emit deselect();
 }
 
 bool DefinitionModel::add()
