@@ -49,24 +49,14 @@ private:
 		Error
 	};
 
-	struct DrawMetaData : public lsystem::common::MetaData
-	{
-		QPoint offset;
-		bool clearAll = false;
-		bool clearLast = false;
-		bool resultOk = false;
-		QString toString() const override;
-	};
-
 private slots:
 
 	// from simulator
-	void processSimulatorSegments(const lsystem::common::ExecResult & execResult,
-								  const QSharedPointer<lsystem::common::MetaData> & metaData);
+	void processSimulatorSegments(const lsystem::common::ExecResult & execResult, const QSharedPointer<lsystem::common::AllDrawData> & data);
 	void processActionStr(const QString & actionStr);
 
 	// from segdrawer
-	void drawDone(const lsystem::ui::Drawing & drawing, const QSharedPointer<lsystem::common::MetaData> & metaData);
+	void drawDone(const lsystem::ui::Drawing & drawing, const QSharedPointer<lsystem::common::AllDrawData> & data);
 
 	// from drawarea
 	void enableUndoRedo(bool undoOrRedo);
@@ -100,9 +90,8 @@ private slots:
 	void onLblStatusMousePressed(QMouseEvent * event);
 
 signals:
-	void simulatorExec(const QSharedPointer<lsystem::common::MetaData> & metaData);
-	void simulatorExecDoubleStackSize(const QSharedPointer<lsystem::common::MetaData> & metaData);
-	void startDraw(const lsystem::common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData);
+	void simulatorExec(const QSharedPointer<lsystem::common::AllDrawData> & data);
+	void startDraw(const lsystem::common::ExecResult & execResult, const QSharedPointer<lsystem::common::AllDrawData> & data);
 
 	void setAnimateLatency(std::chrono::milliseconds latency);
 	void startAnimateCurrentDrawing();
@@ -163,7 +152,7 @@ private:
 	void latencyChanged();
 
 	// additional options & windows
-	void getAdditionalOptionsForSegmentsMeta(const QSharedPointer<lsystem::common::MetaData> & execMeta);
+	void getAdditionalOptionsForSegmentsMeta(lsystem::common::MetaData & execMeta);
 	void showSymbols();
 	bool symbolsVisible() const;
 	void showMarkedConfig();
@@ -201,7 +190,7 @@ private:
 		Draw
 	};
 
-	void invokeExec(const QSharedPointer<DrawMetaData> & execMeta);
+	void invokeExec(const QSharedPointer<lsystem::common::AllDrawData> & drawData);
 	void endInvokeExec(ExecKind execKind);
 	void invokeExecPending();
 
@@ -232,7 +221,7 @@ private:
 		QSet<ExecKind> waitForExecTasks;
 		bool active = false;
 		bool scheduledPending = false;
-		QSharedPointer<DrawMetaData> pendingMeta;
+		QSharedPointer<lsystem::common::AllDrawData> pendingData;
 		QTimer pendingTimer;
 	} exec;
 

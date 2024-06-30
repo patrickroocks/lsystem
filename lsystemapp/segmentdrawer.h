@@ -11,10 +11,10 @@ class SegmentDrawer : public QObject
 	Q_OBJECT
 
 public slots:
-	void startDraw(const common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData);
+	void startDraw(const common::ExecResult & execResult, const QSharedPointer<lsystem::common::AllDrawData> & data);
 
 signals:
-	void drawDone(const ui::Drawing & drawing, const QSharedPointer<common::MetaData> & metaData);
+	void drawDone(const ui::Drawing & drawing, const QSharedPointer<common::AllDrawData> & data);
 };
 
 } // namespace lsystem

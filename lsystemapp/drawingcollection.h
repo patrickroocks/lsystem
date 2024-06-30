@@ -24,7 +24,7 @@ class Drawing
 {
 public:
 	Drawing() = default;
-	Drawing(const common::ExecResult & execResult, const QSharedPointer<common::MetaData> & metaData);
+	Drawing(const common::ExecResult & execResult, const QSharedPointer<common::ConfigAndMeta> & metaData);
 	void drawToImage(QImage & dstImage, bool isMarked, bool isHighlighted);
 	QPoint size() const;
 	bool withinArea(const QPoint & pos);

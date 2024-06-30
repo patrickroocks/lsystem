@@ -78,7 +78,7 @@ struct LineSeg
 
 using LineSegs = QList<LineSeg>;
 
-struct ConfigSet
+struct ConfigSet final
 {
 	ConfigSet() = default;
 	ConfigSet(const QJsonObject & obj);
@@ -178,11 +178,9 @@ struct ColorGradient final
 	QColor endColor;
 };
 
-struct MetaData
+struct MetaData final
 {
-	virtual ~MetaData() {}
-
-	virtual QString toString() const;
+	QString toString() const;
 
 	bool execSegments = false;
 	bool execActionStr = false;
@@ -194,8 +192,26 @@ struct MetaData
 	bool antiAliasing = false;
 	std::optional<std::chrono::milliseconds> animLatency;
 	std::optional<ColorGradient> colorGradient;
+};
 
+struct ConfigAndMeta
+{
+	QString toString() const;
 	ConfigSet config;
+	MetaData meta;
+};
+
+struct UiDrawData final
+{
+	QPoint offset;
+	bool clearAll = false;
+	bool clearLast = false;
+	bool resultOk = false;
+};
+
+struct AllDrawData final : public lsystem::common::ConfigAndMeta
+{
+	UiDrawData uiDrawData;
 };
 
 inline void registerCommonTypes()
@@ -204,6 +220,10 @@ inline void registerCommonTypes()
 	qRegisterMetaType<ConfigSet>("common::ConfigSet");
 	qRegisterMetaType<QSharedPointer<MetaData>>("QSharedPointer<lsystem::common::MetaData>");
 	qRegisterMetaType<QSharedPointer<MetaData>>("QSharedPointer<common::MetaData>");
+	qRegisterMetaType<QSharedPointer<ConfigAndMeta>>("QSharedPointer<lsystem::common::ConfigAndMeta>");
+	qRegisterMetaType<QSharedPointer<ConfigAndMeta>>("QSharedPointer<common::ConfigAndMeta>");
+	qRegisterMetaType<QSharedPointer<AllDrawData>>("QSharedPointer<lsystem::common::AllDrawData>");
+	qRegisterMetaType<QSharedPointer<AllDrawData>>("QSharedPointer<common::AllDrawData>");
 	qRegisterMetaType<ExecResult>("lsystem::common::ExecResult");
 	qRegisterMetaType<ExecResult>("common::ExecResult");
 	qRegisterMetaType<LineSegs>("lsystem::common::LineSegs");

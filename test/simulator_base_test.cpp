@@ -46,8 +46,7 @@ private slots:
 	}
 
 signals:
-	void exec(const QSharedPointer<common::MetaData> & metaData);
-
+	void exec(const QSharedPointer<common::AllDrawData> & data);
 
 private:
 	Simulator simulator;
@@ -61,8 +60,8 @@ void SimulatorBaseTest::baseTest()
 	SIG_WATCHER(recErrorStr, &simulator, &Simulator::errorReceived);
 
 	// Base data
-	QSharedPointer<common::MetaData> inputMeta(new common::MetaData());
-	inputMeta->config.valid = true;
+	QSharedPointer<common::AllDrawData> inputData = QSharedPointer<common::AllDrawData>::create();
+	inputData->config.valid = true;
 
 	// * Test missing execution task
 
@@ -71,23 +70,23 @@ void SimulatorBaseTest::baseTest()
 				   CHECK_RETURN
 			   }))
 
-	emit exec(inputMeta);
+	emit exec(inputData);
 
 	SIG_CHECK
 
 	// * Set execution task segments from here
-	inputMeta->execSegments = true;
+	inputData->meta.execSegments = true;
 
 	// * Test: wrong config
 
-	inputMeta->config.definitions = {Definition('A', "AX")};
+	inputData->config.definitions = {Definition('A', "AX")};
 
 	SIG_EXPECT(recResult, CHECK_AT(1, [](const ExecResult & res) {
 							  CHECK_COMPARE(res.resultKind, ExecResult::ExecResultKind::InvalidConfig);
 							  CHECK_RETURN
-						  }) & CHECK_AT(2, [&inputMeta](const QSharedPointer<common::MetaData> & resMeta) {
+						  }) & CHECK_AT(2, [&inputData](const QSharedPointer<common::AllDrawData> & resMeta) {
 							  CHECK_VERIFY(resMeta);
-							  CHECK_COMPARE_ADDR(resMeta, inputMeta);
+							  CHECK_COMPARE_ADDR(resMeta, inputData);
 							  CHECK_RETURN
 						  }))
 
@@ -96,7 +95,7 @@ void SimulatorBaseTest::baseTest()
 				   CHECK_RETURN
 			   }))
 
-	emit exec(inputMeta);
+	emit exec(inputData);
 
 	SIG_CHECK
 
@@ -105,8 +104,8 @@ void SimulatorBaseTest::baseTest()
 	SIG_EXPECT(recResult, CHECK_AT(1, [](const ExecResult & res) {
 							  CHECK_COMPARE(res.resultKind, ExecResult::ExecResultKind::InvalidConfig);
 							  CHECK_RETURN
-						  }) & CHECK_AT(2, [&inputMeta](const QSharedPointer<common::MetaData> & resMeta) {
-							  CHECK_COMPARE_ADDR(resMeta, inputMeta);
+						  }) & CHECK_AT(2, [&inputData](const QSharedPointer<common::AllDrawData> & resMeta) {
+							  CHECK_COMPARE_ADDR(resMeta, inputData);
 							  CHECK_RETURN
 						  }))
 
@@ -115,13 +114,13 @@ void SimulatorBaseTest::baseTest()
 				   CHECK_RETURN
 			   }))
 
-	inputMeta->config.definitions = {Definition('A', "A"), Definition('A', "B")};
-	emit exec(inputMeta);
+	inputData->config.definitions = {Definition('A', "A"), Definition('A', "B")};
+	emit exec(inputData);
 
 	SIG_CHECK
 
 	// * From here we test with action strings.
-	inputMeta->execActionStr = true;
+	inputData->meta.execActionStr = true;
 
 	// * Test: just one iteration
 
@@ -133,10 +132,10 @@ void SimulatorBaseTest::baseTest()
 
 	SIG_EXPECT(recActionStr, VALUES("A[A]"))
 
-	auto & configSet = inputMeta->config;
+	auto & configSet = inputData->config;
 	configSet.definitions = {Definition('A', "A[A]")};
 	configSet.numIter = 1;
-	emit exec(inputMeta);
+	emit exec(inputData);
 
 	SIG_CHECK
 
@@ -148,8 +147,8 @@ void SimulatorBaseTest::baseTest()
 							  CHECK_COMPARE(print(res.segments),
 											"(L((0, 0), (0, -1)), L((0, -1), (1, -1)), L((1, -1), (1, 0)), L((1, 0), (0, 0)))");
 							  CHECK_RETURN
-						  }) & CHECK_AT(2, [&inputMeta](const QSharedPointer<common::MetaData> & resMeta) {
-							  CHECK_COMPARE_ADDR(resMeta, inputMeta);
+						  }) & CHECK_AT(2, [&inputData](const QSharedPointer<common::AllDrawData> & resMeta) {
+							  CHECK_COMPARE_ADDR(resMeta, inputData);
 							  CHECK_RETURN
 						  }))
 
@@ -160,12 +159,12 @@ void SimulatorBaseTest::baseTest()
 	configSet.startAngle = -90;
 	configSet.numIter = 2;
 	configSet.stepSize = 1;
-	emit exec(inputMeta);
+	emit exec(inputData);
 
 	SIG_CHECK
 
 	// * From here we stop testing with action strings.
-	inputMeta->execActionStr = false;
+	inputData->meta.execActionStr = false;
 
 	// * Test: Check max stack size
 
@@ -184,7 +183,7 @@ void SimulatorBaseTest::baseTest()
 	configSet.definitions = {Definition('A', "AA")};
 	configSet.numIter = std::numeric_limits<quint32>::max();
 
-	emit exec(inputMeta);
+	emit exec(inputData);
 
 	SIG_CHECK
 
@@ -204,7 +203,7 @@ void SimulatorBaseTest::baseTest()
 				   CHECK_RETURN
 			   }))
 
-	emit exec(inputMeta);
+	emit exec(inputData);
 
 	SIG_CHECK
 }

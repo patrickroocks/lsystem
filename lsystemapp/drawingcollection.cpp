@@ -6,33 +6,35 @@ using namespace lsystem::common;
 
 namespace lsystem::ui {
 
-Drawing::Drawing(const ExecResult & execResult, const QSharedPointer<MetaData> & metaData)
+Drawing::Drawing(const ExecResult & execResult, const QSharedPointer<ConfigAndMeta> & configAndMeta)
 	: segments(execResult.segments)
 	, actionColors(execResult.actionColors)
-	, config(metaData->config)
+	, config(configAndMeta->config)
 {
-	const bool paintLastIter = !execResult.segmentsLastIter.isEmpty() && metaData->lastIterOpacy > 0;
+	const auto & metaData = configAndMeta->meta;
 
-	if (paintLastIter) expandSizeToSegments(execResult.segmentsLastIter, metaData->thickness);
-	expandSizeToSegments(segments, metaData->thickness);
+	const bool paintLastIter = !execResult.segmentsLastIter.isEmpty() && metaData.lastIterOpacy > 0;
+
+	if (paintLastIter) expandSizeToSegments(execResult.segmentsLastIter, metaData.thickness);
+	expandSizeToSegments(segments, metaData.thickness);
 
 	const QPoint pSize = botRight - topLeft + QPoint(1, 1);
 	image = QImage(QSize(pSize.x(), pSize.y()), QImage::Format_ARGB32);
 	image.fill(qRgba(0, 0, 0, 0)); // transparent
 
 	InternalMeta meta;
-	meta.antiAliasing = metaData->antiAliasing;
-	meta.thickness = metaData->thickness;
-	meta.colorGradient = metaData->colorGradient;
+	meta.antiAliasing = metaData.antiAliasing;
+	meta.thickness = metaData.thickness;
+	meta.colorGradient = metaData.colorGradient;
 
 	if (paintLastIter) {
 		lastIterMeta = meta;
-		lastIterMeta->opacityFactor = metaData->lastIterOpacy;
+		lastIterMeta->opacityFactor = metaData.lastIterOpacy;
 		drawSegments(execResult.segmentsLastIter, *lastIterMeta);
 		lastIterImage = image;
 	}
 	mainMeta = meta;
-	mainMeta.opacityFactor = metaData->opacity;
+	mainMeta.opacityFactor = metaData.opacity;
 	drawSegments(segments, mainMeta);
 }
 

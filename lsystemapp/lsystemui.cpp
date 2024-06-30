@@ -273,25 +273,25 @@ void LSystemUi::resizeEvent(QResizeEvent * event)
 	removeAllSliders();
 }
 
-void LSystemUi::invokeExec(const QSharedPointer<DrawMetaData> & execMeta)
+void LSystemUi::invokeExec(const QSharedPointer<AllDrawData> & drawData)
 {
 	exec.scheduledPending = false;
 
 	// prevent that a queue of executions blocks everything.
 	if (exec.active) {
 		// When overwriting pending Meta, ensure that no tasks are lost.
-		if (exec.pendingMeta) {
-			execMeta->execActionStr |= exec.pendingMeta->execActionStr;
-			execMeta->execSegments |= exec.pendingMeta->execSegments;
+		if (exec.pendingData) {
+			drawData->meta.execActionStr |= exec.pendingData->meta.execActionStr;
+			drawData->meta.execSegments |= exec.pendingData->meta.execSegments;
 		}
-		exec.pendingMeta = execMeta;
+		exec.pendingData = drawData;
 		return;
 	} else {
-		exec.pendingMeta = nullptr;
+		exec.pendingData = nullptr;
 		exec.active = true;
-		if (execMeta->execActionStr) exec.waitForExecTasks.insert(ExecKind::ActionStr);
-		if (execMeta->execSegments) exec.waitForExecTasks.insert(ExecKind::Segments);
-		emit simulatorExec(execMeta);
+		if (drawData->meta.execActionStr) exec.waitForExecTasks.insert(ExecKind::ActionStr);
+		if (drawData->meta.execSegments) exec.waitForExecTasks.insert(ExecKind::Segments);
+		emit simulatorExec(drawData);
 	}
 }
 
@@ -301,7 +301,7 @@ void LSystemUi::endInvokeExec(ExecKind execKind)
 
 	if (exec.waitForExecTasks.empty()) {
 		exec.active = false;
-		if (exec.pendingMeta) {
+		if (exec.pendingData) {
 			exec.scheduledPending = true;
 			// This restarts the timer, even it was started before.
 			// Don't use singleShot, it would start multiple timers.
@@ -315,7 +315,7 @@ void LSystemUi::invokeExecPending()
 	exec.pendingTimer.stop();
 	if (exec.scheduledPending) {
 		// pendingMeta is deleted in invokeExec, preserve shared pointer (passed by reference)
-		auto copiedPendingMeta = exec.pendingMeta;
+		auto copiedPendingMeta = exec.pendingData;
 		invokeExec(copiedPendingMeta);
 	}
 }
@@ -325,36 +325,36 @@ void LSystemUi::startPaint(int x, int y)
 	const ConfigSet configSet = getConfigSet(true);
 	if (!configSet.valid) return;
 
-	QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
-	execMeta->offset = QPoint{x, y};
-	execMeta->clearAll = drawAreaMenu->autoClearToggle->isChecked() || ui->chkAutoPaint->isChecked();
-	getAdditionalOptionsForSegmentsMeta(execMeta);
-	execMeta->config = configSet;
+	QSharedPointer<AllDrawData> drawData(new AllDrawData);
+	drawData->uiDrawData.offset = QPoint{x, y};
+	drawData->uiDrawData.clearAll = drawAreaMenu->autoClearToggle->isChecked() || ui->chkAutoPaint->isChecked();
+	getAdditionalOptionsForSegmentsMeta(drawData->meta);
+	drawData->config = configSet;
 
-	invokeExec(execMeta);
+	invokeExec(drawData);
 }
 
-void LSystemUi::getAdditionalOptionsForSegmentsMeta(const QSharedPointer<MetaData> & execMeta)
+void LSystemUi::getAdditionalOptionsForSegmentsMeta(MetaData & execMeta)
 {
-	execMeta->execSegments = true;
-	execMeta->execActionStr = symbolsVisible();
+	execMeta.execSegments = true;
+	execMeta.execActionStr = symbolsVisible();
 
-	execMeta->showLastIter = ui->chkShowLastIter->isChecked();
+	execMeta.showLastIter = ui->chkShowLastIter->isChecked();
 
-	if (ui->chkColorGradient->isChecked()) execMeta->colorGradient = colorGradient;
-	else execMeta->colorGradient = {};
+	if (ui->chkColorGradient->isChecked()) execMeta.colorGradient = colorGradient;
+	else execMeta.colorGradient = {};
 
 	bool ok;
 	const double lastIterOpacityPercent = ui->txtLastIterOpacity->text().toDouble(&ok);
-	if (ok) execMeta->lastIterOpacy = lastIterOpacityPercent / 100.;
+	if (ok) execMeta.lastIterOpacy = lastIterOpacityPercent / 100.;
 
 	const double opacityPercent = ui->txtOpacity->text().toDouble(&ok);
-	if (ok) execMeta->opacity = opacityPercent / 100.;
+	if (ok) execMeta.opacity = opacityPercent / 100.;
 
 	const double thickness = ui->txtThickness->text().toDouble(&ok);
-	if (ok) execMeta->thickness = thickness;
+	if (ok) execMeta.thickness = thickness;
 
-	execMeta->antiAliasing = ui->chkAntiAliasing->isChecked();
+	execMeta.antiAliasing = ui->chkAntiAliasing->isChecked();
 }
 
 void LSystemUi::showSymbols()
@@ -373,10 +373,10 @@ void LSystemUi::showSymbols()
 
 	if (resultAvailable) {
 
-		QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
-		execMeta->config = getConfigSet(true);
-		execMeta->execActionStr = true;
-		invokeExec(execMeta);
+		QSharedPointer<AllDrawData> drawData = QSharedPointer<AllDrawData>::create();
+		drawData->config = getConfigSet(true);
+		drawData->meta.execActionStr = true;
+		invokeExec(drawData);
 	}
 }
 
@@ -712,23 +712,21 @@ void LSystemUi::copyToClipboardMarked()
 	drawArea->copyToClipboardMarked(transparent);
 }
 
-void LSystemUi::processSimulatorSegments(const common::ExecResult & execResult, const QSharedPointer<lsystem::common::MetaData> & metaData)
+void LSystemUi::processSimulatorSegments(const common::ExecResult & execResult, const QSharedPointer<lsystem::common::AllDrawData> & data)
 {
 	endInvokeExec(ExecKind::Segments);
 
-	QSharedPointer<DrawMetaData> drawMetaData = qSharedPointerDynamicCast<DrawMetaData>(metaData);
-
 	if (execResult.resultKind == common::ExecResult::ExecResultKind::InvalidConfig) {
 		resultAvailable = false;
-		if (drawMetaData->clearAll) drawArea->clear();
+		if (data->uiDrawData.clearAll) drawArea->clear();
 		return;
 	}
 
 	resultAvailable = true;
-	drawMetaData->resultOk = (execResult.resultKind == ExecResult::ExecResultKind::Ok);
+	data->uiDrawData.resultOk = (execResult.resultKind == ExecResult::ExecResultKind::Ok);
 
 	exec.waitForExecTasks.insert(ExecKind::Draw);
-	emit startDraw(execResult, metaData); // drawDone also calls endInvokeExec
+	emit startDraw(execResult, data); // drawDone also calls endInvokeExec
 }
 
 void LSystemUi::processActionStr(const QString & actionStr)
@@ -738,21 +736,17 @@ void LSystemUi::processActionStr(const QString & actionStr)
 	if (symbolsVisible()) symbolsDialog->setContent(actionStr);
 }
 
-void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPointer<MetaData> & metaData)
+void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPointer<AllDrawData> & data)
 {
 	endInvokeExec(ExecKind::Draw);
 
-	QSharedPointer<DrawMetaData> drawMetaData = qSharedPointerDynamicCast<DrawMetaData>(metaData);
-	if (drawMetaData.isNull()) {
-		showMessage("got wrong meta data", MsgType::Error);
-		return;
-	}
+	const auto & uiData = data->uiDrawData;
 
-	drawArea->draw(drawing, drawMetaData->offset, drawMetaData->clearAll, drawMetaData->clearLast);
+	drawArea->draw(drawing, uiData.offset, uiData.clearAll, uiData.clearLast);
 
 	ui->playerControl->setMaxValueAndValue(drawing.segments.size(), drawing.segments.size());
 
-	if (drawMetaData->resultOk) {
+	if (uiData.resultOk) {
 		const QString msgPainted = printStr("Painted %1 segments, size is %2 px, <a href=\"%3\">show symbols</a>",
 											drawing.segments.size(),
 											drawing.size(),
@@ -777,20 +771,20 @@ void LSystemUi::configLiveEdit()
 
 void LSystemUi::execConfigLive(const ConfigSet & configSet)
 {
-	auto optOffset = drawArea->getLastOffset();
+	const auto optOffset = drawArea->getLastOffset();
 
-	QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
+	QSharedPointer<AllDrawData> drawData = QSharedPointer<AllDrawData>::create();
 	if (optOffset.has_value()) {
-		execMeta->offset = optOffset.value();
+		drawData->uiDrawData.offset = optOffset.value();
 	} else {
-		execMeta->offset = QPoint{drawArea->width() / 2, drawArea->height() / 2};
+		drawData->uiDrawData.offset = QPoint{drawArea->width() / 2, drawArea->height() / 2};
 	}
 
-	execMeta->clearAll = true;
-	execMeta->config = configSet;
-	getAdditionalOptionsForSegmentsMeta(execMeta);
+	drawData->uiDrawData.clearAll = true;
+	drawData->config = configSet;
+	getAdditionalOptionsForSegmentsMeta(drawData->meta);
 
-	invokeExec(execMeta);
+	invokeExec(drawData);
 }
 
 void LSystemUi::focusAngleEdit(FocusableLineEdit * lineEdit)
@@ -944,20 +938,20 @@ void LSystemUi::copyStatus()
 void LSystemUi::onLblStatusLinkActivated(const QString & link)
 {
 	if (link == Links::NextIterations) {
-		QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
+		QSharedPointer<AllDrawData> data = QSharedPointer<AllDrawData>::create();
 		const auto optOffset = drawArea->getLastOffset();
 		if (!optOffset.has_value()) return;
-		execMeta->offset = optOffset.value();
-		execMeta->clearLast = true;
+		data->uiDrawData.offset = optOffset.value();
+		data->uiDrawData.clearLast = true;
 		auto config = drawArea->getCurrentDrawing()->config;
 		if (config.overrideStackSize) {
 			config.overrideStackSize = *config.overrideStackSize * 2;
 		} else {
 			config.overrideStackSize = configFileStore.getSettings().maxStackSize * 2;
 		}
-		execMeta->config = config;
-		getAdditionalOptionsForSegmentsMeta(execMeta);
-		invokeExec(execMeta);
+		data->config = config;
+		getAdditionalOptionsForSegmentsMeta(data->meta);
+		invokeExec(data);
 	} else if (link == Links::ShowSymbols) {
 		showSymbols();
 	} else if (link == Links::EditSettings) {
@@ -1100,17 +1094,17 @@ void LSystemUi::processDrawAction(const QString & link)
 				lastValidConfigSet = configSet;
 			}
 
-			QSharedPointer<DrawMetaData> execMeta(new DrawMetaData);
-			execMeta->offset = QPoint{xOff, yOff};
+			QSharedPointer<AllDrawData> data = QSharedPointer<AllDrawData>::create();
+			data->uiDrawData.offset = QPoint{xOff, yOff};
 			if (ui->chkAutoPaint->isChecked()) {
-				execMeta->clearAll = true;
+				data->uiDrawData.clearAll = true;
 			} else {
-				execMeta->clearLast = true;
+				data->uiDrawData.clearLast = true;
 			}
-			execMeta->config = configSet;
+			data->config = configSet;
 
-			getAdditionalOptionsForSegmentsMeta(execMeta);
-			invokeExec(execMeta);
+			getAdditionalOptionsForSegmentsMeta(data->meta);
+			invokeExec(data);
 		}
 
 	} else {
@@ -1256,18 +1250,6 @@ LSystemUi::StatusMenu::StatusMenu(LSystemUi * parent)
 	: menu(parent)
 {
 	menu.addAction("Copy to clipboard", &*parent, &LSystemUi::copyStatus);
-}
-
-// -------------------- DrawMetaData --------------------
-
-QString LSystemUi::DrawMetaData::toString() const
-{
-	return printStr("[%1,DrawMetaData(offset: %2, clearAll: %3, clearLast: %4, resultOk: %5)]",
-					MetaData::toString(),
-					offset,
-					clearAll,
-					clearLast,
-					resultOk);
 }
 
 // ------------------------------------------------------

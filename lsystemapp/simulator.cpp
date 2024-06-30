@@ -59,9 +59,11 @@ double TurnAction::roundNearWhole(double val)
 
 // -------------------------------------------------------------------------------------
 
-void Simulator::exec(const QSharedPointer<MetaData> & metaData)
+void Simulator::exec(const QSharedPointer<AllDrawData> & data)
 {
-	if (!metaData->execActionStr && !metaData->execSegments) {
+	const auto & meta = data->meta;
+
+	if (!meta.execActionStr && !meta.execSegments) {
 		emit errorReceived("Nothing to execute, neither segments nor action string is requested to calculate.");
 		return;
 	}
@@ -70,7 +72,7 @@ void Simulator::exec(const QSharedPointer<MetaData> & metaData)
 	// Instead of a naive recalculation, we try to use as much as we can from the
 	// previous results
 
-	const common::ConfigSet & newConfig = metaData->config;
+	const common::ConfigSet & newConfig = data->config;
 
 	// set stack size for current execution, might be overridden
 	curMaxStackSize = newConfig.overrideStackSize ? *newConfig.overrideStackSize : maxStackSize;
@@ -89,8 +91,8 @@ void Simulator::exec(const QSharedPointer<MetaData> & metaData)
 		// parseAction raises errorReceived
 		validConfig = parseActions(newConfig);
 		if (!validConfig) {
-			if (metaData->execSegments) emit segmentsReceived(ExecResult{ExecResult::ExecResultKind::InvalidConfig}, metaData);
-			if (metaData->execActionStr) emit actionStrReceived("(error occurred)");
+			if (meta.execSegments) emit segmentsReceived(ExecResult{ExecResult::ExecResultKind::InvalidConfig}, data);
+			if (meta.execActionStr) emit actionStrReceived("(error occurred)");
 			return;
 		}
 	}
@@ -103,7 +105,7 @@ void Simulator::exec(const QSharedPointer<MetaData> & metaData)
 	ExecResult res{ExecResult::ExecResultKind::Ok, actionColors};
 	res.iterNum = config.numIter;
 
-	if (executedSameExpansion && !(metaData->showLastIter && metaData->execSegments)) {
+	if (executedSameExpansion && !(meta.showLastIter && meta.execSegments)) {
 		if (config == newConfig) {
 			// If the configs are completely identical, we just use the last result:
 			res.segments = segments;
@@ -114,19 +116,19 @@ void Simulator::exec(const QSharedPointer<MetaData> & metaData)
 			res.segments = getSegments();
 		}
 		// Action String cannot change in this case, only recalculate if not present.
-		if (metaData->execActionStr && actionStr.isEmpty()) composeActionStr();
+		if (meta.execActionStr && actionStr.isEmpty()) composeActionStr();
 	} else {
 		// We have to reprocess everything.
 		// Iterations are needed for segments and action string.
 		config = newConfig;
-		execIterations(metaData, res);
+		execIterations(meta, res);
 
-		if (metaData->execActionStr) composeActionStr();
+		if (meta.execActionStr) composeActionStr();
 	}
 
 	// Finally report the results.
-	if (metaData->execSegments) emit segmentsReceived(res, metaData);
-	if (metaData->execActionStr) emit actionStrReceived(actionStr);
+	if (meta.execSegments) emit segmentsReceived(res, data);
+	if (meta.execActionStr) emit actionStrReceived(actionStr);
 }
 
 void Simulator::composeActionStr()
@@ -135,7 +137,7 @@ void Simulator::composeActionStr()
 	for (const Action * action : std::as_const(currentActions)) actionStr += print(action);
 }
 
-void Simulator::execIterations(const QSharedPointer<MetaData> & metaData, ExecResult & res)
+void Simulator::execIterations(const common::MetaData & meta, ExecResult & res)
 {
 	currentActions = {startAction.data()};
 	nextActions.clear();
@@ -155,7 +157,7 @@ void Simulator::execIterations(const QSharedPointer<MetaData> & metaData, ExecRe
 								   .arg(2 * curMaxStackSize)
 								   .arg(Links::EditSettings));
 			return;
-		} else if (metaData->showLastIter && curIter == config.numIter - 1) {
+		} else if (meta.showLastIter && curIter == config.numIter - 1) {
 			res.segmentsLastIter = getSegments();
 		}
 	}

@@ -148,4 +148,8 @@ QString MetaData::toString() const
 					animLatency);
 }
 
+// ----------------------------------------------------------------------------
+
+QString ConfigAndMeta::toString() const { return printStr("[%1, %2]", QJsonDocument{config.toJson()}.toJson(), meta.toString()); }
+
 } // namespace lsystem::common

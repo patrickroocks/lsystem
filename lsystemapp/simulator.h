@@ -133,11 +133,11 @@ class Simulator : public QObject, public impl::SimlatorInterface
 
 signals:
 	void errorReceived(const QString & errStr);
-	void segmentsReceived(const common::ExecResult & execResult, const QSharedPointer<common::MetaData> & metaData);
+	void segmentsReceived(const common::ExecResult & execResult, const QSharedPointer<common::AllDrawData> & data);
 	void actionStrReceived(const QString & actionStr);
 
 public slots:
-	void exec(const QSharedPointer<common::MetaData> & metaData);
+	void exec(const QSharedPointer<common::AllDrawData> & data);
 	void setMaxStackSize(int newMaxStackSize);
 
 private:
@@ -147,7 +147,7 @@ private:
 	bool parseActions(const common::ConfigSet & newConfig);
 	bool expansionEqual(const common::ConfigSet & newConfig) const;
 
-	void execIterations(const QSharedPointer<common::MetaData> & metaData, common::ExecResult & res);
+	void execIterations(const common::MetaData & meta, common::ExecResult & res);
 	bool execOneIteration();
 
 	common::LineSegs getSegments();
