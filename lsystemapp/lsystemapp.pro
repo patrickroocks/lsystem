@@ -1,4 +1,4 @@
-QT += core widgets gui quick quickwidgets quickcontrols2
+QT += core widgets gui quick quickwidgets quickcontrols2 qml
 
 CONFIG += c++20
 

@@ -38,9 +38,6 @@ public:
 	LSystemUi(QWidget * parent = nullptr);
 	~LSystemUi();
 
-protected:
-	void resizeEvent(QResizeEvent * event) override;
-
 private:
 	enum class MsgType
 	{
@@ -52,7 +49,8 @@ private:
 private slots:
 
 	// from simulator
-	void processSimulatorSegments(const lsystem::common::ExecResult & execResult, const QSharedPointer<lsystem::common::AllDrawData> & data);
+	void processSimulatorSegments(const lsystem::common::ExecResult & execResult,
+								  const QSharedPointer<lsystem::common::AllDrawData> & data);
 	void processActionStr(const QString & actionStr);
 
 	// from segdrawer
@@ -82,9 +80,9 @@ private slots:
 	void onCmdPlayerClicked();
 	void onCmdClosePlayerClicked();
 	void onChkShowLastIterStateChanged();
-	void onCmdStoreClicked();
-	void onCmdLoadClicked();
-	void onCmdDeleteClicked();
+	void onCmdStoreConfigClicked();
+	void onCmdLoadConfigClicked();
+	void onCmdDeleteConfigClicked();
 	void onLstConfigsDoubleClicked(const QModelIndex & index);
 	void onLblStatusLinkActivated(const QString & link);
 	void onLblStatusMousePressed(QMouseEvent * event);
@@ -177,7 +175,6 @@ private:
 	void showVarError(const QString & errorVar, const QString & extraInfo = QString());
 	void resetStatus();
 	void showSettings();
-	void removeAllSliders();
 	void clearAll();
 	void toggleHelperFrame(QPushButton * button, QWidget * frame);
 	void undoRedo();
@@ -196,8 +193,7 @@ private:
 
 private:
 	Ui::LSystemUi * const ui;
-	QScopedPointer<lsystem::ui::DrawArea> drawArea;
-	QScopedPointer<lsystem::ui::GradientPreview> gradientPreview;
+	lsystem::ui::DrawArea * drawArea = nullptr;
 	DrawPlacement drawPlacement;
 
 	QScopedPointer<TableItemDelegateAutoUpdate> tableItemDelegate;

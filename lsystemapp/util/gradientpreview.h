@@ -10,15 +10,16 @@ namespace lsystem::ui {
 class GradientPreview : public QWidget
 {
 public:
-	explicit GradientPreview(const lsystem::common::ColorGradient & colorGradient, QWidget * parent);
+	explicit GradientPreview(QWidget * parent);
 	void updateGradient();
+	void setColorGradient(lsystem::common::ColorGradient * newColorGradient) { colorGradient = newColorGradient; }
 
 protected:
 	void paintEvent(QPaintEvent * event) override;
 	void resizeEvent(QResizeEvent * event) override;
 
 private:
-	const lsystem::common::ColorGradient & colorGradient;
+	lsystem::common::ColorGradient * colorGradient = nullptr;
 	QImage gradientImage;
 };
 

@@ -15,7 +15,6 @@
 #include <QGuiApplication>
 #include <QInputDialog>
 #include <QMessageBox>
-#include <QResizeEvent>
 
 using namespace lsystem;
 using namespace lsystem::common;
@@ -102,9 +101,9 @@ void LSystemUi::setupConfigList()
 	configFileStore.loadConfig();
 	loadConfigByLstIndex(configList.index(0, 0));
 
-	connect(ui->cmdStore, &QPushButton::clicked, this, &LSystemUi::onCmdStoreClicked);
-	connect(ui->cmdLoad, &QPushButton::clicked, this, &LSystemUi::onCmdLoadClicked);
-	connect(ui->cmdDelete, &QPushButton::clicked, this, &LSystemUi::onCmdDeleteClicked);
+	connect(ui->cmdStoreConfig, &QPushButton::clicked, this, &LSystemUi::onCmdStoreConfigClicked);
+	connect(ui->cmdLoadConfig, &QPushButton::clicked, this, &LSystemUi::onCmdLoadConfigClicked);
+	connect(ui->cmdDeleteConfig, &QPushButton::clicked, this, &LSystemUi::onCmdDeleteConfigClicked);
 	connect(ui->lstConfigs, &QListView::doubleClicked, this, &LSystemUi::onLstConfigsDoubleClicked);
 }
 
@@ -141,7 +140,7 @@ void LSystemUi::setupHelperControls()
 	connect(ui->lblGradientStart, &ClickableLabel::mousePressed, this, &LSystemUi::onLblGradientStartMousePressed);
 	connect(ui->lblGradientEnd, &ClickableLabel::mousePressed, this, &LSystemUi::onLblGradientEndMousePressed);
 	connect(ui->chkColorGradient, &QCheckBox::stateChanged, this, &LSystemUi::configLiveEdit);
-	gradientPreview.reset(new GradientPreview(colorGradient, ui->wdgGradientPreview));
+	ui->wdgGradientPreview->setColorGradient(&colorGradient);
 	updateGradientStyle();
 
 	// Player control (UI control for segment animator)
@@ -189,11 +188,11 @@ void LSystemUi::setupInteractiveControls()
 	ui->txtLeft->setValueRestriction(ValueRestriction::PositiveNumbers);
 	ui->txtRight->setValueRestriction(ValueRestriction::NegativeNumbers);
 
-	quickAngle.reset(new QuickAngle(ui->centralwidget));
+	quickAngle.reset(new QuickAngle(ui->wdgEntire));
 	quickAngle->setVisible(false);
 	connect(quickAngle.data(), &QuickAngle::focusOut, this, &LSystemUi::unfocusAngleEdit);
 
-	quickLinear.reset(new QuickLinear(ui->centralwidget));
+	quickLinear.reset(new QuickLinear(ui->wdgEntire));
 	quickLinear->setVisible(false);
 	connect(quickLinear.data(), &QuickLinear::focusOut, this, &LSystemUi::unfocusLinearEdit);
 
@@ -225,16 +224,15 @@ void LSystemUi::setupInteractiveControls()
 
 void LSystemUi::setupDrawArea()
 {
-	// DrawArea is a widget and can't be moved to a new thread
-	drawArea.reset(new DrawArea(ui->wdgOut));
+	drawArea = ui->wdgDraw;
 	drawArea->setMouseTracking(true); // for mouse move event
-	connect(drawArea.data(), &DrawArea::mouseClick, this, &LSystemUi::drawAreaClick);
-	connect(drawArea.data(), &DrawArea::enableUndoRedo, this, &LSystemUi::enableUndoRedo);
-	connect(drawArea.data(), &DrawArea::markingChanged, this, &LSystemUi::markDrawing);
-	connect(drawArea.data(), &DrawArea::highlightChanged, this, &LSystemUi::highlightDrawing);
+	connect(drawArea, &DrawArea::mouseClick, this, &LSystemUi::drawAreaClick);
+	connect(drawArea, &DrawArea::enableUndoRedo, this, &LSystemUi::enableUndoRedo);
+	connect(drawArea, &DrawArea::markingChanged, this, &LSystemUi::markDrawing);
+	connect(drawArea, &DrawArea::highlightChanged, this, &LSystemUi::highlightDrawing);
 
 	// Label for move/maximize commands
-	lblDrawActions.reset(new ClickableLabel(drawArea.data()));
+	lblDrawActions.reset(new ClickableLabel(drawArea));
 	lblDrawActions->setVisible(false);
 	lblDrawActions->setMouseTracking(true);
 	lblDrawActions->setTextInteractionFlags(Qt::LinksAccessibleByMouse);
@@ -248,29 +246,6 @@ LSystemUi::~LSystemUi()
 {
 	quitAndWait({&simulatorThread, &segDrawerThread});
 	delete ui;
-}
-
-void LSystemUi::resizeEvent(QResizeEvent * event)
-{
-	static bool firstRun = true;
-
-	const int border = 5;
-	const int wdt = event->size().width() - border;
-	const int hgt = event->size().height() - border;
-
-	ui->topMainLayoutWidget->resize(wdt - ui->topMainLayoutWidget->x(), ui->topMainLayoutWidget->height());
-	ui->layPaintFrameWidget->resize(wdt - ui->layPaintFrameWidget->x(), hgt - ui->layPaintFrameWidget->y());
-
-	// size of wdgOut is not available at start
-	drawArea->resize(ui->layPaintFrameWidget->size().width() - 20, ui->layPaintFrameWidget->size().height() - 50);
-
-	if (firstRun) {
-		gradientPreview->resize(ui->wdgGradientPreview->geometry().width(), ui->wdgGradientPreview->geometry().height());
-		firstRun = false;
-	}
-
-	// repaint during resize will fail!
-	removeAllSliders();
 }
 
 void LSystemUi::invokeExec(const QSharedPointer<AllDrawData> & drawData)
@@ -451,12 +426,6 @@ void LSystemUi::showSettings()
 	dia.exec();
 }
 
-void LSystemUi::removeAllSliders()
-{
-	if (quickAngle->isVisible()) unfocusAngleEdit();
-	if (quickLinear->isVisible()) unfocusLinearEdit();
-}
-
 void LSystemUi::clearAll()
 {
 	drawArea->clear();
@@ -549,7 +518,7 @@ void LSystemUi::setConfigSet(const ConfigSet & configSet)
 	configLiveEdit();
 }
 
-void LSystemUi::onCmdStoreClicked()
+void LSystemUi::onCmdStoreConfigClicked()
 {
 	const ConfigSet c = getConfigSet(false);
 	if (!c.valid) return;
@@ -564,7 +533,7 @@ void LSystemUi::onCmdStoreClicked()
 	configList.storeConfig(configName, c);
 }
 
-void LSystemUi::onCmdLoadClicked() { loadConfigByLstIndex(ui->lstConfigs->currentIndex()); }
+void LSystemUi::onCmdLoadConfigClicked() { loadConfigByLstIndex(ui->lstConfigs->currentIndex()); }
 
 void LSystemUi::onLstConfigsDoubleClicked(const QModelIndex & index) { loadConfigByLstIndex(index); }
 
@@ -590,7 +559,7 @@ void LSystemUi::loadConfigByLstIndex(const QModelIndex & index)
 	}
 }
 
-void LSystemUi::onCmdDeleteClicked()
+void LSystemUi::onCmdDeleteConfigClicked()
 {
 	ConfigNameKind currentConfig = configList.getConfigNameKindByIndex(ui->lstConfigs->currentIndex());
 
@@ -801,8 +770,7 @@ void LSystemUi::focusAngleEdit(FocusableLineEdit * lineEdit)
 		}
 	}
 
-
-	const QPoint lineditTopLeft = ui->wdgConfig->mapTo(ui->centralwidget, lineEdit->geometry().topLeft());
+	const QPoint lineditTopLeft = ui->wdgConfig->mapTo(ui->wdgEntire, lineEdit->geometry().topLeft());
 	const int x = lineditTopLeft.x() - 2;
 	const int y = lineditTopLeft.y() - quickAngle->geometry().height() / 2 + lineEdit->geometry().height() / 2;
 
@@ -827,7 +795,7 @@ void LSystemUi::focusLinearEdit(FocusableLineEdit * lineEdit)
 {
 	if (!ui->chkAutoPaint->isChecked()) return;
 
-	const QPoint lineditTopLeft = lineEdit->parentWidget()->mapTo(ui->centralwidget, lineEdit->geometry().topLeft());
+	const QPoint lineditTopLeft = lineEdit->parentWidget()->mapTo(ui->wdgEntire, lineEdit->geometry().topLeft());
 
 	const int x = lineditTopLeft.x() - 2;
 	const int y = lineditTopLeft.y() - quickLinear->geometry().height() / 2 + lineEdit->geometry().height() / 2;
@@ -986,7 +954,7 @@ void LSystemUi::onLblGradientStartMousePressed(QMouseEvent * event)
 	const QColor newColor = QColorDialog::getColor(colorGradient.startColor, this);
 	if (newColor.isValid() && newColor != colorGradient.startColor) {
 		colorGradient.startColor = newColor;
-		gradientPreview->updateGradient();
+		ui->wdgGradientPreview->updateGradient();
 		updateGradientStyle(true);
 	}
 }
@@ -998,7 +966,7 @@ void LSystemUi::onLblGradientEndMousePressed(QMouseEvent * event)
 	const QColor newColor = QColorDialog::getColor(colorGradient.endColor, this);
 	if (newColor.isValid() && newColor != colorGradient.endColor) {
 		colorGradient.endColor = newColor;
-		gradientPreview->updateGradient();
+		ui->wdgGradientPreview->updateGradient();
 		updateGradientStyle(true);
 	}
 }
@@ -1012,8 +980,18 @@ void LSystemUi::onCmdAboutClicked()
 
 void LSystemUi::toggleHelperFrame(QPushButton * button, QWidget * frame)
 {
+	static const QVector<QFrame *> allFrames{ui->frmAdditionalOptions, ui->frmPlayer};
+
+	// close all other frames
+	for (QFrame * frm : allFrames) {
+		if (frm != frame) {
+			frm->setVisible(false);
+		}
+	}
+
+	// toggle visibility and place frame
 	if (!frame->isVisible()) {
-		const auto butBottomLeft = ui->wdgConfig->mapTo(ui->centralwidget, button->geometry().bottomLeft());
+		const auto butBottomLeft = ui->wdgConfig->mapTo(ui->wdgEntire, button->geometry().bottomLeft());
 		const auto & frameGeom = frame->geometry();
 		frame->setGeometry(
 			butBottomLeft.x() - frameGeom.width(), butBottomLeft.y() - frameGeom.height(), frameGeom.width(), frameGeom.height());

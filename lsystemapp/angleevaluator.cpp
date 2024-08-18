@@ -1,6 +1,5 @@
 #include "angleevaluator.h"
 
-
 AngleEvaluator::Result AngleEvaluator::evaluate(const QString & leftAngle, const QString & rightAngleFormula)
 {
 	Result rv;

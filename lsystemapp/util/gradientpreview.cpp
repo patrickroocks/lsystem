@@ -7,9 +7,8 @@ using namespace lsystem::common;
 
 namespace lsystem::ui {
 
-GradientPreview::GradientPreview(const lsystem::common::ColorGradient & colorGradient, QWidget * parent)
+GradientPreview::GradientPreview(QWidget * parent)
 	: QWidget(parent)
-	, colorGradient(colorGradient)
 {}
 
 void GradientPreview::resizeEvent(QResizeEvent * event)
@@ -32,7 +31,7 @@ void GradientPreview::updateGradient()
 	// Paint a horizontal gradient
 	for (int x = 0; x < width; ++x) {
 		const double t = x * invWidth;
-		pen.setColor(colorGradient.colorAt(t));
+		pen.setColor(colorGradient->colorAt(t));
 		painter.setPen(pen); // needed after setColor
 		painter.drawLine(QPoint(x, 0), QPoint(x, height));
 	}
