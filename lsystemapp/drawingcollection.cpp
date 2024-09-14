@@ -78,22 +78,18 @@ QPoint Drawing::size() const { return botRight - topLeft; }
 
 bool Drawing::withinArea(const QPoint & pos) { return pos >= topLeft + offset && pos <= botRight + offset; }
 
-bool Drawing::move(const QPoint & newOffset)
-{
-	if (offset == newOffset) return false;
-	offset = newOffset;
-	return true;
-}
-
 DrawResult Drawing::toDrawResult()
 {
-	return DrawResult{.topLeft = topLeft + offset,
-					  .botRight = botRight + offset,
-					  .offset = offset,
-					  .drawingNum = num,
-					  .segmentsCount = static_cast<int>(segments.count()),
-					  .animStep = animState.inProgress ? animState.curSeg + 1 : static_cast<int>(segments.count()),
-					  .config = config};
+	return DrawResult{
+		.topLeft = topLeft + offset,
+		.botRight = botRight + offset,
+		.offset = offset,
+		.drawingNum = num,
+		.listIndex = listIndex,
+		.segmentsCount = static_cast<int>(segments.count()),
+		.animStep = animState.inProgress ? animState.curSeg + 1 : static_cast<int>(segments.count()),
+		.config = config,
+	};
 }
 
 void Drawing::drawSegmentRange(const common::LineSegs & segs, int numStart, int numEnd, const InternalMeta & meta)
@@ -222,16 +218,46 @@ void Drawing::updateRect(double minX, double minY, double maxX, double maxY)
 
 // ----------------------------------------------------------------------------------------------------------------
 
-void DrawingCollection::addDrawing(Drawing newDrawing, const QPoint & off)
+void DrawingCollection::addOrReplaceDrawing(Drawing newDrawing)
 {
-	newDrawing.zIndex = zIndexToDrawing.isEmpty() ? 1 : (zIndexToDrawing.lastKey() + 1);
-	newDrawing.num = drawings.isEmpty() ? 1 : (drawings.lastKey() + 1);
-	newDrawing.offset = off;
+	storeUndoPoint();
 
-	zIndexToDrawing[newDrawing.zIndex] = newDrawing.num;
+	if (newDrawing.num == 0) {
+		// add new drawing
+		newDrawing.zIndex = zIndexToDrawing.isEmpty() ? 1 : (zIndexToDrawing.lastKey() + 1);
+		newDrawing.num = drawings.isEmpty() ? 1 : (drawings.lastKey() + 1);
+		zIndexToDrawing[newDrawing.zIndex] = newDrawing.num;
+	}
+
 	drawings[newDrawing.num] = newDrawing;
 
-	newDrawing.drawToImage(image, false, false);
+	if (newDrawing.num == 0) {
+		newDrawing.drawToImage(image, false, false);
+	} else {
+		redraw();
+	}
+
+	updateListData();
+}
+
+void DrawingCollection::storeUndoPoint()
+{
+	// very simple 1-step undo
+	lastDrawings = drawings;
+}
+
+void DrawingCollection::restoreLast()
+{
+	qSwap(drawings, lastDrawings);
+
+	updateZIndexToDrawing();
+	if (markedDrawing > 0 && !drawings.contains(markedDrawing)) {
+		// calls redraw
+		setMarkedDrawing(0);
+	} else {
+		redraw();
+	}
+	updateListData();
 }
 
 void DrawingCollection::resize(const QSize & newSize)
@@ -245,6 +271,10 @@ void DrawingCollection::resize(const QSize & newSize)
 
 void DrawingCollection::clearAll()
 {
+	if (drawings.isEmpty()) return;
+
+	storeUndoPoint();
+
 	markedDrawing = 0;
 	drawings.clear();
 	zIndexToDrawing.clear();
@@ -329,17 +359,26 @@ bool DrawingCollection::setMarkedDrawing(qint64 newMarkedDrawing)
 	return true;
 }
 
-bool DrawingCollection::moveDrawing(qint64 drawingNum, const QPoint & newOffset)
+bool DrawingCollection::moveDrawing(qint64 drawingNum, const QPoint & newOffset, bool storeUndo)
 {
-	if (!drawings[drawingNum].move(newOffset)) return false;
+	if (!drawings.contains(drawingNum) || drawings[drawingNum].offset == newOffset) return false;
+
+	if (storeUndo) storeUndoPoint();
+
+	drawings[drawingNum].offset = newOffset;
 	redraw();
+	updateListData();
 	return true;
 }
 
-bool DrawingCollection::deleteImage(qint64 drawingNum)
+bool DrawingCollection::deleteDrawing(qint64 drawingNum)
 {
 	if (!drawings.contains(drawingNum)) return false;
+
+	storeUndoPoint();
+	zIndexToDrawing.remove(drawings[drawingNum].zIndex);
 	drawings.remove(drawingNum);
+	updateListData();
 	redraw();
 	return true;
 }
@@ -382,25 +421,74 @@ std::optional<DrawResult> DrawingCollection::getMarkedDrawResult()
 	}
 }
 
-std::optional<QPoint> DrawingCollection::getLastOffset() const
-{
-	if (drawings.empty()) {
-		return {};
-	} else {
-		return drawings.last().offset;
-	}
-}
-
 bool DrawingCollection::sendToZIndex(qint64 drawingNum, qint64 newZIndex)
 {
 	if (!drawings.contains(drawingNum)) return false;
 	Drawing & drawing = drawings[drawingNum];
 	const qint64 oldZIndex = drawing.zIndex;
+	if (oldZIndex == newZIndex) return false;
+
+	storeUndoPoint();
 	drawing.zIndex = newZIndex;
-	zIndexToDrawing.remove(oldZIndex);
-	zIndexToDrawing[drawing.zIndex] = drawing.num;
+	updateZIndexToDrawing();
 	redraw();
+	updateListData();
 	return true;
+}
+
+int DrawingCollection::rowCount(const QModelIndex & parent) const
+{
+	Q_UNUSED(parent);
+	return drawings.size();
+}
+
+QVariant DrawingCollection::data(const QModelIndex & index, int role) const
+{
+	if (role == Qt::DisplayRole && index.column() == 0) {
+		if (index.row() < drawings.size()) {
+			return getRow(index);
+		}
+	}
+
+	return QVariant();
+}
+
+QString DrawingCollection::getRow(const QModelIndex & index) const
+{
+	if (index.row() >= listData.size()) return QString{};
+	return listData[index.row()].description;
+}
+
+void DrawingCollection::allDataChanged() { emit dataChanged(createIndex(0, 0), createIndex(rowCount() - 1, 0)); }
+
+void DrawingCollection::updateListData()
+{
+	listData.clear();
+	for (qint64 drawNum : std::as_const(zIndexToDrawing)) {
+		ListEntry entry;
+		auto & drawing = drawings[drawNum];
+		entry.description = "[" + QString::number(drawNum) + "] (" + QString::number(drawing.offset.x()) + ", "
+							+ QString::number(drawing.offset.y()) + ")";
+		entry.drawNum = drawNum;
+		drawing.listIndex = listData.size();
+		listData.push_back(entry);
+	}
+
+	allDataChanged();
+}
+
+int DrawingCollection::getDrawingNumByListIndex(int listIndex) const
+{
+	if (listIndex < 0 || listIndex >= listData.size()) return 0;
+	return listData[listIndex].drawNum;
+}
+
+void DrawingCollection::updateZIndexToDrawing()
+{
+	zIndexToDrawing.clear();
+	for (const auto & drawing : std::as_const(drawings)) {
+		zIndexToDrawing[drawing.zIndex] = drawing.num;
+	}
 }
 
 } // namespace lsystem::ui

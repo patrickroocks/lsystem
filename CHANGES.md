@@ -1,3 +1,7 @@
+# Version 0.8.0
+
+- added layers list
+
 # Version 0.7.0
 
 - added color gradient

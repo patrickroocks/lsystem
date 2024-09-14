@@ -154,7 +154,7 @@ void LSystemUi::setupHelperControls()
 	connect(ui->cmdClosePlayer, &QPushButton::clicked, this, &LSystemUi::onCmdClosePlayerClicked);
 
 	// CheckBoxes
-	connect(ui->chkAutoPaint, &QCheckBox::stateChanged, this, &LSystemUi::onChkAutoPaintChanged);
+	connect(ui->chkShowSliders, &QCheckBox::stateChanged, this, &LSystemUi::onChkShowSlidersChanged);
 	connect(ui->chkShowLastIter, &QCheckBox::stateChanged, this, &LSystemUi::onChkShowLastIterStateChanged);
 	connect(ui->chkAntiAliasing, &QCheckBox::stateChanged, this, &LSystemUi::configLiveEdit);
 
@@ -240,6 +240,19 @@ void LSystemUi::setupDrawArea()
 	connect(lblDrawActions.data(), &ClickableLabel::linkActivated, this, &LSystemUi::processDrawAction);
 
 	drawAreaMenu.reset(new DrawAreaMenu(this)); // needs drawArea
+
+	ui->lstLayers->setModel(&drawArea->getDrawingCollection());
+
+	auto * layersSelModel = ui->lstLayers->selectionModel();
+	connect(layersSelModel, &QItemSelectionModel::selectionChanged, drawArea, &DrawArea::layerSelectionChanged);
+
+	connect(ui->cmdDeleteLayer, &QPushButton::clicked, this, &LSystemUi::onCmdDeleteLayerClicked);
+}
+
+void LSystemUi::onCmdDeleteLayerClicked()
+{
+	if (ui->lstLayers->selectionModel()->selectedIndexes().empty()) return;
+	drawArea->deleteIndex(ui->lstLayers->selectionModel()->selectedIndexes().first().row());
 }
 
 LSystemUi::~LSystemUi()
@@ -302,7 +315,6 @@ void LSystemUi::startPaint(int x, int y)
 
 	QSharedPointer<AllDrawData> drawData(new AllDrawData);
 	drawData->uiDrawData.offset = QPoint{x, y};
-	drawData->uiDrawData.clearAll = drawAreaMenu->autoClearToggle->isChecked() || ui->chkAutoPaint->isChecked();
 	getAdditionalOptionsForSegmentsMeta(drawData->meta);
 	drawData->config = configSet;
 
@@ -356,13 +368,6 @@ void LSystemUi::showSymbols()
 }
 
 bool LSystemUi::symbolsVisible() const { return symbolsDialog && symbolsDialog->isVisible(); }
-
-void LSystemUi::showMarkedConfig()
-{
-	if (ui->chkAutoPaint->isChecked() && drawArea->getCurrentDrawing()) {
-		setConfigSet(drawArea->getMarkedDrawingResult()->config);
-	}
-}
 
 void LSystemUi::setBgColor()
 {
@@ -643,11 +648,19 @@ void LSystemUi::markDrawing()
 
 	drawAreaMenu->setDrawingActionsVisible(markedDrawing.has_value());
 
-	if (markedDrawing.has_value() && !ui->chkAutoPaint->isChecked()) {
-		setConfigSet(markedDrawing->config);
+	if (markedDrawing.has_value()) {
+		showConfigSet(markedDrawing->config);
 		ui->playerControl->setPlaying(false);
 		ui->playerControl->setMaxValueAndValue(markedDrawing->segmentsCount, markedDrawing->animStep);
 	}
+
+	// mark in layers list:
+	drawArea->setIgnoreSelectionChange(true);
+	ui->lstLayers->selectionModel()->clearSelection();
+	if (markedDrawing.has_value()) {
+		ui->lstLayers->selectionModel()->select(ui->lstLayers->model()->index(markedDrawing->listIndex, 0), QItemSelectionModel::Select);
+	}
+	drawArea->setIgnoreSelectionChange(false);
 }
 
 void LSystemUi::showErrorInUi(const QString & errString) { showMessage(errString, MsgType::Error); }
@@ -687,7 +700,6 @@ void LSystemUi::processSimulatorSegments(const common::ExecResult & execResult, 
 
 	if (execResult.resultKind == common::ExecResult::ExecResultKind::InvalidConfig) {
 		resultAvailable = false;
-		if (data->uiDrawData.clearAll) drawArea->clear();
 		return;
 	}
 
@@ -705,13 +717,18 @@ void LSystemUi::processActionStr(const QString & actionStr)
 	if (symbolsVisible()) symbolsDialog->setContent(actionStr);
 }
 
-void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPointer<AllDrawData> & data)
+void LSystemUi::drawDone(const Drawing & drawing, const QSharedPointer<AllDrawData> & data)
 {
 	endInvokeExec(ExecKind::Draw);
 
+	lastDrawData = data;
 	const auto & uiData = data->uiDrawData;
 
-	drawArea->draw(drawing, uiData.offset, uiData.clearAll, uiData.clearLast);
+	Drawing newDrawing = drawing;
+	newDrawing.offset = uiData.offset;
+	newDrawing.num = uiData.drawingNumToEdit.value_or(0);
+
+	drawArea->draw(newDrawing);
 
 	ui->playerControl->setMaxValueAndValue(drawing.segments.size(), drawing.segments.size());
 
@@ -730,7 +747,7 @@ void LSystemUi::drawDone(const lsystem::ui::Drawing & drawing, const QSharedPoin
 
 void LSystemUi::configLiveEdit()
 {
-	if (!ui->chkAutoPaint->isChecked() || disableConfigLiveEdit) return;
+	if (disableConfigLiveEdit) return;
 
 	ConfigSet configSet = getConfigSet(true);
 	if (!configSet.valid) return;
@@ -740,16 +757,15 @@ void LSystemUi::configLiveEdit()
 
 void LSystemUi::execConfigLive(const ConfigSet & configSet)
 {
-	const auto optOffset = drawArea->getLastOffset();
+	const auto markedDrawing = drawArea->getMarkedDrawingResult();
+
+	// No live edit, if no marked drawing
+	if (!markedDrawing.has_value()) return;
 
 	QSharedPointer<AllDrawData> drawData = QSharedPointer<AllDrawData>::create();
-	if (optOffset.has_value()) {
-		drawData->uiDrawData.offset = optOffset.value();
-	} else {
-		drawData->uiDrawData.offset = QPoint{drawArea->width() / 2, drawArea->height() / 2};
-	}
+	drawData->uiDrawData.drawingNumToEdit = markedDrawing->drawingNum;
+	drawData->uiDrawData.offset = markedDrawing->offset;
 
-	drawData->uiDrawData.clearAll = true;
 	drawData->config = configSet;
 	getAdditionalOptionsForSegmentsMeta(drawData->meta);
 
@@ -758,7 +774,7 @@ void LSystemUi::execConfigLive(const ConfigSet & configSet)
 
 void LSystemUi::focusAngleEdit(FocusableLineEdit * lineEdit)
 {
-	if (!ui->chkAutoPaint->isChecked()) return;
+	if (!ui->chkShowSliders->isChecked()) return;
 
 	// special case: forumla in right edit
 	if (lineEdit == ui->txtRight) {
@@ -793,7 +809,7 @@ void LSystemUi::focusAngleEdit(FocusableLineEdit * lineEdit)
 
 void LSystemUi::focusLinearEdit(FocusableLineEdit * lineEdit)
 {
-	if (!ui->chkAutoPaint->isChecked()) return;
+	if (!ui->chkShowSliders->isChecked()) return;
 
 	const QPoint lineditTopLeft = lineEdit->parentWidget()->mapTo(ui->wdgEntire, lineEdit->geometry().topLeft());
 
@@ -879,7 +895,7 @@ void LSystemUi::unfocusLinearEdit()
 	quickLinear->setLineEdit(nullptr);
 }
 
-void LSystemUi::onChkAutoPaintChanged(int state)
+void LSystemUi::onChkShowSlidersChanged(int state)
 {
 	if (state == Qt::CheckState::Checked) {
 		configLiveEdit();
@@ -906,12 +922,11 @@ void LSystemUi::copyStatus()
 void LSystemUi::onLblStatusLinkActivated(const QString & link)
 {
 	if (link == Links::NextIterations) {
+		if (!lastDrawData) return;
 		QSharedPointer<AllDrawData> data = QSharedPointer<AllDrawData>::create();
-		const auto optOffset = drawArea->getLastOffset();
-		if (!optOffset.has_value()) return;
-		data->uiDrawData.offset = optOffset.value();
-		data->uiDrawData.clearLast = true;
-		auto config = drawArea->getCurrentDrawing()->config;
+		*data = *lastDrawData;
+		auto & config = data->config;
+
 		if (config.overrideStackSize) {
 			config.overrideStackSize = *config.overrideStackSize * 2;
 		} else {
@@ -1023,6 +1038,8 @@ void LSystemUi::processDrawAction(const QString & link)
 {
 	if (!highlightedDrawing.has_value()) return;
 
+	drawArea->markHighlighted();
+
 	ui->playerControl->stashState();
 
 	const auto & dp = drawPlacement;
@@ -1062,23 +1079,17 @@ void LSystemUi::processDrawAction(const QString & link)
 			ConfigSet configSet = drawing.config;
 			configSet.stepSize = newStepSize;
 
-			if (ui->chkAutoPaint->isChecked()) {
-				disableConfigLiveEdit = true;
-				if (quickLinear->getLineEdit() == static_cast<QLineEdit *>(ui->txtStep)) {
-					quickLinear->setValue(newStepSize);
-				}
-				ui->txtStep->setText(util::formatFixed(newStepSize, 2));
-				disableConfigLiveEdit = false;
-				lastValidConfigSet = configSet;
+			disableConfigLiveEdit = true;
+			if (quickLinear->getLineEdit() == static_cast<QLineEdit *>(ui->txtStep)) {
+				quickLinear->setValue(newStepSize);
 			}
+			ui->txtStep->setText(util::formatFixed(newStepSize, 2));
+			disableConfigLiveEdit = false;
+			lastValidConfigSet = configSet;
 
 			QSharedPointer<AllDrawData> data = QSharedPointer<AllDrawData>::create();
 			data->uiDrawData.offset = QPoint{xOff, yOff};
-			if (ui->chkAutoPaint->isChecked()) {
-				data->uiDrawData.clearAll = true;
-			} else {
-				data->uiDrawData.clearLast = true;
-			}
+			data->uiDrawData.drawingNumToEdit = drawing.drawingNum;
 			data->config = configSet;
 
 			getAdditionalOptionsForSegmentsMeta(data->meta);
@@ -1169,7 +1180,7 @@ void LSystemUi::playerValueChanged(int value) { emit goToAnimationStep(value); }
 void LSystemUi::undoRedo()
 {
 	drawArea->restoreLastImage();
-	if (ui->chkAutoPaint->isChecked() && drawArea->getCurrentDrawing()) {
+	if (drawArea->getCurrentDrawing()) {
 		showConfigSet(drawArea->getCurrentDrawing()->config);
 
 		if (symbolsVisible()) showSymbols();
@@ -1184,9 +1195,7 @@ LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
 	drawingActions << menu.addAction("Delete drawing", Qt::Key_Delete, &*parent->drawArea, &DrawArea::deleteMarked)
 				   << menu.addAction("Copy drawing", Qt::CTRL | Qt::Key_C, parent, &LSystemUi::copyToClipboardMarked)
 				   << menu.addAction("Send to front", &*parent->drawArea, &DrawArea::sendToFrontMarked)
-				   << menu.addAction("Send to back", &*parent->drawArea, &DrawArea::sendToBackMarked)
-				   << menu.addAction("Show config", Qt::CTRL | Qt::SHIFT | Qt::Key_C, parent, &LSystemUi::showMarkedConfig)
-				   << menu.addSeparator();
+				   << menu.addAction("Send to back", &*parent->drawArea, &DrawArea::sendToBackMarked) << menu.addSeparator();
 
 	setDrawingActionsVisible(false);
 
@@ -1194,10 +1203,6 @@ LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
 	undoAction->setEnabled(false);
 	redoAction = menu.addAction("Redo", Qt::CTRL | Qt::Key_Y, parent, &LSystemUi::undoRedo);
 	redoAction->setEnabled(false);
-	menu.addSeparator();
-
-	autoClearToggle = menu.addAction("Auto clear");
-	autoClearToggle->setCheckable(true);
 	menu.addSeparator();
 
 	menu.addAction("Clear all", Qt::CTRL | Qt::Key_Delete, parent, &LSystemUi::clearAll);

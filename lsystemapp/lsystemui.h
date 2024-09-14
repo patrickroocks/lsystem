@@ -86,6 +86,7 @@ private slots:
 	void onLstConfigsDoubleClicked(const QModelIndex & index);
 	void onLblStatusLinkActivated(const QString & link);
 	void onLblStatusMousePressed(QMouseEvent * event);
+	void onCmdDeleteLayerClicked();
 
 signals:
 	void simulatorExec(const QSharedPointer<lsystem::common::AllDrawData> & data);
@@ -146,14 +147,13 @@ private:
 	void focusLinearEdit(FocusableLineEdit * lineEdit);
 	void unfocusAngleEdit();
 	void unfocusLinearEdit();
-	void onChkAutoPaintChanged(int state);
+	void onChkShowSlidersChanged(int state);
 	void latencyChanged();
 
 	// additional options & windows
 	void getAdditionalOptionsForSegmentsMeta(lsystem::common::MetaData & execMeta);
 	void showSymbols();
 	bool symbolsVisible() const;
-	void showMarkedConfig();
 	void showRightAngleDialog();
 	void updateGradientStyle(bool updateAfterClick = false);
 
@@ -230,7 +230,6 @@ private:
 		QMenu menu;
 		QAction * undoAction;
 		QAction * redoAction;
-		QAction * autoClearToggle;
 
 		void setDrawingActionsVisible(bool visible);
 
@@ -259,8 +258,7 @@ private:
 		= TransparencyOpt::Ask;
 
 	QScopedPointer<SymbolsDialog> symbolsDialog;
-
 	AngleEvaluator angleEvaluator;
-
 	lsystem::common::ColorGradient colorGradient;
+	QSharedPointer<lsystem::common::AllDrawData> lastDrawData;
 };

@@ -13,13 +13,10 @@ namespace lsystem::ui {
 
 DrawArea::DrawArea(QWidget * parent)
 	: QWidget(parent)
-{
-}
+{}
 
 void DrawArea::clear()
 {
-	lastDrawings = drawings;
-
 	clearAllDrawings();
 
 	update();
@@ -34,22 +31,9 @@ void DrawArea::clearAllDrawings()
 	drawings.clearAll();
 }
 
-void DrawArea::draw(const ui::Drawing & drawing, const QPoint & offset, bool clearAll, bool clearLast)
+void DrawArea::draw(const ui::Drawing & drawing)
 {
-	lastDrawings = drawings;
-
-	if (clearAll) {
-		if (drawings.highlightDrawing(0)) {
-			emit highlightChanged({});
-		}
-		drawings.clearAll();
-	} else if (clearLast) {
-		if (drawings.getHighlightedDrawingNum() == drawings.getLastDrawingNum() && drawings.highlightDrawing(0)) {
-			emit highlightChanged({});
-		}
-		drawings.deleteHighlightedOrLastDrawing();
-	}
-	drawings.addDrawing(drawing, offset);
+	drawings.addOrReplaceDrawing(drawing);
 
 	update();
 	setNextUndoRedo(true);
@@ -57,8 +41,7 @@ void DrawArea::draw(const ui::Drawing & drawing, const QPoint & offset, bool cle
 
 void DrawArea::restoreLastImage()
 {
-	qSwap(drawings, lastDrawings);
-	drawings.setMarkedDrawing(0);
+	drawings.restoreLast();
 	update();
 	setNextUndoRedo(!nextUndoOrRedo);
 }
@@ -90,23 +73,29 @@ void DrawArea::copyToClipboardMarked(bool transparent)
 
 void DrawArea::deleteMarked()
 {
-	lastDrawings = drawings;
-	drawings.deleteImage(drawings.getMarkedDrawingNum());
+	drawings.deleteDrawing(drawings.getMarkedDrawingNum());
 	drawings.setMarkedDrawing(0);
+	update();
+	setNextUndoRedo(true);
+}
+
+void DrawArea::deleteIndex(int index)
+{
+	auto drawingNum = drawings.getDrawingNumByListIndex(index);
+	drawings.deleteDrawing(drawingNum);
+	if (drawings.getMarkedDrawingNum() == drawingNum) drawings.setMarkedDrawing(0);
 	update();
 	setNextUndoRedo(true);
 }
 
 void DrawArea::sendToFrontMarked()
 {
-	lastDrawings = drawings;
 	drawings.sendToFront(drawings.getMarkedDrawingNum());
 	update();
 }
 
 void DrawArea::sendToBackMarked()
 {
-	lastDrawings = drawings;
 	drawings.sendToBack(drawings.getMarkedDrawingNum());
 	update();
 }
@@ -120,10 +109,14 @@ void DrawArea::translateHighlighted(const QPoint & newOffset)
 	}
 }
 
-Drawing * DrawArea::getCurrentDrawing()
+void DrawArea::markHighlighted()
 {
-	return drawings.getCurrentDrawing();
+	if (drawings.getHighlightedDrawingNum() > 0) {
+		markDrawing(drawings.getHighlightedDrawingNum());
+	}
 }
+
+Drawing * DrawArea::getCurrentDrawing() { return drawings.getCurrentDrawing(); }
 
 void DrawArea::redrawAndUpdate(bool keepContent)
 {
@@ -139,25 +132,11 @@ void DrawArea::setBgColor(const QColor & col)
 	drawings.backColor = col;
 	drawings.redraw();
 	update();
-
-	lastDrawings.backColor = col;
-	lastDrawings.dirty = true;
 }
 
-QColor DrawArea::getBgColor() const
-{
-	return drawings.backColor;
-}
+QColor DrawArea::getBgColor() const { return drawings.backColor; }
 
-std::optional<QPoint> DrawArea::getLastOffset() const
-{
-	return drawings.getLastOffset();
-}
-
-std::optional<DrawResult> DrawArea::getMarkedDrawingResult()
-{
-	return drawings.getMarkedDrawResult();
-}
+std::optional<DrawResult> DrawArea::getMarkedDrawingResult() { return drawings.getMarkedDrawResult(); }
 
 AnimatorResult DrawArea::newAnimationStep(int step, bool relativeStep)
 {
@@ -169,6 +148,20 @@ AnimatorResult DrawArea::newAnimationStep(int step, bool relativeStep)
 	redrawAndUpdate(res.nextStepResult == AnimatorResult::NextStepResult::AddedOnly);
 	return res;
 }
+
+void DrawArea::layerSelectionChanged(const QItemSelection & selected, const QItemSelection & deselected)
+{
+	Q_UNUSED(deselected);
+
+	if (ignoreSelectionChange) return;
+
+	if (selected.indexes().empty()) {
+		markDrawing(0);
+	} else {
+		markDrawing(drawings.getDrawingNumByListIndex(selected.indexes().first().row()));
+	}
+}
+
 
 void DrawArea::paintEvent(QPaintEvent * event)
 {
@@ -186,7 +179,6 @@ void DrawArea::resizeEvent(QResizeEvent * event)
 		int newHeight = qMax(height() + 128, image.height());
 		const QSize newSize(newWidth, newHeight);
 		drawings.resize(newSize);
-		lastDrawings.resize(newSize);
 		update();
 	}
 	QWidget::resizeEvent(event);
@@ -199,19 +191,16 @@ void DrawArea::mousePressEvent(QMouseEvent * event)
 	bool cancelEvent = false;
 
 	if (clickedDrawing > 0 && clickedDrawing == drawings.getMarkedDrawingNum() && event->button() == Qt::MouseButton::LeftButton) {
-		moveMode = MoveState::ReadyForMove;
-		moveStart = event->position().toPoint();
-		moveStartOffset = drawings.getDrawingOffset(drawings.getMarkedDrawingNum()) - event->position().toPoint();
+		move.mode = MoveState::ReadyForMove;
+		move.start = event->position().toPoint();
+		move.startOffset = drawings.getDrawingOffset(drawings.getMarkedDrawingNum()) - event->position().toPoint();
 		setCursor(Qt::SizeAllCursor);
 		cancelEvent = true;
 	} else if (drawings.getMarkedDrawingNum() > 0 && clickedDrawing == 0) {
 		cancelEvent = true;
 	}
 
-	if (drawings.setMarkedDrawing(clickedDrawing)) {
-		emit markingChanged();
-		update();
-	}
+	markDrawing(clickedDrawing);
 
 	if (!cancelEvent) {
 		const auto pos = event->position().toPoint();
@@ -219,29 +208,37 @@ void DrawArea::mousePressEvent(QMouseEvent * event)
 	}
 }
 
+void DrawArea::markDrawing(int drawingNum)
+{
+	if (drawings.setMarkedDrawing(drawingNum)) {
+		emit markingChanged();
+		update();
+	}
+}
+
 void DrawArea::mouseReleaseEvent(QMouseEvent * event)
 {
 	Q_UNUSED(event);
 
-	if (moveMode != MoveState::NoMove) {
+	if (move.mode != MoveState::NoMove) {
 		setCursor(Qt::ArrowCursor);
-		if (moveMode == MoveState::MoveStarted && drawings.getHighlightedDrawingNum()) {
+		if (move.mode == MoveState::MoveStarted && drawings.getHighlightedDrawingNum()) {
 			emit highlightChanged(drawings.getHighlightedDrawResult());
 		}
-		moveMode = MoveState::NoMove;
+		move.mode = MoveState::NoMove;
 	}
 }
 
 void DrawArea::mouseMoveEvent(QMouseEvent * event)
 {
-	if (moveMode != MoveState::NoMove) {
-		if (moveMode == MoveState::ReadyForMove) {
-			lastDrawings = drawings;
+	if (move.mode != MoveState::NoMove) {
+		if (move.mode == MoveState::ReadyForMove) {
+			drawings.storeUndoPoint();
 			setNextUndoRedo(true);
-			moveMode = MoveState::MoveStarted;
+			move.mode = MoveState::MoveStarted;
 		}
-		const QPoint newOffset = moveStartOffset + event->position().toPoint();
-		if (drawings.moveDrawing(drawings.getMarkedDrawingNum(), newOffset)) update();
+		const QPoint newOffset = move.startOffset + event->position().toPoint();
+		if (drawings.moveDrawing(drawings.getMarkedDrawingNum(), newOffset, false)) update();
 
 	} else {
 		const qint64 mouseOverDrawing = drawings.getDrawingByPos(event->pos());
@@ -265,4 +262,5 @@ void DrawArea::setNextUndoRedo(bool undoOrRedo)
 	nextUndoOrRedo = undoOrRedo;
 	emit enableUndoRedo(nextUndoOrRedo);
 }
+
 } // namespace lsystem::ui

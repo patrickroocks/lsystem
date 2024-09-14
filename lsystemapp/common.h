@@ -204,8 +204,7 @@ struct ConfigAndMeta
 struct UiDrawData final
 {
 	QPoint offset;
-	bool clearAll = false;
-	bool clearLast = false;
+	std::optional<int> drawingNumToEdit; // if not given: new drawing
 	bool resultOk = false;
 };
 

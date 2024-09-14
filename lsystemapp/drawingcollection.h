@@ -2,6 +2,7 @@
 
 #include <common.h>
 
+#include <QAbstractListModel>
 #include <QImage>
 #include <QPainter>
 
@@ -15,12 +16,13 @@ struct DrawResult
 	QPoint botRight;
 	QPoint offset;
 	qint64 drawingNum = 0;
+	int listIndex = 0;
 	int segmentsCount = 0;
 	int animStep = 0;
 	lsystem::common::ConfigSet config;
 };
 
-class Drawing
+class Drawing final
 {
 public:
 	Drawing() = default;
@@ -28,7 +30,6 @@ public:
 	void drawToImage(QImage & dstImage, bool isMarked, bool isHighlighted);
 	QPoint size() const;
 	bool withinArea(const QPoint & pos);
-	bool move(const QPoint & newOffset);
 	DrawResult toDrawResult();
 
 	common::AnimatorResult newAnimationStep(int step, bool relativeStep);
@@ -46,6 +47,7 @@ public:
 
 	qint64 zIndex = 0;
 	qint64 num = 0;
+	int listIndex = 0;
 	QPoint offset;
 	common::LineSegs segments;
 	QVector<QColor> actionColors;
@@ -73,10 +75,12 @@ private:
 	QPoint botRight;
 };
 
-class DrawingCollection
+// ------------------------------------------------------------------------------------
+
+class DrawingCollection final : public QAbstractListModel
 {
 public:
-	void addDrawing(Drawing newDrawing, const QPoint & off);
+	void addOrReplaceDrawing(Drawing newDrawing);
 
 	void resize(const QSize & newSize);
 	void clearAll();
@@ -84,6 +88,8 @@ public:
 
 	void redraw(bool keepContent = false);
 	QPoint getLastSize() const;
+
+	void restoreLast();
 
 	qint64 getDrawingByPos(const QPoint & pos);
 	QPoint getDrawingOffset(qint64 drawingNum);
@@ -95,14 +101,21 @@ public:
 	Drawing * getCurrentDrawing();
 	int getLastDrawingNum() const { return drawings.empty() ? 0 : drawings.lastKey(); }
 	bool setMarkedDrawing(qint64 newMarkedDrawing);
-	bool moveDrawing(qint64 drawingNum, const QPoint & newOffset);
-	bool deleteImage(qint64 drawingNum);
+	bool moveDrawing(qint64 drawingNum, const QPoint & newOffset, bool storeUndo = true);
+	bool deleteDrawing(qint64 drawingNum);
 	bool sendToFront(qint64 drawingNum);
 	bool sendToBack(qint64 drawingNum);
 	bool highlightDrawing(qint64 newHighlightedDrawing);
 	std::optional<DrawResult> getHighlightedDrawResult();
 	std::optional<DrawResult> getMarkedDrawResult();
-	std::optional<QPoint> getLastOffset() const;
+	int getDrawingNumByListIndex(int listIndex) const;
+
+	// called also externally, e.g., for move by drag
+	void storeUndoPoint();
+
+	// ListModel:
+	int rowCount(const QModelIndex & parent = QModelIndex()) const override;
+	QVariant data(const QModelIndex & index, int role) const override;
 
 public:
 	QColor backColor = QColor(255, 255, 255);
@@ -111,14 +124,31 @@ public:
 private:
 	bool sendToZIndex(qint64 drawingNum, qint64 newZIndex);
 
+	// ListModel:
+	QString getRow(const QModelIndex & index) const;
+	void allDataChanged();
+	void updateListData();
+	void updateZIndexToDrawing();
+
 private:
 	QImage image;
 
 	QMap<qint64 /*drawNum*/, Drawing> drawings;
 	QMap<qint64 /*zIndex*/, qint64 /*drawNum*/> zIndexToDrawing;
 
+	QMap<qint64 /*drawNum*/, Drawing> lastDrawings;
+
 	qint64 markedDrawing = 0;
 	qint64 highlightedDrawing = 0;
+
+	// Data for ListModel:
+	struct ListEntry
+	{
+		QString description;
+		int drawNum = 0;
+	};
+
+	QVector<ListEntry> listData;
 };
 
 } // namespace lsystem::ui

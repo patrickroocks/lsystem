@@ -14,15 +14,17 @@ public:
 	explicit DrawArea(QWidget * parent = nullptr);
 
 	void clear();
-	void draw(const Drawing & drawing, const QPoint & offset, bool clearAll, bool clearLast);
+	void draw(const Drawing & drawing);
 	void restoreLastImage();
 	void copyToClipboardFull();
 
 	void copyToClipboardMarked(bool transparent);
 	void deleteMarked();
+	void deleteIndex(int index);
 	void sendToFrontMarked();
 	void sendToBackMarked();
 	void translateHighlighted(const QPoint & newOffset);
+	void markHighlighted();
 	Drawing * getCurrentDrawing();
 
 	void redrawAndUpdate(bool keepContent = false);
@@ -30,11 +32,15 @@ public:
 	void setBgColor(const QColor & col);
 	QColor getBgColor() const;
 
-	std::optional<QPoint> getLastOffset() const;
 	std::optional<DrawResult> getMarkedDrawingResult();
+
+	DrawingCollection & getDrawingCollection() { return drawings; }
+
+	void setIgnoreSelectionChange(bool ignore) { ignoreSelectionChange = ignore; }
 
 public slots:
 	common::AnimatorResult newAnimationStep(int step, bool relativeStep);
+	void layerSelectionChanged(const QItemSelection & selected, const QItemSelection & deselected);
 
 signals:
 	void markingChanged();
@@ -52,10 +58,10 @@ protected:
 private:
 	void clearAllDrawings();
 	void setNextUndoRedo(bool undoOrRedo);
+	void markDrawing(int drawingNum);
 
 private:
 	DrawingCollection drawings;
-	DrawingCollection lastDrawings;
 
 	bool nextUndoOrRedo = true;
 
@@ -66,9 +72,14 @@ private:
 		MoveStarted
 	};
 
-	MoveState moveMode = MoveState::NoMove;
-	QPoint moveStart;
-	QPoint moveStartOffset;
+	struct MoveInfo
+	{
+		MoveState mode = MoveState::NoMove;
+		QPoint start;
+		QPoint startOffset;
+	} move;
+
+	bool ignoreSelectionChange = false;
 };
 
-}		 // namespace lsystem::ui
+} // namespace lsystem::ui

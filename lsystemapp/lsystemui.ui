@@ -940,7 +940,7 @@ options</string>
       <string>50</string>
      </property>
     </widget>
-    <widget class="QCheckBox" name="chkAutoPaint">
+    <widget class="QCheckBox" name="chkShowSliders">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -950,7 +950,7 @@ options</string>
       </rect>
      </property>
      <property name="text">
-      <string>Auto paint (interactive mode)</string>
+      <string>Show sliders for parameters</string>
      </property>
      <property name="checked">
       <bool>true</bool>
@@ -1101,7 +1101,7 @@ border: 1px solid black;</string>
       <string>end</string>
      </property>
     </widget>
-	<widget class="lsystem::ui::GradientPreview" name="wdgGradientPreview" native="true">
+    <widget class="lsystem::ui::GradientPreview" name="wdgGradientPreview" native="true">
      <property name="geometry">
       <rect>
        <x>220</x>
@@ -1251,8 +1251,8 @@ border: 1px solid black;</string>
    <header>drawarea.h</header>
   </customwidget>
   <customwidget>
-  <class>lsystem::ui::GradientPreview</class>
-  <extends>QWidget</extends>
+   <class>lsystem::ui::GradientPreview</class>
+   <extends>QWidget</extends>
    <header>util/gradientpreview.h</header>
   </customwidget>
  </customwidgets>
