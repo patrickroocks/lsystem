@@ -76,22 +76,22 @@ bool ConfigList::removeRows(int row, int count, const QModelIndex & parent)
 	return true;
 }
 
-bool ConfigList::storeConfig(const QString & configName, const common::ConfigSet & configSet)
+bool ConfigList::storeConfig(const common::ConfigSet & configSet)
 {
-	if (configName.isEmpty()) {
+	if (configSet.name.isEmpty()) {
 		QMessageBox::information(parentWidget, "Error", "Config name must not be empty");
 		return false;
 	}
 
 	bool overwritten = false;
-	if (userConfigs.contains(configName)) {
-		const QMessageBox::StandardButton result = QMessageBox::question(parentWidget, "Overwrite?",
-				QString("Overwrite existing config with name '%1'?").arg(configName));
+	if (userConfigs.contains(configSet.name)) {
+		const QMessageBox::StandardButton result
+			= QMessageBox::question(parentWidget, "Overwrite?", QString("Overwrite existing config with name '%1'?").arg(configSet.name));
 		if (result == QMessageBox::No) return false;
 		overwritten = true;
 	}
 
-	userConfigs[configName] = configSet;
+	userConfigs[configSet.name] = configSet;
 	if (!overwritten) {
 		updateConfigNames();
 		insertRow(configNames.size() - 1);
@@ -101,7 +101,6 @@ bool ConfigList::storeConfig(const QString & configName, const common::ConfigSet
 
 	return false;
 }
-
 bool ConfigList::deleteConfig(const QString & configName)
 {
 	if (userConfigs.remove(configName) == 0) return false;

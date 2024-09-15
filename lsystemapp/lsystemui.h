@@ -246,6 +246,7 @@ private:
 	QScopedPointer<StatusMenu> statusMenu;
 
 	lsystem::common::ConfigSet lastValidConfigSet;
+	QString curConfigName;
 	std::optional<lsystem::ui::DrawResult> highlightedDrawing;
 	QScopedPointer<ClickableLabel> lblDrawActions;
 

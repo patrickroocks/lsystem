@@ -443,6 +443,7 @@ ConfigSet LSystemUi::getConfigSet(bool storeAsLastValid)
 {
 	ConfigSet configSet;
 
+	configSet.name = curConfigName;
 	configSet.definitions = defModel.getDefinitions();
 
 	bool ok;
@@ -502,6 +503,7 @@ ConfigSet LSystemUi::getConfigSet(bool storeAsLastValid)
 void LSystemUi::showConfigSet(const ConfigSet & configSet)
 {
 	disableConfigLiveEdit = true;
+	curConfigName = configSet.name;
 	defModel.setDefinitions(configSet.definitions);
 	// clang-format off
 	ui->txtScaleDown ->setText(QString::number(configSet.scaling));
@@ -525,8 +527,8 @@ void LSystemUi::setConfigSet(const ConfigSet & configSet)
 
 void LSystemUi::onCmdStoreConfigClicked()
 {
-	const ConfigSet c = getConfigSet(false);
-	if (!c.valid) return;
+	ConfigSet cfg = getConfigSet(false);
+	if (!cfg.valid) return;
 
 	ConfigNameKind currentConfig = configList.getConfigNameKindByIndex(ui->lstConfigs->currentIndex());
 	bool ok;
@@ -535,7 +537,10 @@ void LSystemUi::onCmdStoreConfigClicked()
 
 	if (!ok) return;
 
-	configList.storeConfig(configName, c);
+	curConfigName = configName;
+	cfg.name = configName;
+	configList.storeConfig(cfg);
+	configLiveEdit();
 }
 
 void LSystemUi::onCmdLoadConfigClicked() { loadConfigByLstIndex(ui->lstConfigs->currentIndex()); }

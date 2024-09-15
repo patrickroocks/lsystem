@@ -25,7 +25,7 @@ public:
 	bool removeRows(int row, int count, const QModelIndex & parent = QModelIndex()) override;
 
 public:
-	bool storeConfig(const QString & configName, const common::ConfigSet & configSet);
+	bool storeConfig(const common::ConfigSet & configSet);
 	bool deleteConfig(const QString & configName);
 
 	ConfigNameKind getConfigNameKindByIndex(const QModelIndex & index);

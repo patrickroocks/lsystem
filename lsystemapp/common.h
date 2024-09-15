@@ -98,6 +98,7 @@ struct ConfigSet final
 	double stepSize = 0;
 	bool valid = false;
 	std::optional<int> overrideStackSize;
+	QString name;
 };
 
 struct ConfigMap : public QMap<QString, common::ConfigSet>
@@ -122,7 +123,8 @@ inline bool operator==(const ConfigSet & lhs, const ConfigSet & rhs)
 			&& lhs.numIter           == rhs.numIter
 			&& lhs.stepSize          == rhs.stepSize
 			&& lhs.valid             == rhs.valid
-			&& lhs.overrideStackSize == rhs.overrideStackSize;
+			&& lhs.overrideStackSize == rhs.overrideStackSize
+			&& lhs.name == rhs.name;
 	// clang-format on
 }
 

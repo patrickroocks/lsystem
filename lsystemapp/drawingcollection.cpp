@@ -467,7 +467,7 @@ void DrawingCollection::updateListData()
 	for (qint64 drawNum : std::as_const(zIndexToDrawing)) {
 		ListEntry entry;
 		auto & drawing = drawings[drawNum];
-		entry.description = "[" + QString::number(drawNum) + "] (" + QString::number(drawing.offset.x()) + ", "
+		entry.description = "[" + QString::number(drawNum) + "] " + drawing.config.name + " (" + QString::number(drawing.offset.x()) + ", "
 							+ QString::number(drawing.offset.y()) + ")";
 		entry.drawNum = drawNum;
 		drawing.listIndex = listData.size();

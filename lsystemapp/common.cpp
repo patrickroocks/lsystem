@@ -87,7 +87,9 @@ ConfigMap::ConfigMap(const QJsonObject & obj)
 {
 	QVariantMap tmpMap = obj.toVariantMap();
 	for (const auto & [key, value] : KeyVal(tmpMap)) {
-		(*this)[key] = ConfigSet(value.toJsonObject());
+		auto & entry = (*this)[key];
+		entry = ConfigSet(value.toJsonObject());
+		entry.name = key;
 	}
 }
 

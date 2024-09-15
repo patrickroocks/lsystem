@@ -21,10 +21,10 @@ class ConfigFileStore : public QObject
 	Q_OBJECT
 public:
 	void loadConfig();
+	common::AppSettings getSettings() const;
 
 public slots:
 	void newConfigMap(const common::ConfigMap & configMap);
-	common::AppSettings getSettings() const;
 	void saveSettings(const common::AppSettings& settings);
 
 signals:
