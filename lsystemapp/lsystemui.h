@@ -87,6 +87,7 @@ private slots:
 	void onLblStatusLinkActivated(const QString & link);
 	void onLblStatusMousePressed(QMouseEvent * event);
 	void onCmdDeleteLayerClicked();
+	void onCmdResetDefaultOptionsClicked();
 
 signals:
 	void simulatorExec(const QSharedPointer<lsystem::common::AllDrawData> & data);
@@ -172,6 +173,7 @@ private:
 
 	// Common helpers
 	void showMessage(const QString & msg, MsgType msgType);
+	void showWarningInUi(const QString & errString);
 	void showVarError(const QString & errorVar, const QString & extraInfo = QString());
 	void resetStatus();
 	void showSettings();

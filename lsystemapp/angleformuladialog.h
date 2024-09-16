@@ -13,17 +13,17 @@ class AngleFormulaDialog : public QDialog
 	Q_OBJECT
 
 public:
-	explicit AngleFormulaDialog(QWidget * parent, const QString & initialLeftAngle, QString & rightAngle);
+	explicit AngleFormulaDialog(QWidget * parent, const QString & initialLeftAngle, QString & rightAngleResult);
 	~AngleFormulaDialog();
 
 protected:
 	void accept() override;
 
 private slots:
-	void on_cmbFormula_currentTextChanged(const QString & arg1);
-	void on_txtExampleLeftAngle_textChanged(const QString & arg1);
+	void onCmdDeleteFormulaClicked();
 
 private:
+	void setupConnections();
 	void recalculateExample();
 
 private:

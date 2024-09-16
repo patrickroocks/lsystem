@@ -175,6 +175,7 @@ struct AppSettings
 struct ColorGradient final
 {
 	ColorGradient();
+	void setDefault();
 	QColor colorAt(double t) const;
 	QColor startColor;
 	QColor endColor;

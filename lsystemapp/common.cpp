@@ -121,10 +121,13 @@ QJsonObject AppSettings::toJson() const
 
 // ----------------------------------------------------------------------------
 
-ColorGradient::ColorGradient()
-	: startColor(QColor(255, 0, 0))
-	, endColor(QColor(0, 0, 255))
-{}
+ColorGradient::ColorGradient() { setDefault(); }
+
+void ColorGradient::setDefault()
+{
+	startColor = QColor(255, 0, 0);
+	endColor = QColor(0, 0, 255);
+}
 
 QColor ColorGradient::colorAt(double t) const
 {

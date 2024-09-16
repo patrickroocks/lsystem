@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>588</width>
-    <height>144</height>
+    <height>147</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -166,6 +166,19 @@ border: 1px solid black;</string>
    </property>
    <property name="textFormat">
     <enum>Qt::MarkdownText</enum>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="cmdDeleteFormula">
+   <property name="geometry">
+    <rect>
+     <x>430</x>
+     <y>40</y>
+     <width>151</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Delete formula</string>
    </property>
   </widget>
  </widget>

@@ -1114,6 +1114,19 @@ border: 1px solid black;</string>
       <string notr="true"/>
      </property>
     </widget>
+    <widget class="QPushButton" name="cmdResetDefaultOptions">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>100</y>
+       <width>121</width>
+       <height>25</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Reset defaults</string>
+     </property>
+    </widget>
    </widget>
    <widget class="QFrame" name="frmPlayer">
     <property name="enabled">

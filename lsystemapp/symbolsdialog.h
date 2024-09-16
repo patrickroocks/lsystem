@@ -21,8 +21,7 @@ protected:
 	void resizeEvent(QResizeEvent * event) override;
 
 private slots:
-	void on_cmdClose_clicked();
-	void on_cmdCopy_clicked();
+	void onCmdCopyClicked();
 
 private:
 	Ui::SymbolsDialog * const ui;

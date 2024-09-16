@@ -6,21 +6,15 @@
 #include <QDate>
 
 AboutDialog::AboutDialog(QWidget * parent)
-	 : QDialog(parent)
-	 , ui(new Ui::AboutDialog)
+	: QDialog(parent)
+	, ui(new Ui::AboutDialog)
 {
 	ui->setupUi(this);
 
 	// replace %1 and %2 in info string
 	ui->lblAbout->setText(ui->lblAbout->text().arg(lsystem::common::Version, QDate::currentDate().toString("yyyy")));
+
+	connect(ui->cmdClose, &QPushButton::clicked, this, &AboutDialog::close);
 }
 
-AboutDialog::~AboutDialog()
-{
-	delete ui;
-}
-
-void AboutDialog::on_cmdClose_clicked()
-{
-	close();
-}
+AboutDialog::~AboutDialog() { delete ui; }

@@ -158,6 +158,9 @@ void LSystemUi::setupHelperControls()
 	connect(ui->chkShowLastIter, &QCheckBox::stateChanged, this, &LSystemUi::onChkShowLastIterStateChanged);
 	connect(ui->chkAntiAliasing, &QCheckBox::stateChanged, this, &LSystemUi::configLiveEdit);
 
+	// Defaults
+	connect(ui->cmdResetDefaultOptions, &QPushButton::clicked, this, &LSystemUi::onCmdResetDefaultOptionsClicked);
+
 	// Helper popups are invisible by default
 	ui->frmAdditionalOptions->setVisible(false);
 	ui->frmPlayer->setVisible(false);
@@ -670,6 +673,8 @@ void LSystemUi::markDrawing()
 
 void LSystemUi::showErrorInUi(const QString & errString) { showMessage(errString, MsgType::Error); }
 
+void LSystemUi::showWarningInUi(const QString & errString) { showMessage(errString, MsgType::Warning); }
+
 void LSystemUi::copyToClipboardMarked()
 {
 	bool transparent;
@@ -757,6 +762,8 @@ void LSystemUi::configLiveEdit()
 	ConfigSet configSet = getConfigSet(true);
 	if (!configSet.valid) return;
 
+	ui->playerControl->setPlaying(false);
+
 	execConfigLive(configSet);
 }
 
@@ -765,7 +772,10 @@ void LSystemUi::execConfigLive(const ConfigSet & configSet)
 	const auto markedDrawing = drawArea->getMarkedDrawingResult();
 
 	// No live edit, if no marked drawing
-	if (!markedDrawing.has_value()) return;
+	if (!markedDrawing.has_value()) {
+		showWarningInUi("no drawing selected");
+		return;
+	}
 
 	QSharedPointer<AllDrawData> drawData = QSharedPointer<AllDrawData>::create();
 	drawData->uiDrawData.drawingNumToEdit = markedDrawing->drawingNum;
@@ -960,6 +970,7 @@ void LSystemUi::updateGradientStyle(bool updateAfterClick)
 {
 	ui->lblGradientStart->setStyleSheet(generateBgColorStyle(colorGradient.startColor));
 	ui->lblGradientEnd->setStyleSheet(generateBgColorStyle(colorGradient.endColor));
+	ui->wdgGradientPreview->updateGradient();
 
 	if (updateAfterClick) {
 		if (!ui->chkColorGradient->isChecked()) ui->chkColorGradient->setCheckState(Qt::Checked); // raises liveEdit
@@ -974,7 +985,6 @@ void LSystemUi::onLblGradientStartMousePressed(QMouseEvent * event)
 	const QColor newColor = QColorDialog::getColor(colorGradient.startColor, this);
 	if (newColor.isValid() && newColor != colorGradient.startColor) {
 		colorGradient.startColor = newColor;
-		ui->wdgGradientPreview->updateGradient();
 		updateGradientStyle(true);
 	}
 }
@@ -986,9 +996,26 @@ void LSystemUi::onLblGradientEndMousePressed(QMouseEvent * event)
 	const QColor newColor = QColorDialog::getColor(colorGradient.endColor, this);
 	if (newColor.isValid() && newColor != colorGradient.endColor) {
 		colorGradient.endColor = newColor;
-		ui->wdgGradientPreview->updateGradient();
 		updateGradientStyle(true);
 	}
+}
+
+void LSystemUi::onCmdResetDefaultOptionsClicked()
+{
+	disableConfigLiveEdit = true;
+
+	ui->chkShowSliders->setCheckState(Qt::Checked);
+	ui->chkAntiAliasing->setCheckState(Qt::Unchecked);
+	ui->chkShowLastIter->setCheckState(Qt::Unchecked);
+	ui->chkColorGradient->setCheckState(Qt::Unchecked);
+	ui->txtLastIterOpacity->setText("100");
+	ui->txtThickness->setText("1");
+	ui->txtOpacity->setText("100");
+	colorGradient.setDefault();
+	updateGradientStyle();
+
+	disableConfigLiveEdit = false;
+	configLiveEdit();
 }
 
 void LSystemUi::onCmdAboutClicked()
@@ -1053,6 +1080,11 @@ void LSystemUi::processDrawAction(const QString & link)
 	int xOff = drawing.offset.x();
 	int yOff = drawing.offset.y();
 
+	const auto translate = [&]() {
+		drawArea->translateHighlighted(QPoint(xOff, yOff));
+		ui->playerControl->unstashState();
+	};
+
 	if (link == DrawLinks::Maximize) {
 
 		const auto newStepSize = drawing.config.stepSize * dp.fct;
@@ -1099,6 +1131,8 @@ void LSystemUi::processDrawAction(const QString & link)
 
 			getAdditionalOptionsForSegmentsMeta(data->meta);
 			invokeExec(data);
+		} else {
+			translate();
 		}
 
 	} else {
@@ -1134,8 +1168,7 @@ void LSystemUi::processDrawAction(const QString & link)
 		if (moveLeft) xOff += dp.areaBotRight.x() - drawing.botRight.x();
 		if (moveRight) xOff += dp.areaTopLeft.x() - drawing.topLeft.x();
 
-		drawArea->translateHighlighted(QPoint(xOff, yOff));
-		ui->playerControl->unstashState();
+		translate();
 	}
 }
 

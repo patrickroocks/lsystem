@@ -69,6 +69,7 @@ void PlayerControl::setPlaying(bool playing)
 	curPlaying = playing;
 	control_->setProperty("playing", playing);
 	valueChanging = false;
+	emit playPauseChanged(curPlaying);
 }
 
 void PlayerControl::playingChanged()
@@ -89,9 +90,6 @@ void PlayerControl::stashState()
 {
 	stashedState = StashedState{.playing = curPlaying, .value = curValue};
 	setPlaying(false);
-
-	emit playPauseChanged(curPlaying);
-	emit playerValueChanged(curValue);
 }
 
 void PlayerControl::unstashState()
@@ -100,9 +98,6 @@ void PlayerControl::unstashState()
 
 	if (stashedState->value <= curMaxValue) setValue(stashedState->value);
 	setPlaying(stashedState->playing);
-
-	emit playerValueChanged(curValue);
-	emit playPauseChanged(curPlaying);
 
 	stashedState = {};
 }

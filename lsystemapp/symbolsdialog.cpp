@@ -4,17 +4,16 @@
 #include <QClipboard>
 #include <QResizeEvent>
 
-SymbolsDialog::SymbolsDialog(QWidget * parent) :
-	QDialog(parent),
-	ui(new Ui::SymbolsDialog)
+SymbolsDialog::SymbolsDialog(QWidget * parent)
+	: QDialog(parent)
+	, ui(new Ui::SymbolsDialog)
 {
 	ui->setupUi(this);
+
+	connect(ui->cmdClose, &QPushButton::clicked, this, &SymbolsDialog::close);
 }
 
-SymbolsDialog::~SymbolsDialog()
-{
-	delete ui;
-}
+SymbolsDialog::~SymbolsDialog() { delete ui; }
 
 void SymbolsDialog::setContent(const QString & content)
 {
@@ -47,15 +46,11 @@ void SymbolsDialog::resizeEvent(QResizeEvent * event)
 	ui->txtSymbols->resize(wdt - 2 * border, hgt - ui->cmdClose->height() - 3 * border);
 	auto labelGeom = ui->txtSymbols->geometry();
 	auto buttonsGeom = ui->wdgButtons->geometry();
-	ui->wdgButtons->setGeometry(labelGeom.right() - buttonsGeom.width(), labelGeom.bottom() + border, buttonsGeom.width(), buttonsGeom.height());
+	ui->wdgButtons->setGeometry(
+		labelGeom.right() - buttonsGeom.width(), labelGeom.bottom() + border, buttonsGeom.width(), buttonsGeom.height());
 }
 
-void SymbolsDialog::on_cmdClose_clicked()
-{
-	close();
-}
-
-void SymbolsDialog::on_cmdCopy_clicked()
+void SymbolsDialog::onCmdCopyClicked()
 {
 	QClipboard * clipboard = QGuiApplication::clipboard();
 	clipboard->setText(lastContent);
