@@ -169,7 +169,7 @@ bool DefinitionModel::dropMimeData(const QMimeData * data, Qt::DropAction action
 {
 	ALL_UNUSED(column, parent);
 
-	if (action != Qt::MoveAction) return false;
+	if (action != Qt::MoveAction || row == -1) return false;
 
 	const QStringList & mimeTypesRef = mimeTypes();
 	if (mimeTypesRef.isEmpty()) return false;

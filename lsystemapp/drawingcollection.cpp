@@ -227,6 +227,9 @@ void DrawingCollection::addOrReplaceDrawing(Drawing newDrawing)
 		newDrawing.zIndex = zIndexToDrawing.isEmpty() ? 1 : (zIndexToDrawing.lastKey() + 1);
 		newDrawing.num = drawings.isEmpty() ? 1 : (drawings.lastKey() + 1);
 		zIndexToDrawing[newDrawing.zIndex] = newDrawing.num;
+	} else {
+		// replace drawing, keep zIndex
+		newDrawing.zIndex = drawings[newDrawing.num].zIndex;
 	}
 
 	drawings[newDrawing.num] = newDrawing;
