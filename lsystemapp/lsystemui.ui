@@ -561,9 +561,9 @@ options</string>
         <widget class="QPushButton" name="cmdStoreConfig">
          <property name="geometry">
           <rect>
-           <x>90</x>
+           <x>10</x>
            <y>164</y>
-           <width>71</width>
+           <width>116</width>
            <height>25</height>
           </rect>
          </property>
@@ -577,27 +577,14 @@ options</string>
         <widget class="QPushButton" name="cmdDeleteConfig">
          <property name="geometry">
           <rect>
-           <x>170</x>
+           <x>135</x>
            <y>164</y>
-           <width>81</width>
+           <width>116</width>
            <height>25</height>
           </rect>
          </property>
          <property name="text">
           <string>delete</string>
-         </property>
-        </widget>
-        <widget class="QPushButton" name="cmdLoadConfig">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>164</y>
-           <width>71</width>
-           <height>25</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>load</string>
          </property>
         </widget>
         <widget class="QListView" name="lstConfigs">

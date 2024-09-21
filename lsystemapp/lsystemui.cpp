@@ -101,10 +101,8 @@ void LSystemUi::setupConfigList()
 	configFileStore.loadConfig();
 	loadConfigByLstIndex(configList.index(0, 0));
 
-	connect(ui->cmdStoreConfig, &QPushButton::clicked, this, &LSystemUi::onCmdStoreConfigClicked);
-	connect(ui->cmdLoadConfig, &QPushButton::clicked, this, &LSystemUi::onCmdLoadConfigClicked);
 	connect(ui->cmdDeleteConfig, &QPushButton::clicked, this, &LSystemUi::onCmdDeleteConfigClicked);
-	connect(ui->lstConfigs, &QListView::doubleClicked, this, &LSystemUi::onLstConfigsDoubleClicked);
+	connect(ui->lstConfigs, &QListView::clicked, this, &LSystemUi::loadConfigByLstIndex);
 }
 
 void LSystemUi::setupMainControls()
@@ -546,10 +544,6 @@ void LSystemUi::onCmdStoreConfigClicked()
 	configLiveEdit();
 }
 
-void LSystemUi::onCmdLoadConfigClicked() { loadConfigByLstIndex(ui->lstConfigs->currentIndex()); }
-
-void LSystemUi::onLstConfigsDoubleClicked(const QModelIndex & index) { loadConfigByLstIndex(index); }
-
 void LSystemUi::drawAreaClick(int x, int y, Qt::MouseButton button, bool drawingMarked)
 {
 	ui->tblDefinitions->setFocus();						// removes focus from text fields
@@ -566,7 +560,7 @@ void LSystemUi::loadConfigByLstIndex(const QModelIndex & index)
 {
 	ConfigSet config = configList.getConfigByIndex(index);
 	if (config.valid) {
-		setConfigSet(config);
+		showConfigSet(config);
 	} else {
 		showMessage("Config could not be loaded", MsgType::Error);
 	}
@@ -727,25 +721,23 @@ void LSystemUi::processActionStr(const QString & actionStr)
 	if (symbolsVisible()) symbolsDialog->setContent(actionStr);
 }
 
-void LSystemUi::drawDone(const Drawing & drawing, const QSharedPointer<AllDrawData> & data)
+void LSystemUi::drawDone(const QSharedPointer<Drawing> & drawing, const QSharedPointer<AllDrawData> & data)
 {
 	endInvokeExec(ExecKind::Draw);
 
 	lastDrawData = data;
 	const auto & uiData = data->uiDrawData;
+	drawing->offset = uiData.offset;
+	drawing->num = uiData.drawingNumToEdit.value_or(0);
 
-	Drawing newDrawing = drawing;
-	newDrawing.offset = uiData.offset;
-	newDrawing.num = uiData.drawingNumToEdit.value_or(0);
+	drawArea->draw(drawing);
 
-	drawArea->draw(newDrawing);
-
-	ui->playerControl->setMaxValueAndValue(drawing.segments.size(), drawing.segments.size());
+	ui->playerControl->setMaxValueAndValue(drawing->segments.size(), drawing->segments.size());
 
 	if (uiData.resultOk) {
 		const QString msgPainted = printStr("Painted %1 segments, size is %2 px, <a href=\"%3\">show symbols</a>",
-											drawing.segments.size(),
-											drawing.size(),
+											drawing->segments.size(),
+											drawing->size(),
 											Links::ShowSymbols);
 
 		showMessage(msgPainted, MsgType::Info);

@@ -3,6 +3,7 @@
 #include <common.h>
 #include <drawingcollection.h>
 
+#include <QMenu>
 #include <QWidget>
 
 namespace lsystem::ui {
@@ -14,7 +15,7 @@ public:
 	explicit DrawArea(QWidget * parent = nullptr);
 
 	void clear();
-	void draw(const Drawing & drawing);
+	void draw(const QSharedPointer<ui::Drawing> & drawing);
 	void restoreLastImage();
 	void copyToClipboardFull();
 
@@ -41,6 +42,7 @@ public:
 public slots:
 	common::AnimatorResult newAnimationStep(int step, bool relativeStep);
 	void layerSelectionChanged(const QItemSelection & selected, const QItemSelection & deselected);
+	void moveDrawingHere();
 
 signals:
 	void markingChanged();
@@ -56,9 +58,9 @@ protected:
 	void mouseMoveEvent(QMouseEvent * event) override;
 
 private:
-	void clearAllDrawings();
 	void setNextUndoRedo(bool undoOrRedo);
 	void markDrawing(int drawingNum);
+	void highlightDrawing(int drawingNum);
 
 private:
 	DrawingCollection drawings;
@@ -69,14 +71,16 @@ private:
 	{
 		NoMove,
 		ReadyForMove,
-		MoveStarted
+		MoveStarted,
+		MoveByMenu
 	};
 
 	struct MoveInfo
 	{
 		MoveState mode = MoveState::NoMove;
-		QPoint start;
+		QPoint moveToPos;
 		QPoint startOffset;
+		QMenu menu;
 	} move;
 
 	bool ignoreSelectionChange = false;

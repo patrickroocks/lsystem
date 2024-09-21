@@ -80,7 +80,7 @@ private:
 class DrawingCollection final : public QAbstractListModel
 {
 public:
-	void addOrReplaceDrawing(Drawing newDrawing);
+	void addOrReplaceDrawing(const QSharedPointer<Drawing> & newDrawing);
 
 	void resize(const QSize & newSize);
 	void clearAll();
@@ -111,7 +111,7 @@ public:
 	int getDrawingNumByListIndex(int listIndex) const;
 
 	// called also externally, e.g., for move by drag
-	void storeUndoPoint();
+	void storeUndoPoint(std::optional<int> numToCopy = std::nullopt);
 
 	// ListModel:
 	int rowCount(const QModelIndex & parent = QModelIndex()) const override;
@@ -133,10 +133,10 @@ private:
 private:
 	QImage image;
 
-	QMap<qint64 /*drawNum*/, Drawing> drawings;
+	QMap<qint64 /*drawNum*/, QSharedPointer<Drawing>> drawings;
 	QMap<qint64 /*zIndex*/, qint64 /*drawNum*/> zIndexToDrawing;
 
-	QMap<qint64 /*drawNum*/, Drawing> lastDrawings;
+	QMap<qint64 /*drawNum*/, QSharedPointer<Drawing>> lastDrawings;
 
 	qint64 markedDrawing = 0;
 	qint64 highlightedDrawing = 0;

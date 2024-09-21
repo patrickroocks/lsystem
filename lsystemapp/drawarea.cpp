@@ -13,27 +13,32 @@ namespace lsystem::ui {
 
 DrawArea::DrawArea(QWidget * parent)
 	: QWidget(parent)
-{}
+{
+	move.menu.addAction("move to here", this, &DrawArea::moveDrawingHere);
+}
 
 void DrawArea::clear()
 {
-	clearAllDrawings();
-
+	drawings.clearAll();
+	emit highlightChanged({});
 	update();
 	setNextUndoRedo(true);
 }
 
-void DrawArea::clearAllDrawings()
+void DrawArea::moveDrawingHere()
 {
-	if (drawings.highlightDrawing(0)) {
-		emit highlightChanged({});
-	}
-	drawings.clearAll();
+	if (move.mode != MoveState::MoveByMenu) return;
+
+	if (drawings.moveDrawing(drawings.getMarkedDrawingNum(), move.moveToPos, false)) update();
+	move.mode = MoveState::NoMove;
 }
 
-void DrawArea::draw(const ui::Drawing & drawing)
+void DrawArea::draw(const QSharedPointer<ui::Drawing> & drawing)
 {
 	drawings.addOrReplaceDrawing(drawing);
+
+	// In general, the drawing dimensions changed, so the icons for the highlighted drawing have to be updated.
+	emit highlightChanged(drawings.getHighlightedDrawResult());
 
 	update();
 	setNextUndoRedo(true);
@@ -73,8 +78,9 @@ void DrawArea::copyToClipboardMarked(bool transparent)
 
 void DrawArea::deleteMarked()
 {
+	const bool wasHighlighted = drawings.getMarkedDrawingNum() == drawings.getHighlightedDrawingNum();
 	drawings.deleteDrawing(drawings.getMarkedDrawingNum());
-	drawings.setMarkedDrawing(0);
+	if (wasHighlighted) emit highlightChanged({});
 	update();
 	setNextUndoRedo(true);
 }
@@ -191,12 +197,18 @@ void DrawArea::mousePressEvent(QMouseEvent * event)
 	bool cancelEvent = false;
 
 	if (clickedDrawing > 0 && clickedDrawing == drawings.getMarkedDrawingNum() && event->button() == Qt::MouseButton::LeftButton) {
-		move.mode = MoveState::ReadyForMove;
-		move.start = event->position().toPoint();
 		move.startOffset = drawings.getDrawingOffset(drawings.getMarkedDrawingNum()) - event->position().toPoint();
+		move.mode = MoveState::ReadyForMove;
 		setCursor(Qt::SizeAllCursor);
 		cancelEvent = true;
 	} else if (drawings.getMarkedDrawingNum() > 0 && clickedDrawing == 0) {
+		if (event->button() == Qt::MouseButton::RightButton) {
+			move.mode = MoveState::MoveByMenu;
+			move.moveToPos = event->position().toPoint();
+			// note that the menu blocks the following actions
+			move.menu.exec(event->globalPosition().toPoint());
+			return;
+		}
 		cancelEvent = true;
 	}
 
@@ -220,7 +232,7 @@ void DrawArea::mouseReleaseEvent(QMouseEvent * event)
 {
 	Q_UNUSED(event);
 
-	if (move.mode != MoveState::NoMove) {
+	if (move.mode == MoveState::ReadyForMove || move.mode == MoveState::MoveStarted) {
 		setCursor(Qt::ArrowCursor);
 		if (move.mode == MoveState::MoveStarted && drawings.getHighlightedDrawingNum()) {
 			emit highlightChanged(drawings.getHighlightedDrawResult());
@@ -231,9 +243,9 @@ void DrawArea::mouseReleaseEvent(QMouseEvent * event)
 
 void DrawArea::mouseMoveEvent(QMouseEvent * event)
 {
-	if (move.mode != MoveState::NoMove) {
+	if (move.mode == MoveState::ReadyForMove || move.mode == MoveState::MoveStarted) {
 		if (move.mode == MoveState::ReadyForMove) {
-			drawings.storeUndoPoint();
+			drawings.storeUndoPoint(drawings.getMarkedDrawingNum());
 			setNextUndoRedo(true);
 			move.mode = MoveState::MoveStarted;
 		}
@@ -241,19 +253,24 @@ void DrawArea::mouseMoveEvent(QMouseEvent * event)
 		if (drawings.moveDrawing(drawings.getMarkedDrawingNum(), newOffset, false)) update();
 
 	} else {
-		const qint64 mouseOverDrawing = drawings.getDrawingByPos(event->pos());
+		const qint64 mouseOverDrawingNum = drawings.getDrawingByPos(event->pos());
 		if (drawings.getMarkedDrawingNum() == 0) {
-			if (mouseOverDrawing > 0) {
+			if (mouseOverDrawingNum > 0) {
 				setCursor(Qt::ArrowCursor);
 			} else {
 				setCursor(Qt::CrossCursor);
 			}
 		}
 
-		if (drawings.highlightDrawing(mouseOverDrawing)) {
-			update();
-			emit highlightChanged(drawings.getHighlightedDrawResult());
-		}
+		highlightDrawing(mouseOverDrawingNum);
+	}
+}
+
+void DrawArea::highlightDrawing(int drawingNum)
+{
+	if (drawings.highlightDrawing(drawingNum)) {
+		emit highlightChanged(drawings.getHighlightedDrawResult());
+		update();
 	}
 }
 

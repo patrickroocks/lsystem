@@ -218,35 +218,42 @@ void Drawing::updateRect(double minX, double minY, double maxX, double maxY)
 
 // ----------------------------------------------------------------------------------------------------------------
 
-void DrawingCollection::addOrReplaceDrawing(Drawing newDrawing)
+void DrawingCollection::addOrReplaceDrawing(const QSharedPointer<Drawing> & newDrawing)
 {
-	storeUndoPoint();
 
-	if (newDrawing.num == 0) {
+	if (newDrawing->num == 0) {
 		// add new drawing
-		newDrawing.zIndex = zIndexToDrawing.isEmpty() ? 1 : (zIndexToDrawing.lastKey() + 1);
-		newDrawing.num = drawings.isEmpty() ? 1 : (drawings.lastKey() + 1);
-		zIndexToDrawing[newDrawing.zIndex] = newDrawing.num;
+		storeUndoPoint();
+		newDrawing->zIndex = zIndexToDrawing.isEmpty() ? 1 : (zIndexToDrawing.lastKey() + 1);
+		newDrawing->num = drawings.isEmpty() ? 1 : (drawings.lastKey() + 1);
+		zIndexToDrawing[newDrawing->zIndex] = newDrawing->num;
 	} else {
 		// replace drawing, keep zIndex
-		newDrawing.zIndex = drawings[newDrawing.num].zIndex;
+		storeUndoPoint(newDrawing->num);
+		newDrawing->zIndex = drawings[newDrawing->num]->zIndex;
 	}
 
-	drawings[newDrawing.num] = newDrawing;
+	drawings[newDrawing->num] = newDrawing;
 
-	if (newDrawing.num == 0) {
-		newDrawing.drawToImage(image, false, false);
+	if (newDrawing->num == 0) {
+		newDrawing->drawToImage(image, false, false);
 	} else {
 		redraw();
 	}
 
+	setMarkedDrawing(newDrawing->num);
+
 	updateListData();
 }
 
-void DrawingCollection::storeUndoPoint()
+void DrawingCollection::storeUndoPoint(std::optional<int> numToCopy)
 {
 	// very simple 1-step undo
 	lastDrawings = drawings;
+
+	if (numToCopy.has_value()) {
+		lastDrawings[numToCopy.value()] = QSharedPointer<Drawing>::create(*drawings[numToCopy.value()]);
+	}
 }
 
 void DrawingCollection::restoreLast()
@@ -279,6 +286,7 @@ void DrawingCollection::clearAll()
 	storeUndoPoint();
 
 	markedDrawing = 0;
+	highlightedDrawing = 0;
 	drawings.clear();
 	zIndexToDrawing.clear();
 
@@ -306,14 +314,14 @@ void DrawingCollection::redraw(bool keepContent)
 	if (!keepContent) image.fill(backColor);
 
 	for (qint64 drawNum : std::as_const(zIndexToDrawing)) {
-		drawings[drawNum].drawToImage(image, !keepContent && drawNum == markedDrawing, !keepContent && drawNum == highlightedDrawing);
+		drawings[drawNum]->drawToImage(image, !keepContent && drawNum == markedDrawing, !keepContent && drawNum == highlightedDrawing);
 	}
 }
 
 QPoint DrawingCollection::getLastSize() const
 {
 	if (drawings.isEmpty()) return QPoint();
-	return drawings.last().size();
+	return drawings.last()->size();
 }
 
 qint64 DrawingCollection::getDrawingByPos(const QPoint & pos)
@@ -323,7 +331,7 @@ qint64 DrawingCollection::getDrawingByPos(const QPoint & pos)
 	while (true) {
 		it--;
 		const qint64 drawNum = it.value();
-		if (drawings[drawNum].withinArea(pos)) return drawNum;
+		if (drawings[drawNum]->withinArea(pos)) return drawNum;
 		if (it == zIndexToDrawing.begin()) break;
 	}
 
@@ -333,24 +341,24 @@ qint64 DrawingCollection::getDrawingByPos(const QPoint & pos)
 QPoint DrawingCollection::getDrawingOffset(qint64 drawingNum)
 {
 	if (!drawings.contains(drawingNum)) return QPoint();
-	return drawings[drawingNum].offset;
+	return drawings[drawingNum]->offset;
 }
 
 QPoint DrawingCollection::getDrawingSize(qint64 drawingNum)
 {
 	if (!drawings.contains(drawingNum)) return QPoint();
-	return drawings[drawingNum].size();
+	return drawings[drawingNum]->size();
 }
 
-QImage & DrawingCollection::getDrawingImage(qint64 drawingNum) { return drawings[drawingNum].image; }
+QImage & DrawingCollection::getDrawingImage(qint64 drawingNum) { return drawings[drawingNum]->image; }
 
 QImage DrawingCollection::getImage() { return image; }
 
 Drawing * DrawingCollection::getCurrentDrawing()
 {
-	if (markedDrawing > 0) return &drawings[markedDrawing];
+	if (markedDrawing > 0) return drawings[markedDrawing].get();
 	if (drawings.isEmpty()) return nullptr;
-	return &drawings.last();
+	return drawings.last().get();
 }
 
 bool DrawingCollection::setMarkedDrawing(qint64 newMarkedDrawing)
@@ -358,17 +366,18 @@ bool DrawingCollection::setMarkedDrawing(qint64 newMarkedDrawing)
 	if (markedDrawing == newMarkedDrawing) return false;
 
 	markedDrawing = newMarkedDrawing;
+
 	redraw();
 	return true;
 }
 
 bool DrawingCollection::moveDrawing(qint64 drawingNum, const QPoint & newOffset, bool storeUndo)
 {
-	if (!drawings.contains(drawingNum) || drawings[drawingNum].offset == newOffset) return false;
+	if (!drawings.contains(drawingNum) || drawings[drawingNum]->offset == newOffset) return false;
 
-	if (storeUndo) storeUndoPoint();
+	if (storeUndo) storeUndoPoint(drawingNum);
 
-	drawings[drawingNum].offset = newOffset;
+	drawings[drawingNum]->offset = newOffset;
 	redraw();
 	updateListData();
 	return true;
@@ -379,8 +388,10 @@ bool DrawingCollection::deleteDrawing(qint64 drawingNum)
 	if (!drawings.contains(drawingNum)) return false;
 
 	storeUndoPoint();
-	zIndexToDrawing.remove(drawings[drawingNum].zIndex);
+	zIndexToDrawing.remove(drawings[drawingNum]->zIndex);
 	drawings.remove(drawingNum);
+	if (markedDrawing == drawingNum) markedDrawing = 0;
+	if (highlightedDrawing == drawingNum) highlightedDrawing = 0;
 	updateListData();
 	redraw();
 	return true;
@@ -411,7 +422,7 @@ std::optional<DrawResult> DrawingCollection::getHighlightedDrawResult()
 	if (!highlightedDrawing) {
 		return {};
 	} else {
-		return drawings[highlightedDrawing].toDrawResult();
+		return drawings[highlightedDrawing]->toDrawResult();
 	}
 }
 
@@ -420,19 +431,19 @@ std::optional<DrawResult> DrawingCollection::getMarkedDrawResult()
 	if (!markedDrawing) {
 		return {};
 	} else {
-		return drawings[markedDrawing].toDrawResult();
+		return drawings[markedDrawing]->toDrawResult();
 	}
 }
 
 bool DrawingCollection::sendToZIndex(qint64 drawingNum, qint64 newZIndex)
 {
 	if (!drawings.contains(drawingNum)) return false;
-	Drawing & drawing = drawings[drawingNum];
-	const qint64 oldZIndex = drawing.zIndex;
+	auto & drawing = drawings[drawingNum];
+	const qint64 oldZIndex = drawing->zIndex;
 	if (oldZIndex == newZIndex) return false;
 
-	storeUndoPoint();
-	drawing.zIndex = newZIndex;
+	storeUndoPoint(drawingNum);
+	drawing->zIndex = newZIndex;
 	updateZIndexToDrawing();
 	redraw();
 	updateListData();
@@ -470,10 +481,10 @@ void DrawingCollection::updateListData()
 	for (qint64 drawNum : std::as_const(zIndexToDrawing)) {
 		ListEntry entry;
 		auto & drawing = drawings[drawNum];
-		entry.description = "[" + QString::number(drawNum) + "] " + drawing.config.name + " (" + QString::number(drawing.offset.x()) + ", "
-							+ QString::number(drawing.offset.y()) + ")";
+		entry.description = "[" + QString::number(drawNum) + "] " + drawing->config.name + " (" + QString::number(drawing->offset.x())
+							+ ", " + QString::number(drawing->offset.y()) + ")";
 		entry.drawNum = drawNum;
-		drawing.listIndex = listData.size();
+		drawing->listIndex = listData.size();
 		listData.push_back(entry);
 	}
 
@@ -490,7 +501,7 @@ void DrawingCollection::updateZIndexToDrawing()
 {
 	zIndexToDrawing.clear();
 	for (const auto & drawing : std::as_const(drawings)) {
-		zIndexToDrawing[drawing.zIndex] = drawing.num;
+		zIndexToDrawing[drawing->zIndex] = drawing->num;
 	}
 }
 

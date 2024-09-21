@@ -54,7 +54,7 @@ private slots:
 	void processActionStr(const QString & actionStr);
 
 	// from segdrawer
-	void drawDone(const lsystem::ui::Drawing & drawing, const QSharedPointer<lsystem::common::AllDrawData> & data);
+	void drawDone(const QSharedPointer<lsystem::ui::Drawing> & drawing, const QSharedPointer<lsystem::common::AllDrawData> & data);
 
 	// from drawarea
 	void enableUndoRedo(bool undoOrRedo);
@@ -81,9 +81,7 @@ private slots:
 	void onCmdClosePlayerClicked();
 	void onChkShowLastIterStateChanged();
 	void onCmdStoreConfigClicked();
-	void onCmdLoadConfigClicked();
 	void onCmdDeleteConfigClicked();
-	void onLstConfigsDoubleClicked(const QModelIndex & index);
 	void onLblStatusLinkActivated(const QString & link);
 	void onLblStatusMousePressed(QMouseEvent * event);
 	void onCmdDeleteLayerClicked();
