@@ -191,6 +191,8 @@ private:
 	void endInvokeExec(ExecKind execKind);
 	void invokeExecPending();
 
+	bool eventFilter(QObject * obj, QEvent * event) override;
+
 private:
 	Ui::LSystemUi * const ui;
 	lsystem::ui::DrawArea * drawArea = nullptr;

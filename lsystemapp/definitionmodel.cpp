@@ -200,6 +200,7 @@ bool DefinitionModel::dropMimeData(const QMimeData * data, Qt::DropAction action
 	definitions.removeAt(srcRow);
 	emit dataChanged(createIndex(qMin(row, srcRow), 0), createIndex(qMax(row, srcRow), columnCount() - 1));
 	checkForNewStartSymbol();
+	emit edited();
 	return true;
 }
 

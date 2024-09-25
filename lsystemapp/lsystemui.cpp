@@ -223,6 +223,17 @@ void LSystemUi::setupInteractiveControls()
 	connect(ui->txtLatency, &FocusableLineEdit::textChanged, this, &LSystemUi::latencyChanged);
 }
 
+bool LSystemUi::eventFilter(QObject * obj, QEvent * event)
+{
+	if (obj == ui->lstLayers && event->type() == QEvent::KeyPress) {
+		QKeyEvent * keyEvent = static_cast<QKeyEvent *>(event);
+		if (keyEvent->key() == Qt::Key_Delete) {
+			onCmdDeleteLayerClicked();
+		}
+	}
+	return QObject::eventFilter(obj, event);
+}
+
 void LSystemUi::setupDrawArea()
 {
 	drawArea = ui->wdgDraw;
@@ -248,6 +259,9 @@ void LSystemUi::setupDrawArea()
 	connect(layersSelModel, &QItemSelectionModel::selectionChanged, drawArea, &DrawArea::layerSelectionChanged);
 
 	connect(ui->cmdDeleteLayer, &QPushButton::clicked, this, &LSystemUi::onCmdDeleteLayerClicked);
+
+	// Install event filter
+	ui->lstLayers->installEventFilter(this);
 }
 
 void LSystemUi::onCmdDeleteLayerClicked()
@@ -646,7 +660,7 @@ void LSystemUi::highlightDrawing(std::optional<DrawResult> drawResult)
 
 void LSystemUi::markDrawing()
 {
-	auto markedDrawing = drawArea->getMarkedDrawingResult();
+	const auto markedDrawing = drawArea->getMarkedDrawingResult();
 
 	drawAreaMenu->setDrawingActionsVisible(markedDrawing.has_value());
 

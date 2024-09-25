@@ -88,8 +88,10 @@ void DrawArea::deleteMarked()
 void DrawArea::deleteIndex(int index)
 {
 	auto drawingNum = drawings.getDrawingNumByListIndex(index);
+	const bool wasHighlighted = drawingNum == drawings.getHighlightedDrawingNum();
 	drawings.deleteDrawing(drawingNum);
 	if (drawings.getMarkedDrawingNum() == drawingNum) drawings.setMarkedDrawing(0);
+	if (wasHighlighted) emit highlightChanged({});
 	update();
 	setNextUndoRedo(true);
 }

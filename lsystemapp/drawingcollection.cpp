@@ -293,20 +293,6 @@ void DrawingCollection::clearAll()
 	image.fill(backColor);
 }
 
-void DrawingCollection::deleteHighlightedOrLastDrawing()
-{
-	const auto numToDelete = getHighlightedDrawingNum() ? getHighlightedDrawingNum() : getLastDrawingNum();
-	if (numToDelete == 0) return;
-
-	drawings.remove(numToDelete);
-
-	QMutableMapIterator it{zIndexToDrawing};
-	while (it.hasNext()) {
-		it.next();
-		if (it.value() == numToDelete) it.remove();
-	}
-}
-
 void DrawingCollection::redraw(bool keepContent)
 {
 	dirty = false;
@@ -316,12 +302,6 @@ void DrawingCollection::redraw(bool keepContent)
 	for (qint64 drawNum : std::as_const(zIndexToDrawing)) {
 		drawings[drawNum]->drawToImage(image, !keepContent && drawNum == markedDrawing, !keepContent && drawNum == highlightedDrawing);
 	}
-}
-
-QPoint DrawingCollection::getLastSize() const
-{
-	if (drawings.isEmpty()) return QPoint();
-	return drawings.last()->size();
 }
 
 qint64 DrawingCollection::getDrawingByPos(const QPoint & pos)

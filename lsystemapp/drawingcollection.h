@@ -10,7 +10,7 @@
 
 namespace lsystem::ui {
 
-struct DrawResult
+struct DrawResult final
 {
 	QPoint topLeft;
 	QPoint botRight;
@@ -58,7 +58,7 @@ public:
 	std::optional<InternalMeta> lastIterMeta;
 	bool usesOpacity = false;
 
-	struct AnimState
+	struct AnimState final
 	{
 		bool inProgress = false;
 		int curSeg = 0; // index of the last segment which was painted
@@ -84,10 +84,8 @@ public:
 
 	void resize(const QSize & newSize);
 	void clearAll();
-	void deleteHighlightedOrLastDrawing();
 
 	void redraw(bool keepContent = false);
-	QPoint getLastSize() const;
 
 	void restoreLast();
 
@@ -99,7 +97,6 @@ public:
 	int getMarkedDrawingNum() const { return markedDrawing; }
 	int getHighlightedDrawingNum() const { return highlightedDrawing; }
 	Drawing * getCurrentDrawing();
-	int getLastDrawingNum() const { return drawings.empty() ? 0 : drawings.lastKey(); }
 	bool setMarkedDrawing(qint64 newMarkedDrawing);
 	bool moveDrawing(qint64 drawingNum, const QPoint & newOffset, bool storeUndo = true);
 	bool deleteDrawing(qint64 drawingNum);
@@ -142,7 +139,7 @@ private:
 	qint64 highlightedDrawing = 0;
 
 	// Data for ListModel:
-	struct ListEntry
+	struct ListEntry final
 	{
 		QString description;
 		int drawNum = 0;
