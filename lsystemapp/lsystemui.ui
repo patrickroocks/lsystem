@@ -35,10 +35,10 @@
          </size>
         </property>
         <property name="frameShape">
-         <enum>QFrame::StyledPanel</enum>
+         <enum>QFrame::Shape::StyledPanel</enum>
         </property>
         <property name="frameShadow">
-         <enum>QFrame::Raised</enum>
+         <enum>QFrame::Shadow::Raised</enum>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <property name="spacing">
@@ -110,13 +110,13 @@
                 </size>
                </property>
                <property name="layoutDirection">
-                <enum>Qt::LeftToRight</enum>
+                <enum>Qt::LayoutDirection::LeftToRight</enum>
                </property>
                <property name="text">
                 <string>Definitions:</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
                </property>
               </widget>
               <widget class="QPushButton" name="cmdAdd">
@@ -244,16 +244,16 @@
                <bool>false</bool>
               </property>
               <property name="dragDropMode">
-               <enum>QAbstractItemView::InternalMove</enum>
+               <enum>QAbstractItemView::DragDropMode::InternalMove</enum>
               </property>
               <property name="defaultDropAction">
-               <enum>Qt::MoveAction</enum>
+               <enum>Qt::DropAction::MoveAction</enum>
               </property>
               <property name="selectionMode">
-               <enum>QAbstractItemView::SingleSelection</enum>
+               <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
               </property>
               <property name="selectionBehavior">
-               <enum>QAbstractItemView::SelectItems</enum>
+               <enum>QAbstractItemView::SelectionBehavior::SelectItems</enum>
               </property>
              </widget>
             </item>
@@ -386,9 +386,9 @@
            <widget class="FocusableLineEdit" name="txtStep" native="true">
             <property name="geometry">
              <rect>
-              <x>150</x>
+              <x>110</x>
               <y>33</y>
-              <width>51</width>
+              <width>91</width>
               <height>21</height>
              </rect>
             </property>
@@ -553,10 +553,10 @@ options</string>
          </size>
         </property>
         <property name="frameShape">
-         <enum>QFrame::StyledPanel</enum>
+         <enum>QFrame::Shape::StyledPanel</enum>
         </property>
         <property name="frameShadow">
-         <enum>QFrame::Raised</enum>
+         <enum>QFrame::Shadow::Raised</enum>
         </property>
         <widget class="QPushButton" name="cmdStoreConfig">
          <property name="geometry">
@@ -618,10 +618,10 @@ options</string>
       <item>
        <widget class="QFrame" name="frmDraw">
         <property name="frameShape">
-         <enum>QFrame::StyledPanel</enum>
+         <enum>QFrame::Shape::StyledPanel</enum>
         </property>
         <property name="frameShadow">
-         <enum>QFrame::Raised</enum>
+         <enum>QFrame::Shadow::Raised</enum>
         </property>
         <layout class="QVBoxLayout" name="layoutDraw">
          <property name="leftMargin">
@@ -642,7 +642,7 @@ options</string>
             <cursorShape>CrossCursor</cursorShape>
            </property>
            <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
+            <enum>Qt::FocusPolicy::NoFocus</enum>
            </property>
           </widget>
          </item>
@@ -673,10 +673,10 @@ options</string>
          </size>
         </property>
         <property name="frameShape">
-         <enum>QFrame::StyledPanel</enum>
+         <enum>QFrame::Shape::StyledPanel</enum>
         </property>
         <property name="frameShadow">
-         <enum>QFrame::Raised</enum>
+         <enum>QFrame::Shadow::Raised</enum>
         </property>
         <layout class="QVBoxLayout" name="layoutLayers">
          <property name="leftMargin">
@@ -738,7 +738,7 @@ options</string>
         <number>6</number>
        </property>
        <property name="sizeConstraint">
-        <enum>QLayout::SetDefaultConstraint</enum>
+        <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
        </property>
        <property name="leftMargin">
         <number>0</number>
@@ -812,7 +812,7 @@ options</string>
      </rect>
     </property>
     <property name="focusPolicy">
-     <enum>Qt::NoFocus</enum>
+     <enum>Qt::FocusPolicy::NoFocus</enum>
     </property>
     <property name="autoFillBackground">
      <bool>true</bool>
@@ -821,10 +821,10 @@ options</string>
      <string notr="true"/>
     </property>
     <property name="frameShape">
-     <enum>QFrame::StyledPanel</enum>
+     <enum>QFrame::Shape::StyledPanel</enum>
     </property>
     <property name="frameShadow">
-     <enum>QFrame::Raised</enum>
+     <enum>QFrame::Shadow::Raised</enum>
     </property>
     <widget class="QCheckBox" name="chkShowLastIter">
      <property name="geometry">
@@ -937,7 +937,7 @@ options</string>
       </rect>
      </property>
      <property name="text">
-      <string>Show sliders for parameters</string>
+      <string>Show sliders</string>
      </property>
      <property name="checked">
       <bool>true</bool>
@@ -1114,6 +1114,22 @@ border: 1px solid black;</string>
       <string>Reset defaults</string>
      </property>
     </widget>
+    <widget class="QCheckBox" name="chkAutoMax">
+     <property name="geometry">
+      <rect>
+       <x>190</x>
+       <y>4</y>
+       <width>171</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Automatic maximize</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
    </widget>
    <widget class="QFrame" name="frmPlayer">
     <property name="enabled">
@@ -1128,7 +1144,7 @@ border: 1px solid black;</string>
      </rect>
     </property>
     <property name="focusPolicy">
-     <enum>Qt::NoFocus</enum>
+     <enum>Qt::FocusPolicy::NoFocus</enum>
     </property>
     <property name="autoFillBackground">
      <bool>true</bool>
@@ -1137,10 +1153,10 @@ border: 1px solid black;</string>
      <string notr="true"/>
     </property>
     <property name="frameShape">
-     <enum>QFrame::StyledPanel</enum>
+     <enum>QFrame::Shape::StyledPanel</enum>
     </property>
     <property name="frameShadow">
-     <enum>QFrame::Raised</enum>
+     <enum>QFrame::Shadow::Raised</enum>
     </property>
     <widget class="QPushButton" name="cmdClosePlayer">
      <property name="geometry">

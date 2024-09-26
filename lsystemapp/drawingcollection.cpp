@@ -6,18 +6,51 @@ using namespace lsystem::common;
 
 namespace lsystem::ui {
 
-Drawing::Drawing(const ExecResult & execResult, const QSharedPointer<ConfigAndMeta> & configAndMeta)
-	: segments(execResult.segments)
-	, actionColors(execResult.actionColors)
-	, config(configAndMeta->config)
+DrawingFrameSummary DrawingFrame::toDrawingFrameSummary()
 {
-	const auto & metaData = configAndMeta->meta;
+	return DrawingFrameSummary{.topLeft = topLeft + offset, .botRight = botRight + offset, .offset = offset, .config = config};
+}
 
-	const bool paintLastIter = !execResult.segmentsLastIter.isEmpty() && metaData.lastIterOpacy > 0;
+void DrawingFrame::expandSizeToSegments(const common::LineSegs & segs, double thickness)
+{
+	const int off = qCeil(thickness / 2.);
+	for (const LineSeg & seg : segs) {
+		const QLine ln = seg.lineNegY();
+		// clang-format off
+		updateRect(qMin(ln.x1(), ln.x2()) - off, qMin(ln.y1(), ln.y2()) - off,
+				   qMax(ln.x1(), ln.x2()) + off, qMax(ln.y1(), ln.y2()) + off);
+		// clang-format on
+	}
+}
 
+void DrawingFrame::updateRect(double minX, double minY, double maxX, double maxY)
+{
+	if (minX < topLeft.x()) topLeft.setX(minX);
+	if (minY < topLeft.y()) topLeft.setY(minY);
+	if (maxX > botRight.x()) botRight.setX(maxX);
+	if (maxY > botRight.y()) botRight.setY(maxY);
+}
+
+// ----------------------------------------------------------
+
+DrawingFrame::DrawingFrame(const ExecResult & execResult, const QSharedPointer<AllDrawData> & data)
+	: offset(data->uiDrawData.offset)
+	, config(data->config)
+	, metaData(data->meta)
+	, paintLastIter(!execResult.segmentsLastIter.isEmpty() && metaData.lastIterOpacy > 0)
+{
 	if (paintLastIter) expandSizeToSegments(execResult.segmentsLastIter, metaData.thickness);
-	expandSizeToSegments(segments, metaData.thickness);
+	expandSizeToSegments(execResult.segments, metaData.thickness);
+}
 
+// ----------------------------------------------------------
+
+Drawing::Drawing(const ExecResult & execResult, const QSharedPointer<AllDrawData> & data)
+	: DrawingFrame(execResult, data)
+	, num(data->uiDrawData.drawingNumToEdit.value_or(0))
+	, segments(execResult.segments)
+	, actionColors(execResult.actionColors)
+{
 	const QPoint pSize = botRight - topLeft + QPoint(1, 1);
 	image = QImage(QSize(pSize.x(), pSize.y()), QImage::Format_ARGB32);
 	image.fill(qRgba(0, 0, 0, 0)); // transparent
@@ -36,18 +69,6 @@ Drawing::Drawing(const ExecResult & execResult, const QSharedPointer<ConfigAndMe
 	mainMeta = meta;
 	mainMeta.opacityFactor = metaData.opacity;
 	drawSegments(segments, mainMeta);
-}
-
-void Drawing::expandSizeToSegments(const common::LineSegs & segs, double thickness)
-{
-	const int off = qCeil(thickness / 2.);
-	for (const LineSeg & seg : segs) {
-		const QLine ln = seg.lineNegY();
-		// clang-format off
-		updateRect(qMin(ln.x1(), ln.x2()) - off, qMin(ln.y1(), ln.y2()) - off,
-				   qMax(ln.x1(), ln.x2()) + off, qMax(ln.y1(), ln.y2()) + off);
-		// clang-format on
-	}
 }
 
 void Drawing::drawSegments(const LineSegs & segs, const InternalMeta & meta) { drawSegmentRange(segs, 0, segs.size() - 1, meta); }
@@ -78,18 +99,15 @@ QPoint Drawing::size() const { return botRight - topLeft; }
 
 bool Drawing::withinArea(const QPoint & pos) { return pos >= topLeft + offset && pos <= botRight + offset; }
 
-DrawResult Drawing::toDrawResult()
+DrawingSummary Drawing::toDrawingSummary()
 {
-	return DrawResult{
-		.topLeft = topLeft + offset,
-		.botRight = botRight + offset,
-		.offset = offset,
-		.drawingNum = num,
-		.listIndex = listIndex,
-		.segmentsCount = static_cast<int>(segments.count()),
-		.animStep = animState.inProgress ? animState.curSeg + 1 : static_cast<int>(segments.count()),
-		.config = config,
-	};
+	DrawingSummary rv;
+	static_cast<DrawingFrameSummary &>(rv) = toDrawingFrameSummary();
+	rv.drawingNum = num;
+	rv.listIndex = listIndex;
+	rv.segmentsCount = static_cast<int>(segments.count());
+	rv.animStep = animState.inProgress ? animState.curSeg + 1 : static_cast<int>(segments.count());
+	return rv;
 }
 
 void Drawing::drawSegmentRange(const common::LineSegs & segs, int numStart, int numEnd, const InternalMeta & meta)
@@ -206,14 +224,6 @@ AnimatorResult Drawing::newAnimationStep(int step, bool relativeStep)
 	rv.step = newStep;
 
 	return rv;
-}
-
-void Drawing::updateRect(double minX, double minY, double maxX, double maxY)
-{
-	if (minX < topLeft.x()) topLeft.setX(minX);
-	if (minY < topLeft.y()) topLeft.setY(minY);
-	if (maxX > botRight.x()) botRight.setX(maxX);
-	if (maxY > botRight.y()) botRight.setY(maxY);
 }
 
 // ----------------------------------------------------------------------------------------------------------------
@@ -397,21 +407,21 @@ bool DrawingCollection::highlightDrawing(qint64 newHighlightedDrawing)
 	return true;
 }
 
-std::optional<DrawResult> DrawingCollection::getHighlightedDrawResult()
+std::optional<DrawingSummary> DrawingCollection::getHighlightedDrawResult()
 {
 	if (!highlightedDrawing) {
 		return {};
 	} else {
-		return drawings[highlightedDrawing]->toDrawResult();
+		return drawings[highlightedDrawing]->toDrawingSummary();
 	}
 }
 
-std::optional<DrawResult> DrawingCollection::getMarkedDrawResult()
+std::optional<DrawingSummary> DrawingCollection::getMarkedDrawResult()
 {
 	if (!markedDrawing) {
 		return {};
 	} else {
-		return drawings[markedDrawing]->toDrawResult();
+		return drawings[markedDrawing]->toDrawingSummary();
 	}
 }
 

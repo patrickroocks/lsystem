@@ -6,7 +6,7 @@
 
 namespace lsystem::common {
 
-class AnimatorResultStructs : public QObject
+class AnimatorResultStructs final : public QObject
 {
 	Q_OBJECT
 public:
@@ -20,14 +20,14 @@ public:
 	Q_ENUM(NextStepResult)
 };
 
-struct AnimatorResult
+struct AnimatorResult final
 {
 	using NextStepResult = AnimatorResultStructs::NextStepResult;
 	NextStepResult nextStepResult;
 	int step = 0;
 };
 
-struct Definition
+struct Definition final
 {
 	Definition() = default;
 	explicit Definition(char literal, const QString & command);
@@ -54,14 +54,14 @@ inline bool operator==(const Definition & lhs, const Definition & rhs)
 
 using Definitions = QList<Definition>;
 
-struct Links
+struct Links final
 {
 	static const constexpr char * NextIterations = "next_iter";
 	static const constexpr char * ShowSymbols = "show_symbols";
 	static const constexpr char * EditSettings = "show_settings";
 };
 
-struct LineSeg
+struct LineSeg final
 {
 	QPointF start;
 	QPointF end;
@@ -163,7 +163,7 @@ struct ExecResult
 	QString toString() const;
 };
 
-struct AppSettings
+struct AppSettings final
 {
 	quint32 maxStackSize = 0;
 
@@ -195,6 +195,7 @@ struct MetaData final
 	bool antiAliasing = false;
 	std::optional<std::chrono::milliseconds> animLatency;
 	std::optional<ColorGradient> colorGradient;
+	bool maximize = false;
 };
 
 struct ConfigAndMeta
@@ -207,6 +208,7 @@ struct ConfigAndMeta
 struct UiDrawData final
 {
 	QPoint offset;
+	bool causedByLink = false;
 	std::optional<int> drawingNumToEdit; // if not given: new drawing
 	bool resultOk = false;
 };

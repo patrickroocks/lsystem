@@ -26,6 +26,7 @@ public:
 	void sendToBackMarked();
 	void translateHighlighted(const QPoint & newOffset);
 	void markHighlighted();
+	void markDrawing(int drawingNum);
 	Drawing * getCurrentDrawing();
 
 	void redrawAndUpdate(bool keepContent = false);
@@ -33,7 +34,7 @@ public:
 	void setBgColor(const QColor & col);
 	QColor getBgColor() const;
 
-	std::optional<DrawResult> getMarkedDrawingResult();
+	std::optional<DrawingSummary> getMarkedDrawingResult();
 
 	DrawingCollection & getDrawingCollection() { return drawings; }
 
@@ -46,7 +47,7 @@ public slots:
 
 signals:
 	void markingChanged();
-	void highlightChanged(std::optional<DrawResult>);
+	void highlightChanged(std::optional<DrawingSummary>);
 	void mouseClick(int x, int y, Qt::MouseButton button, bool drawingMarked);
 	void enableUndoRedo(bool undoOrRedo);
 
@@ -59,8 +60,8 @@ protected:
 
 private:
 	void setNextUndoRedo(bool undoOrRedo);
-	void markDrawing(int drawingNum);
 	void highlightDrawing(int drawingNum);
+	void deleteDrawing(int drawingNum);
 
 private:
 	DrawingCollection drawings;

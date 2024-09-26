@@ -1,3 +1,7 @@
+# Version 0.9.0
+
+- added automatic maximize option
+
 # Version 0.8.0
 
 - added layers list

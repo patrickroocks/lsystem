@@ -10,33 +10,55 @@
 
 namespace lsystem::ui {
 
-struct DrawResult final
+struct DrawingFrameSummary
 {
 	QPoint topLeft;
 	QPoint botRight;
 	QPoint offset;
+	common::ConfigSet config;
+};
+
+struct DrawingSummary final : public DrawingFrameSummary
+{
 	qint64 drawingNum = 0;
 	int listIndex = 0;
 	int segmentsCount = 0;
 	int animStep = 0;
-	lsystem::common::ConfigSet config;
 };
 
-class Drawing final
+class DrawingFrame
 {
 public:
-	Drawing() = default;
-	Drawing(const common::ExecResult & execResult, const QSharedPointer<common::ConfigAndMeta> & metaData);
+	DrawingFrame(const common::ExecResult & execResult, const QSharedPointer<common::AllDrawData> & configAndMeta);
+	DrawingFrameSummary toDrawingFrameSummary();
+
+	QPoint offset;
+	common::ConfigSet config;
+
+protected:
+	common::MetaData metaData;
+	const bool paintLastIter;
+	QPoint topLeft;
+	QPoint botRight;
+
+private:
+	void expandSizeToSegments(const common::LineSegs & segs, double thickness);
+	void updateRect(double minX, double minY, double maxX, double maxY);
+};
+
+class Drawing final : public DrawingFrame
+{
+public:
+	Drawing(const common::ExecResult & execResult, const QSharedPointer<common::AllDrawData> & metaData);
 	void drawToImage(QImage & dstImage, bool isMarked, bool isHighlighted);
 	QPoint size() const;
 	bool withinArea(const QPoint & pos);
-	DrawResult toDrawResult();
+	DrawingSummary toDrawingSummary();
 
 	common::AnimatorResult newAnimationStep(int step, bool relativeStep);
-
-public:
 	void drawBasicImage();
 
+public:
 	struct InternalMeta
 	{
 		double opacityFactor = 0;
@@ -45,15 +67,13 @@ public:
 		std::optional<lsystem::common::ColorGradient> colorGradient;
 	};
 
-	qint64 zIndex = 0;
 	qint64 num = 0;
+	qint64 zIndex = 0;
 	int listIndex = 0;
-	QPoint offset;
 	common::LineSegs segments;
 	QVector<QColor> actionColors;
 	QImage lastIterImage;
 	QImage image;
-	lsystem::common::ConfigSet config;
 	InternalMeta mainMeta;
 	std::optional<InternalMeta> lastIterMeta;
 	bool usesOpacity = false;
@@ -65,14 +85,8 @@ public:
 	} animState;
 
 private:
-	void expandSizeToSegments(const common::LineSegs & segs, double thickness);
 	void drawSegments(const common::LineSegs & segs, const InternalMeta & meta);
-	void updateRect(double minX, double minY, double maxX, double maxY);
 	void drawSegmentRange(const common::LineSegs & segs, int numStart, int numEnd, const InternalMeta & meta);
-
-private:
-	QPoint topLeft;
-	QPoint botRight;
 };
 
 // ------------------------------------------------------------------------------------
@@ -103,8 +117,8 @@ public:
 	bool sendToFront(qint64 drawingNum);
 	bool sendToBack(qint64 drawingNum);
 	bool highlightDrawing(qint64 newHighlightedDrawing);
-	std::optional<DrawResult> getHighlightedDrawResult();
-	std::optional<DrawResult> getMarkedDrawResult();
+	std::optional<DrawingSummary> getHighlightedDrawResult();
+	std::optional<DrawingSummary> getMarkedDrawResult();
 	int getDrawingNumByListIndex(int listIndex) const;
 
 	// called also externally, e.g., for move by drag

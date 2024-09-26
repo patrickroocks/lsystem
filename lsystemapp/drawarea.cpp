@@ -39,6 +39,7 @@ void DrawArea::draw(const QSharedPointer<ui::Drawing> & drawing)
 
 	// In general, the drawing dimensions changed, so the icons for the highlighted drawing have to be updated.
 	emit highlightChanged(drawings.getHighlightedDrawResult());
+	emit markingChanged();
 
 	update();
 	setNextUndoRedo(true);
@@ -78,19 +79,18 @@ void DrawArea::copyToClipboardMarked(bool transparent)
 
 void DrawArea::deleteMarked()
 {
-	const bool wasHighlighted = drawings.getMarkedDrawingNum() == drawings.getHighlightedDrawingNum();
-	drawings.deleteDrawing(drawings.getMarkedDrawingNum());
-	if (wasHighlighted) emit highlightChanged({});
-	update();
-	setNextUndoRedo(true);
+	if (drawings.getMarkedDrawingNum() > 0) {
+		deleteDrawing(drawings.getMarkedDrawingNum());
+	}
 }
 
-void DrawArea::deleteIndex(int index)
+void DrawArea::deleteIndex(int index) { deleteDrawing(drawings.getDrawingNumByListIndex(index)); }
+
+void DrawArea::deleteDrawing(int drawingNum)
 {
-	auto drawingNum = drawings.getDrawingNumByListIndex(index);
 	const bool wasHighlighted = drawingNum == drawings.getHighlightedDrawingNum();
 	drawings.deleteDrawing(drawingNum);
-	if (drawings.getMarkedDrawingNum() == drawingNum) drawings.setMarkedDrawing(0);
+	emit markingChanged();
 	if (wasHighlighted) emit highlightChanged({});
 	update();
 	setNextUndoRedo(true);
@@ -144,7 +144,7 @@ void DrawArea::setBgColor(const QColor & col)
 
 QColor DrawArea::getBgColor() const { return drawings.backColor; }
 
-std::optional<DrawResult> DrawArea::getMarkedDrawingResult() { return drawings.getMarkedDrawResult(); }
+std::optional<DrawingSummary> DrawArea::getMarkedDrawingResult() { return drawings.getMarkedDrawResult(); }
 
 AnimatorResult DrawArea::newAnimationStep(int step, bool relativeStep)
 {

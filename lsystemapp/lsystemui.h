@@ -55,10 +55,11 @@ private slots:
 
 	// from segdrawer
 	void drawDone(const QSharedPointer<lsystem::ui::Drawing> & drawing, const QSharedPointer<lsystem::common::AllDrawData> & data);
+	void drawFrameDone(const QSharedPointer<lsystem::ui::DrawingFrame> & drawing, const QSharedPointer<lsystem::common::AllDrawData> & data);
 
 	// from drawarea
 	void enableUndoRedo(bool undoOrRedo);
-	void highlightDrawing(std::optional<lsystem::ui::DrawResult> drawResult);
+	void highlightDrawing(std::optional<lsystem::ui::DrawingSummary> drawResult);
 	void markDrawing();
 	void processDrawAction(const QString & link);
 
@@ -137,7 +138,8 @@ private:
 	void drawAreaClick(int x, int y, Qt::MouseButton button, bool drawingMarked);
 	void startPaint(int x, int y);
 	void setBgColor();
-	DrawPlacement getDrawPlacement() const;
+	DrawPlacement getDrawPlacement(const lsystem::ui::DrawingFrameSummary & drawingFrameResult) const;
+	void maximizeDrawing(const lsystem::ui::DrawingFrameSummary & drawing, std::optional<qint64> drawingNumToEdit, bool causedByLink);
 
 	// current Config
 	void configLiveEdit();
@@ -150,7 +152,7 @@ private:
 	void latencyChanged();
 
 	// additional options & windows
-	void getAdditionalOptionsForSegmentsMeta(lsystem::common::MetaData & execMeta);
+	void getAdditionalOptionsForSegmentsMeta(lsystem::common::MetaData & execMeta, bool noMaximize = false);
 	void showSymbols();
 	bool symbolsVisible() const;
 	void showRightAngleDialog();
@@ -196,7 +198,6 @@ private:
 private:
 	Ui::LSystemUi * const ui;
 	lsystem::ui::DrawArea * drawArea = nullptr;
-	DrawPlacement drawPlacement;
 
 	QScopedPointer<TableItemDelegateAutoUpdate> tableItemDelegate;
 	QScopedPointer<QuickAngle> quickAngle;
@@ -249,7 +250,7 @@ private:
 
 	lsystem::common::ConfigSet lastValidConfigSet;
 	QString curConfigName;
-	std::optional<lsystem::ui::DrawResult> highlightedDrawing;
+	std::optional<lsystem::ui::DrawingSummary> highlightedDrawing;
 	QScopedPointer<ClickableLabel> lblDrawActions;
 
 	enum class TransparencyOpt
@@ -264,4 +265,5 @@ private:
 	AngleEvaluator angleEvaluator;
 	lsystem::common::ColorGradient colorGradient;
 	QSharedPointer<lsystem::common::AllDrawData> lastDrawData;
+	qint64 markedDrawingNum = 0;
 };

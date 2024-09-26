@@ -77,6 +77,7 @@ void LSystemUi::setupServices()
 	segDrawer.moveToThread(&segDrawerThread);
 	connect(this, &LSystemUi::startDraw, &segDrawer, &SegmentDrawer::startDraw);
 	connect(&segDrawer, &SegmentDrawer::drawDone, this, &LSystemUi::drawDone);
+	connect(&segDrawer, &SegmentDrawer::drawFrameDone, this, &LSystemUi::drawFrameDone);
 	segDrawerThread.start();
 
 	// Segment animator (own thread does not really make sense, drawings have to be in the UI thread)
@@ -155,6 +156,7 @@ void LSystemUi::setupHelperControls()
 	connect(ui->chkShowSliders, &QCheckBox::stateChanged, this, &LSystemUi::onChkShowSlidersChanged);
 	connect(ui->chkShowLastIter, &QCheckBox::stateChanged, this, &LSystemUi::onChkShowLastIterStateChanged);
 	connect(ui->chkAntiAliasing, &QCheckBox::stateChanged, this, &LSystemUi::configLiveEdit);
+	connect(ui->chkAutoMax, &QCheckBox::stateChanged, this, &LSystemUi::configLiveEdit);
 
 	// Defaults
 	connect(ui->cmdResetDefaultOptions, &QPushButton::clicked, this, &LSystemUi::onCmdResetDefaultOptionsClicked);
@@ -336,7 +338,7 @@ void LSystemUi::startPaint(int x, int y)
 	invokeExec(drawData);
 }
 
-void LSystemUi::getAdditionalOptionsForSegmentsMeta(MetaData & execMeta)
+void LSystemUi::getAdditionalOptionsForSegmentsMeta(MetaData & execMeta, bool noMaximize)
 {
 	execMeta.execSegments = true;
 	execMeta.execActionStr = symbolsVisible();
@@ -357,6 +359,8 @@ void LSystemUi::getAdditionalOptionsForSegmentsMeta(MetaData & execMeta)
 	if (ok) execMeta.thickness = thickness;
 
 	execMeta.antiAliasing = ui->chkAntiAliasing->isChecked();
+
+	if (!noMaximize) execMeta.maximize = ui->chkAutoMax->isChecked();
 }
 
 void LSystemUi::showSymbols()
@@ -390,13 +394,12 @@ void LSystemUi::setBgColor()
 	if (col.isValid()) drawArea->setBgColor(col);
 }
 
-LSystemUi::DrawPlacement LSystemUi::getDrawPlacement() const
+LSystemUi::DrawPlacement LSystemUi::getDrawPlacement(const lsystem::ui::DrawingFrameSummary & drawingFrameResult) const
 {
 	LSystemUi::DrawPlacement rv;
 
-	const auto drawing = highlightedDrawing.value();
 	const auto & drawGeom = drawArea->geometry();
-	rv.drawingSize = drawing.botRight - drawing.topLeft;
+	rv.drawingSize = drawingFrameResult.botRight - drawingFrameResult.topLeft;
 	rv.areaTopLeft = DrawPlacement::outerDist;
 	rv.areaWidthHeight = QPoint(drawGeom.width(), drawArea->height());
 	rv.areaBotRight = rv.areaWidthHeight - DrawPlacement::outerDist;
@@ -575,6 +578,7 @@ void LSystemUi::loadConfigByLstIndex(const QModelIndex & index)
 	ConfigSet config = configList.getConfigByIndex(index);
 	if (config.valid) {
 		showConfigSet(config);
+		if (drawArea) drawArea->markDrawing(0);
 	} else {
 		showMessage("Config could not be loaded", MsgType::Error);
 	}
@@ -597,7 +601,7 @@ void LSystemUi::enableUndoRedo(bool undoOrRedo)
 	drawAreaMenu->redoAction->setEnabled(!undoOrRedo);
 }
 
-void LSystemUi::highlightDrawing(std::optional<DrawResult> drawResult)
+void LSystemUi::highlightDrawing(std::optional<DrawingSummary> drawResult)
 {
 	highlightedDrawing = drawResult;
 
@@ -606,8 +610,7 @@ void LSystemUi::highlightDrawing(std::optional<DrawResult> drawResult)
 		return;
 	}
 
-	drawPlacement = getDrawPlacement();
-	const auto & dp = drawPlacement;
+	const auto dp = getDrawPlacement(highlightedDrawing.value());
 
 	// first guess label pos
 	const auto & drawing = drawResult.value();
@@ -661,6 +664,10 @@ void LSystemUi::highlightDrawing(std::optional<DrawResult> drawResult)
 void LSystemUi::markDrawing()
 {
 	const auto markedDrawing = drawArea->getMarkedDrawingResult();
+	const auto newDrawingNum = markedDrawing.has_value() ? markedDrawing->drawingNum : 0;
+
+	if (newDrawingNum == markedDrawingNum) return;
+	markedDrawingNum = newDrawingNum;
 
 	drawAreaMenu->setDrawingActionsVisible(markedDrawing.has_value());
 
@@ -741,12 +748,10 @@ void LSystemUi::drawDone(const QSharedPointer<Drawing> & drawing, const QSharedP
 
 	lastDrawData = data;
 	const auto & uiData = data->uiDrawData;
-	drawing->offset = uiData.offset;
-	drawing->num = uiData.drawingNumToEdit.value_or(0);
 
 	drawArea->draw(drawing);
 
-	ui->playerControl->setMaxValueAndValue(drawing->segments.size(), drawing->segments.size());
+	if (!uiData.causedByLink) ui->playerControl->setMaxValueAndValue(drawing->segments.size(), drawing->segments.size());
 
 	if (uiData.resultOk) {
 		const QString msgPainted = printStr("Painted %1 segments, size is %2 px, <a href=\"%3\">show symbols</a>",
@@ -758,7 +763,13 @@ void LSystemUi::drawDone(const QSharedPointer<Drawing> & drawing, const QSharedP
 	}
 
 	// Needed if drawing was caused by a DrawLinks::Maximize operation.
-	ui->playerControl->unstashState();
+	if (uiData.causedByLink) ui->playerControl->unstashState();
+}
+
+void LSystemUi::drawFrameDone(const QSharedPointer<DrawingFrame> & drawing, const QSharedPointer<AllDrawData> & data)
+{
+	endInvokeExec(ExecKind::Draw);
+	maximizeDrawing(drawing->toDrawingFrameSummary(), data->uiDrawData.drawingNumToEdit, false);
 }
 
 void LSystemUi::configLiveEdit()
@@ -830,6 +841,12 @@ void LSystemUi::focusAngleEdit(FocusableLineEdit * lineEdit)
 
 void LSystemUi::focusLinearEdit(FocusableLineEdit * lineEdit)
 {
+	if (ui->chkAutoMax->isChecked() && lineEdit == ui->txtStep) {
+		showMessage("Cannot change step size when auto maximize is on", MsgType::Warning);
+		lineEdit->clearFocus();
+		return;
+	}
+
 	if (!ui->chkShowSliders->isChecked()) return;
 
 	const QPoint lineditTopLeft = lineEdit->parentWidget()->mapTo(ui->wdgEntire, lineEdit->geometry().topLeft());
@@ -837,34 +854,26 @@ void LSystemUi::focusLinearEdit(FocusableLineEdit * lineEdit)
 	const int x = lineditTopLeft.x() - 2;
 	const int y = lineditTopLeft.y() - quickLinear->geometry().height() / 2 + lineEdit->geometry().height() / 2;
 
-	double bigStep;
-	double smallStep;
-	double minValue;
-	double maxValue;
+	double smallStep = 1;
+	double bigStep = 3;
+	double minValue = 0;
+	double maxValue = 1;
 	double extFactor = 0;
 	double fineStepSize = 0;
 	if (lineEdit == ui->txtStep) {
-		smallStep = 1;
-		bigStep = 3;
 		minValue = 1;
 		maxValue = qMax(static_cast<double>(qCeil(lastValidConfigSet.stepSize)), 30.);
 		extFactor = 2;
 		fineStepSize = 0.1;
 	} else if (lineEdit == ui->txtIter) {
-		smallStep = 1;
-		bigStep = 3;
 		minValue = 1;
 		maxValue = qMax(lastValidConfigSet.numIter, 20u);
 		extFactor = 1.5;
 	} else if (lineEdit == ui->txtScaleDown) {
 		smallStep = 0.05;
 		bigStep = 0.15;
-		minValue = 0;
-		maxValue = 1;
 	} else if (lineEdit == ui->txtLastIterOpacity || lineEdit == ui->txtOpacity) {
-		smallStep = 1;
 		bigStep = 10;
-		minValue = 0;
 		maxValue = 100;
 	} else if (lineEdit == ui->txtThickness) {
 		smallStep = 0.25;
@@ -876,7 +885,6 @@ void LSystemUi::focusLinearEdit(FocusableLineEdit * lineEdit)
 		smallStep = 0.01;
 		bigStep = 0.1;
 		minValue = 0.01;
-		maxValue = 1;
 	} else {
 		// should not happen
 		return;
@@ -1080,66 +1088,11 @@ void LSystemUi::processDrawAction(const QString & link)
 
 	ui->playerControl->stashState();
 
-	const auto & dp = drawPlacement;
 	const auto & drawing = highlightedDrawing.value();
-
-	int xOff = drawing.offset.x();
-	int yOff = drawing.offset.y();
-
-	const auto translate = [&]() {
-		drawArea->translateHighlighted(QPoint(xOff, yOff));
-		ui->playerControl->unstashState();
-	};
 
 	if (link == DrawLinks::Maximize) {
 
-		const auto newStepSize = drawing.config.stepSize * dp.fct;
-
-		// calculate new y position
-
-		const auto predTopY = yOff - (yOff - drawing.topLeft.y()) * dp.fct;
-		const auto predBottomY = predTopY + dp.drawingSize.y() * dp.fct;
-
-		if (predTopY < dp.areaTopLeft.y()) {
-			yOff += dp.areaTopLeft.y() - predTopY;
-		} else if (predBottomY > dp.areaBotRight.y()) {
-			yOff -= (predBottomY - dp.areaBotRight.y());
-		}
-
-		// calculate new x position
-
-		const auto predLeftX = xOff - (xOff - drawing.topLeft.x()) * dp.fct;
-		const auto predRightX = predLeftX + dp.drawingSize.x() * dp.fct;
-
-		if (predLeftX < dp.areaTopLeft.x()) {
-			xOff += dp.areaTopLeft.x() - predLeftX;
-		} else if (predRightX > dp.areaBotRight.x()) {
-			xOff -= (predRightX - dp.areaBotRight.x());
-		}
-
-		if (drawing.config.stepSize != newStepSize) {
-
-			ConfigSet configSet = drawing.config;
-			configSet.stepSize = newStepSize;
-
-			disableConfigLiveEdit = true;
-			if (quickLinear->getLineEdit() == static_cast<QLineEdit *>(ui->txtStep)) {
-				quickLinear->setValue(newStepSize);
-			}
-			ui->txtStep->setText(util::formatFixed(newStepSize, 2));
-			disableConfigLiveEdit = false;
-			lastValidConfigSet = configSet;
-
-			QSharedPointer<AllDrawData> data = QSharedPointer<AllDrawData>::create();
-			data->uiDrawData.offset = QPoint{xOff, yOff};
-			data->uiDrawData.drawingNumToEdit = drawing.drawingNum;
-			data->config = configSet;
-
-			getAdditionalOptionsForSegmentsMeta(data->meta);
-			invokeExec(data);
-		} else {
-			translate();
-		}
+		maximizeDrawing(drawing, drawing.drawingNum, true);
 
 	} else {
 		bool moveLeft = false;
@@ -1169,12 +1122,76 @@ void LSystemUi::processDrawAction(const QString & link)
 			moveLeft = true;
 		}
 
+		const auto dp = getDrawPlacement(highlightedDrawing.value());
+		int xOff = drawing.offset.x();
+		int yOff = drawing.offset.y();
+
 		if (moveDown) yOff += dp.areaTopLeft.y() - drawing.topLeft.y();
 		if (moveUp) yOff += dp.areaBotRight.y() - drawing.botRight.y();
 		if (moveLeft) xOff += dp.areaBotRight.x() - drawing.botRight.x();
 		if (moveRight) xOff += dp.areaTopLeft.x() - drawing.topLeft.x();
 
-		translate();
+		drawArea->translateHighlighted(QPoint(xOff, yOff));
+		ui->playerControl->unstashState();
+	}
+}
+
+void LSystemUi::maximizeDrawing(const DrawingFrameSummary & drawing, std::optional<qint64> drawingNumToEdit, bool causedByLink)
+{
+	const auto dp = getDrawPlacement(drawing);
+
+	const auto newStepSize = drawing.config.stepSize * dp.fct;
+
+	int xOff = drawing.offset.x();
+	int yOff = drawing.offset.y();
+
+	// calculate new y position
+
+	const auto predTopY = yOff - (yOff - drawing.topLeft.y()) * dp.fct;
+	const auto predBottomY = predTopY + dp.drawingSize.y() * dp.fct;
+
+	if (predTopY < dp.areaTopLeft.y()) {
+		yOff += dp.areaTopLeft.y() - predTopY;
+	} else if (predBottomY > dp.areaBotRight.y()) {
+		yOff -= (predBottomY - dp.areaBotRight.y());
+	}
+
+	// calculate new x position
+
+	const auto predLeftX = xOff - (xOff - drawing.topLeft.x()) * dp.fct;
+	const auto predRightX = predLeftX + dp.drawingSize.x() * dp.fct;
+
+	if (predLeftX < dp.areaTopLeft.x()) {
+		xOff += dp.areaTopLeft.x() - predLeftX;
+	} else if (predRightX > dp.areaBotRight.x()) {
+		xOff -= (predRightX - dp.areaBotRight.x());
+	}
+
+	if (drawing.config.stepSize != newStepSize || !causedByLink) {
+
+		ConfigSet configSet = drawing.config;
+		configSet.stepSize = newStepSize;
+
+		disableConfigLiveEdit = true;
+		if (quickLinear->getLineEdit() == static_cast<QLineEdit *>(ui->txtStep)) {
+			quickLinear->setValue(newStepSize);
+		}
+		ui->txtStep->setText(util::formatFixed(newStepSize, 2));
+		disableConfigLiveEdit = false;
+		lastValidConfigSet = configSet;
+
+		QSharedPointer<AllDrawData> data = QSharedPointer<AllDrawData>::create();
+		data->uiDrawData.offset = QPoint{xOff, yOff};
+		data->uiDrawData.drawingNumToEdit = drawingNumToEdit;
+		data->uiDrawData.causedByLink = causedByLink;
+		data->config = configSet;
+
+		getAdditionalOptionsForSegmentsMeta(data->meta, true);
+		invokeExec(data);
+		// unstash is called in drawDone
+	} else {
+		drawArea->translateHighlighted(QPoint(xOff, yOff));
+		ui->playerControl->unstashState();
 	}
 }
 

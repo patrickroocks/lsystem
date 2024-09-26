@@ -97,6 +97,7 @@ void PlayerControl::unstashState()
 	if (!stashedState) return;
 
 	if (stashedState->value <= curMaxValue) setValue(stashedState->value);
+	emit playerValueChanged(curValue);
 	setPlaying(stashedState->playing);
 
 	stashedState = {};

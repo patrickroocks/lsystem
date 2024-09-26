@@ -15,6 +15,7 @@ public slots:
 
 signals:
 	void drawDone(const QSharedPointer<ui::Drawing> & drawing, const QSharedPointer<common::AllDrawData> & data);
+	void drawFrameDone(const QSharedPointer<ui::DrawingFrame> & drawing, const QSharedPointer<common::AllDrawData> & data);
 };
 
 } // namespace lsystem
