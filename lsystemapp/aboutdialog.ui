@@ -10,6 +10,12 @@
     <height>291</height>
    </rect>
   </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
   <property name="windowTitle">
    <string>About lsystem</string>
   </property>
@@ -43,7 +49,7 @@ border: 1px solid black;</string>
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#4e9a06;&quot;&gt;lystem&lt;/span&gt;&lt;/p&gt;&lt;p&gt;An interactive simulator for Lindenmayer systems&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Version: %1&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://github.com/patrickroocks/lsystem&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;lsystem on GitHub&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://www.p-roocks.de/wordpress2/lsystem-simulator/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;lsystem on my personal web page&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Copyright 2021-%2 by Patrick Roocks (&lt;a href=&quot;mailto:mail@p-roocks.de&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;mail@p-roocks.de&lt;/span&gt;&lt;/a&gt;)&lt;/p&gt;&lt;p&gt;License: MIT License&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="alignment">
-    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+    <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
    </property>
    <property name="openExternalLinks">
     <bool>true</bool>

@@ -1,7 +1,10 @@
 #include "drawarea.h"
 
+#include <QCheckBox>
 #include <QClipboard>
+#include <QColorDialog>
 #include <QGuiApplication>
+#include <QMessageBox>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPointF>
@@ -13,6 +16,7 @@ namespace lsystem::ui {
 
 DrawArea::DrawArea(QWidget * parent)
 	: QWidget(parent)
+	, ctxMenu(this)
 {
 	move.menu.addAction("move to here", this, &DrawArea::moveDrawingHere);
 }
@@ -39,42 +43,15 @@ void DrawArea::draw(const QSharedPointer<ui::Drawing> & drawing)
 
 	// In general, the drawing dimensions changed, so the icons for the highlighted drawing have to be updated.
 	emit highlightChanged(drawings.getHighlightedDrawResult());
-	emit markingChanged();
 
 	update();
 	setNextUndoRedo(true);
-}
-
-void DrawArea::restoreLastImage()
-{
-	drawings.restoreLast();
-	update();
-	setNextUndoRedo(!nextUndoOrRedo);
 }
 
 void DrawArea::copyToClipboardFull()
 {
 	QClipboard * clipboard = QGuiApplication::clipboard();
 	clipboard->setImage(drawings.getImage());
-}
-
-void DrawArea::copyToClipboardMarked(bool transparent)
-{
-	const QPoint drawingSize = drawings.getDrawingSize(drawings.getMarkedDrawingNum());
-	if (drawingSize.isNull()) return;
-
-	QClipboard * clipboard = QGuiApplication::clipboard();
-	const QPoint size = drawingSize + QPoint(1, 1);
-	QImage newImage(QSize(size.x(), size.y()), QImage::Format_ARGB32);
-	QPainter painter(&newImage);
-
-	if (transparent) {
-		newImage.fill(qRgba(0, 0, 0, 0)); // transparent
-	} else {
-		newImage.fill(drawings.backColor);
-	}
-	painter.drawImage(QPoint(0, 0), drawings.getDrawingImage(drawings.getMarkedDrawingNum()));
-	clipboard->setImage(newImage);
 }
 
 void DrawArea::deleteMarked()
@@ -90,7 +67,6 @@ void DrawArea::deleteDrawing(int drawingNum)
 {
 	const bool wasHighlighted = drawingNum == drawings.getHighlightedDrawingNum();
 	drawings.deleteDrawing(drawingNum);
-	emit markingChanged();
 	if (wasHighlighted) emit highlightChanged({});
 	update();
 	setNextUndoRedo(true);
@@ -134,15 +110,6 @@ void DrawArea::redrawAndUpdate(bool keepContent)
 		emit highlightChanged(drawings.getHighlightedDrawResult());
 	}
 }
-
-void DrawArea::setBgColor(const QColor & col)
-{
-	drawings.backColor = col;
-	drawings.redraw();
-	update();
-}
-
-QColor DrawArea::getBgColor() const { return drawings.backColor; }
 
 std::optional<DrawingSummary> DrawArea::getMarkedDrawingResult() { return drawings.getMarkedDrawResult(); }
 
@@ -201,7 +168,7 @@ void DrawArea::mousePressEvent(QMouseEvent * event)
 	if (clickedDrawing > 0 && clickedDrawing == drawings.getMarkedDrawingNum() && event->button() == Qt::MouseButton::LeftButton) {
 		move.startOffset = drawings.getDrawingOffset(drawings.getMarkedDrawingNum()) - event->position().toPoint();
 		move.mode = MoveState::ReadyForMove;
-		setCursor(Qt::SizeAllCursor);
+		setCursor(Qt::ClosedHandCursor);
 		cancelEvent = true;
 	} else if (drawings.getMarkedDrawingNum() > 0 && clickedDrawing == 0) {
 		if (event->button() == Qt::MouseButton::RightButton) {
@@ -216,6 +183,13 @@ void DrawArea::mousePressEvent(QMouseEvent * event)
 
 	markDrawing(clickedDrawing);
 
+	if (!cancelEvent && event->button() == Qt::MouseButton::RightButton) {
+		ctxMenu.setDrawingActionsVisible(clickedDrawing > 0);
+		ctxMenu.menu.exec(event->globalPosition().toPoint());
+		cancelEvent = true;
+	}
+
+	// forward to main window
 	if (!cancelEvent) {
 		const auto pos = event->position().toPoint();
 		emit mouseClick(pos.x(), pos.y(), event->button(), drawings.getMarkedDrawingNum() > 0);
@@ -225,7 +199,6 @@ void DrawArea::mousePressEvent(QMouseEvent * event)
 void DrawArea::markDrawing(int drawingNum)
 {
 	if (drawings.setMarkedDrawing(drawingNum)) {
-		emit markingChanged();
 		update();
 	}
 }
@@ -253,17 +226,13 @@ void DrawArea::mouseMoveEvent(QMouseEvent * event)
 		}
 		const QPoint newOffset = move.startOffset + event->position().toPoint();
 		if (drawings.moveDrawing(drawings.getMarkedDrawingNum(), newOffset, false)) update();
+		setCursor(Qt::ClosedHandCursor);
 
 	} else {
 		const qint64 mouseOverDrawingNum = drawings.getDrawingByPos(event->pos());
-		if (drawings.getMarkedDrawingNum() == 0) {
-			if (mouseOverDrawingNum > 0) {
-				setCursor(Qt::ArrowCursor);
-			} else {
-				setCursor(Qt::CrossCursor);
-			}
-		}
-
+		const bool moveCouldStart = (mouseOverDrawingNum > 0 && mouseOverDrawingNum == drawings.getMarkedDrawingNum());
+		const bool readyForPaint = (drawings.getMarkedDrawingNum() == 0 && mouseOverDrawingNum == 0);
+		setCursor(moveCouldStart ? Qt::OpenHandCursor : (readyForPaint ? Qt::CrossCursor : Qt::ArrowCursor));
 		highlightDrawing(mouseOverDrawingNum);
 	}
 }
@@ -279,7 +248,119 @@ void DrawArea::highlightDrawing(int drawingNum)
 void DrawArea::setNextUndoRedo(bool undoOrRedo)
 {
 	nextUndoOrRedo = undoOrRedo;
-	emit enableUndoRedo(nextUndoOrRedo);
+	ctxMenu.undoAction->setEnabled(undoOrRedo);
+	ctxMenu.redoAction->setEnabled(!undoOrRedo);
+}
+
+void DrawArea::copyToClipboardMarked()
+{
+	bool ok;
+	const bool transparent = ctxMenu.getTransparencyForExport(&ok);
+	if (!ok) return;
+
+	const QPoint drawingSize = drawings.getDrawingSize(drawings.getMarkedDrawingNum());
+	if (drawingSize.isNull()) return;
+
+	QClipboard * clipboard = QGuiApplication::clipboard();
+	const QPoint size = drawingSize + QPoint(1, 1);
+	QImage newImage(QSize(size.x(), size.y()), QImage::Format_ARGB32);
+	QPainter painter(&newImage);
+
+	if (transparent) {
+		newImage.fill(qRgba(0, 0, 0, 0)); // transparent
+	} else {
+		newImage.fill(drawings.backColor);
+	}
+	painter.drawImage(QPoint(0, 0), drawings.getDrawingImage(drawings.getMarkedDrawingNum()));
+	clipboard->setImage(newImage);
+}
+
+void DrawArea::undoRedo()
+{
+	drawings.restoreLast();
+	update();
+	setNextUndoRedo(!nextUndoOrRedo);
+}
+
+void DrawArea::setBgColor()
+{
+	const QColor col = QColorDialog::getColor(drawings.backColor, this);
+	if (col.isValid()) {
+
+		drawings.backColor = col;
+		drawings.redraw();
+		update();
+	}
+}
+
+// -------------------- ContextMenu --------------------
+
+DrawArea::ContextMenu::ContextMenu(DrawArea * parent)
+	: menu(parent)
+	, drawArea(parent)
+{
+	drawingActions << menu.addAction("Delete drawing", Qt::Key_Delete, parent, &DrawArea::deleteMarked)
+				   << menu.addAction("Copy drawing", Qt::CTRL | Qt::Key_C, parent, &DrawArea::copyToClipboardMarked)
+				   << menu.addAction("Send to front", parent, &DrawArea::sendToFrontMarked)
+				   << menu.addAction("Send to back", parent, &DrawArea::sendToBackMarked) << menu.addSeparator();
+
+	setDrawingActionsVisible(false);
+
+	undoAction = menu.addAction("Undo", Qt::CTRL | Qt::Key_Z, parent, &DrawArea::undoRedo);
+	undoAction->setEnabled(false);
+	redoAction = menu.addAction("Redo", Qt::CTRL | Qt::Key_Y, parent, &DrawArea::undoRedo);
+	redoAction->setEnabled(false);
+	menu.addSeparator();
+
+	menu.addAction("Clear all", Qt::CTRL | Qt::Key_Delete, parent, &DrawArea::clear);
+	menu.addAction("Set Bg-Color", Qt::CTRL | Qt::Key_B, parent, &DrawArea::setBgColor);
+	menu.addSeparator();
+
+	menu.addAction("Copy canvas", parent, &DrawArea::copyToClipboardFull);
+	menu.addSeparator();
+
+	menu.addAction("Show symbols window", Qt::CTRL | Qt::SHIFT | Qt::Key_S, parent, &DrawArea::emitShowSymbols);
+}
+
+void DrawArea::ContextMenu::setDrawingActionsVisible(bool visible)
+{
+	// shortcuts become enabled/disabled with making the actions (un)visible
+	for (QAction * action : std::as_const(drawingActions)) {
+		action->setVisible(visible);
+	}
+}
+
+bool DrawArea::ContextMenu::getTransparencyForExport(bool * ok)
+{
+	bool transparent;
+	if (transparencyForExport != TransparencyOpt::Ask) {
+		transparent = (transparencyForExport == TransparencyOpt::Transparency);
+	} else {
+		bool doNotAskAnymore = false;
+		// QMessageBox will take ownership (will delete the checkbox)
+		QCheckBox * chkTransparency = new QCheckBox("Don't ask anymore until restart of lsystem");
+		connect(chkTransparency, &QCheckBox::stateChanged, [&doNotAskAnymore](int state) { doNotAskAnymore = static_cast<bool>(state); });
+
+		QMessageBox msgBox(QMessageBox::Icon::Question,
+						   "Transparency",
+						   "Do you want to export the drawing with transparent background (will not work in all programs)?",
+						   QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,
+						   drawArea->parentWidget());
+		msgBox.setDefaultButton(QMessageBox::Yes);
+		msgBox.setCheckBox(chkTransparency);
+		QMessageBox::StandardButton res = static_cast<QMessageBox::StandardButton>(msgBox.exec());
+		if (res == QMessageBox::Cancel) {
+			*ok = false;
+			return false;
+		}
+		transparent = (res == QMessageBox::Yes);
+		if (doNotAskAnymore) {
+			transparencyForExport = (transparent ? TransparencyOpt::Transparency : TransparencyOpt::NoTransparency);
+		}
+	}
+
+	*ok = true;
+	return transparent;
 }
 
 } // namespace lsystem::ui

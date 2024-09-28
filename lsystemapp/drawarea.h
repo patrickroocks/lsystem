@@ -16,10 +16,8 @@ public:
 
 	void clear();
 	void draw(const QSharedPointer<ui::Drawing> & drawing);
-	void restoreLastImage();
 	void copyToClipboardFull();
 
-	void copyToClipboardMarked(bool transparent);
 	void deleteMarked();
 	void deleteIndex(int index);
 	void sendToFrontMarked();
@@ -31,14 +29,13 @@ public:
 
 	void redrawAndUpdate(bool keepContent = false);
 
-	void setBgColor(const QColor & col);
-	QColor getBgColor() const;
-
 	std::optional<DrawingSummary> getMarkedDrawingResult();
 
 	DrawingCollection & getDrawingCollection() { return drawings; }
 
 	void setIgnoreSelectionChange(bool ignore) { ignoreSelectionChange = ignore; }
+
+	QMenu * getContextMenu() { return &ctxMenu.menu; }
 
 public slots:
 	common::AnimatorResult newAnimationStep(int step, bool relativeStep);
@@ -46,10 +43,9 @@ public slots:
 	void moveDrawingHere();
 
 signals:
-	void markingChanged();
 	void highlightChanged(std::optional<DrawingSummary>);
 	void mouseClick(int x, int y, Qt::MouseButton button, bool drawingMarked);
-	void enableUndoRedo(bool undoOrRedo);
+	void showSymbols();
 
 protected:
 	void paintEvent(QPaintEvent * event) override;
@@ -62,6 +58,12 @@ private:
 	void setNextUndoRedo(bool undoOrRedo);
 	void highlightDrawing(int drawingNum);
 	void deleteDrawing(int drawingNum);
+
+private slots:
+	void copyToClipboardMarked();
+	void undoRedo();
+	void setBgColor();
+	void emitShowSymbols() { emit showSymbols(); }
 
 private:
 	DrawingCollection drawings;
@@ -76,13 +78,36 @@ private:
 		MoveByMenu
 	};
 
-	struct MoveInfo
+	enum class TransparencyOpt
+	{
+		Ask = 0,
+		NoTransparency = 1,
+		Transparency = 2
+	};
+
+	struct MoveInfo final
 	{
 		MoveState mode = MoveState::NoMove;
 		QPoint moveToPos;
 		QPoint startOffset;
 		QMenu menu;
 	} move;
+
+	class ContextMenu final
+	{
+	public:
+		ContextMenu(DrawArea * parent);
+		QMenu menu;
+		QAction * undoAction;
+		QAction * redoAction;
+		void setDrawingActionsVisible(bool visible);
+		bool getTransparencyForExport(bool * ok);
+
+	private:
+		DrawArea * const drawArea;
+		QList<QAction *> drawingActions;
+		TransparencyOpt transparencyForExport = TransparencyOpt::Ask;
+	} ctxMenu;
 
 	bool ignoreSelectionChange = false;
 };

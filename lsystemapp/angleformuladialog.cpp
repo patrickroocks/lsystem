@@ -7,6 +7,8 @@ AngleFormulaDialog::AngleFormulaDialog(QWidget * parent, const QString & initial
 	, strOut(rightAngleResult)
 {
 	ui->setupUi(this);
+	setFixedSize(size());
+
 	ui->txtExampleLeftAngle->setText(initialLeftAngle);
 
 	if (angleEvaluator.evaluate(initialLeftAngle, rightAngleResult).isFormula) {

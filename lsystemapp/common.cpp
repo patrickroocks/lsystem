@@ -1,22 +1,24 @@
 #include "common.h"
 
+#include <jsonkeys.h>
 #include <util/print.h>
 #include <util/qtcontutils.h>
 
 #include <QtMath>
 
 using namespace util;
+using namespace lsystem::constants;
 
 namespace lsystem::common {
 
 Definition::Definition(const QJsonObject & obj)
 {
-	const QByteArray literalStr = obj["literal"].toString().toLatin1();
+	const QByteArray literalStr = obj[JsonKeyLiteral].toString().toLatin1();
 	literal = literalStr.size() == 1 ? literalStr.data()[0] : '\0';
-	command = obj["command"].toString();
-	color = obj["color"].toInt();
-	paint = obj["paint"].toBool();
-	move = obj["move"].toBool();
+	command = obj[JsonKeyCommand].toString();
+	color = obj[JsonKeyColor].toInt();
+	paint = obj[JsonKeyPaint].toBool();
+	move = obj[JsonKeyMove].toBool();
 }
 
 Definition::Definition(char literal, const QString & command)
@@ -29,11 +31,11 @@ Definition::Definition(char literal, const QString & command)
 QJsonObject Definition::toJson() const
 {
 	QJsonObject rv;
-	rv["literal"] = QString(literal);
-	rv["command"] = command;
-	rv["color"] = color.value();
-	rv["paint"] = paint;
-	rv["move"] = paint;
+	rv[JsonKeyLiteral] = QString(literal);
+	rv[JsonKeyCommand] = command;
+	rv[JsonKeyColor] = color.value();
+	rv[JsonKeyPaint] = paint;
+	rv[JsonKeyMove] = move;
 	return rv;
 }
 
@@ -50,11 +52,11 @@ QPointF LineSeg::pointNegY() const { return QPoint(start.x(), -start.y()); }
 // ---------------------------------------------------------------------------
 
 ConfigSet::ConfigSet(const QJsonObject & obj)
-	: turn({obj["turnLeft"].toDouble(), obj["turnRight"].toDouble()})
-	, scaling(obj["scaling"].toDouble())
-	, startAngle(obj["startAngle"].toDouble())
-	, numIter(obj["numIter"].toInt())
-	, stepSize(obj["stepSize"].toDouble())
+	: turn({obj[JsonKeyTurnLeft].toDouble(), obj[JsonKeyTurnRight].toDouble()})
+	, scaling(obj[JsonKeyScaling].toDouble())
+	, startAngle(obj[JsonKeyStartAngle].toDouble())
+	, numIter(obj[JsonKeyNumIter].toInt())
+	, stepSize(obj[JsonKeyStepSize].toDouble())
 {
 	for (const auto & jsonDef : obj["definitions"].toArray()) {
 		definitions << Definition(jsonDef.toObject());
@@ -65,12 +67,12 @@ QJsonObject ConfigSet::toJson() const
 {
 	QJsonObject rv;
 
-	rv["turnLeft"] = turn.left;
-	rv["turnRight"] = turn.right;
-	rv["scaling"] = scaling;
-	rv["startAngle"] = startAngle;
-	rv["stepSize"] = stepSize;
-	rv["numIter"] = static_cast<int>(numIter);
+	rv[JsonKeyTurnLeft] = turn.left;
+	rv[JsonKeyTurnRight] = turn.right;
+	rv[JsonKeyScaling] = scaling;
+	rv[JsonKeyStartAngle] = startAngle;
+	rv[JsonKeyStepSize] = stepSize;
+	rv[JsonKeyNumIter] = static_cast<int>(numIter);
 
 	QJsonArray jsonDefinitions;
 	for (const Definition & def : definitions) {
@@ -109,13 +111,13 @@ QString ExecResult::toString() const { return printStr("ExecResult(%1, segments:
 // ----------------------------------------------------------------------------
 
 AppSettings::AppSettings(const QJsonObject & obj)
-	: maxStackSize(obj["maxStackSize"].toInt())
+	: maxStackSize(obj[JsonKeySettingsMaxStackSize].toInt())
 {}
 
 QJsonObject AppSettings::toJson() const
 {
 	QJsonObject rv;
-	rv["maxStackSize"] = static_cast<int>(maxStackSize);
+	rv[JsonKeySettingsMaxStackSize] = static_cast<int>(maxStackSize);
 	return rv;
 }
 

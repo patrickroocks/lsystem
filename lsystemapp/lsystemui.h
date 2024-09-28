@@ -1,13 +1,8 @@
 #pragma once
 
 #include <angleevaluator.h>
-#include <configfilestore.h>
-#include <configlist.h>
-#include <definitionmodel.h>
-#include <drawarea.h>
-#include <segmentanimator.h>
-#include <segmentdrawer.h>
-#include <simulator.h>
+
+#include <drawing.h>
 #include <symbolsdialog.h>
 #include <util/clickablelabel.h>
 #include <util/focusablelineedit.h>
@@ -29,6 +24,19 @@ namespace Ui {
 class LSystemUi;
 }
 QT_END_NAMESPACE
+
+namespace lsystem::ui {
+class DrawArea;
+} // namespace lsystem::ui
+
+namespace lsystem {
+class ConfigList;
+class ConfigFileStore;
+class DefinitionModel;
+class SegmentAnimator;
+class SegmentDrawer;
+class Simulator;
+} // namespace lsystem
 
 class LSystemUi : public QMainWindow
 {
@@ -58,19 +66,16 @@ private slots:
 	void drawFrameDone(const QSharedPointer<lsystem::ui::DrawingFrame> & drawing, const QSharedPointer<lsystem::common::AllDrawData> & data);
 
 	// from drawarea
-	void enableUndoRedo(bool undoOrRedo);
-	void highlightDrawing(std::optional<lsystem::ui::DrawingSummary> drawResult);
-	void markDrawing();
+	void highlightChanged(std::optional<lsystem::ui::DrawingSummary> drawResult);
+	void markingChanged();
 	void processDrawAction(const QString & link);
+	void showSymbols();
 
 	// from different other components
 	void showErrorInUi(const QString & errString);
 
 	// from animator
 	lsystem::common::AnimatorResult newAnimationStep(int step, bool relativeStep);
-
-	// from myself (menu)
-	void copyToClipboardMarked();
 
 	// controls
 	void onLblGradientStartMousePressed(QMouseEvent * event);
@@ -132,12 +137,11 @@ private:
 	void setupHelperControls();
 	void setupStatusAndTimers();
 	void setupInteractiveControls();
-	void setupDrawArea();
+	void setupDrawAreaAndLayers();
 
 	// Draw Area
 	void drawAreaClick(int x, int y, Qt::MouseButton button, bool drawingMarked);
 	void startPaint(int x, int y);
-	void setBgColor();
 	DrawPlacement getDrawPlacement(const lsystem::ui::DrawingFrameSummary & drawingFrameResult) const;
 	void maximizeDrawing(const lsystem::ui::DrawingFrameSummary & drawing, std::optional<qint64> drawingNumToEdit, bool causedByLink);
 
@@ -153,7 +157,6 @@ private:
 
 	// additional options & windows
 	void getAdditionalOptionsForSegmentsMeta(lsystem::common::MetaData & execMeta, bool noMaximize = false);
-	void showSymbols();
 	bool symbolsVisible() const;
 	void showRightAngleDialog();
 	void updateGradientStyle(bool updateAfterClick = false);
@@ -177,9 +180,7 @@ private:
 	void showVarError(const QString & errorVar, const QString & extraInfo = QString());
 	void resetStatus();
 	void showSettings();
-	void clearAll();
 	void toggleHelperFrame(QPushButton * button, QWidget * frame);
-	void undoRedo();
 
 	// Execution helpers
 	enum class ExecKind
@@ -197,18 +198,18 @@ private:
 
 private:
 	Ui::LSystemUi * const ui;
-	lsystem::ui::DrawArea * drawArea = nullptr;
+	lsystem::ui::DrawArea * drawArea = nullptr; // instance lives within ui
 
 	QScopedPointer<TableItemDelegateAutoUpdate> tableItemDelegate;
 	QScopedPointer<QuickAngle> quickAngle;
 	QScopedPointer<QuickLinear> quickLinear;
 
-	lsystem::DefinitionModel defModel;
-	lsystem::ConfigList configList;
-	lsystem::ConfigFileStore configFileStore;
-	lsystem::Simulator simulator;
+	QScopedPointer<lsystem::DefinitionModel> defModel;
+	QScopedPointer<lsystem::ConfigList> configList;
+	QScopedPointer<lsystem::ConfigFileStore> configFileStore;
+	QScopedPointer<lsystem::Simulator> simulator;
 	QThread simulatorThread;
-	lsystem::SegmentDrawer segDrawer;
+	QScopedPointer<lsystem::SegmentDrawer> segDrawer;
 	QThread segDrawerThread;
 	QScopedPointer<lsystem::SegmentAnimator> segAnimator;
 
@@ -226,21 +227,6 @@ private:
 
 	QTimer messageDecayTimer;
 
-	class DrawAreaMenu
-	{
-	public:
-		DrawAreaMenu(LSystemUi * parent);
-		QMenu menu;
-		QAction * undoAction;
-		QAction * redoAction;
-
-		void setDrawingActionsVisible(bool visible);
-
-	private:
-		QList<QAction *> drawingActions;
-	};
-	QScopedPointer<DrawAreaMenu> drawAreaMenu;
-
 	struct StatusMenu
 	{
 		StatusMenu(LSystemUi * parent);
@@ -252,18 +238,8 @@ private:
 	QString curConfigName;
 	std::optional<lsystem::ui::DrawingSummary> highlightedDrawing;
 	QScopedPointer<ClickableLabel> lblDrawActions;
-
-	enum class TransparencyOpt
-	{
-		Ask = 0,
-		NoTransparency = 1,
-		Transparency = 2
-	} transparencyOpt
-		= TransparencyOpt::Ask;
-
 	QScopedPointer<SymbolsDialog> symbolsDialog;
 	AngleEvaluator angleEvaluator;
 	lsystem::common::ColorGradient colorGradient;
 	QSharedPointer<lsystem::common::AllDrawData> lastDrawData;
-	qint64 markedDrawingNum = 0;
 };

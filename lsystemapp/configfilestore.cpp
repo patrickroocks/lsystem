@@ -1,31 +1,32 @@
 #include "configfilestore.h"
 
+#include <jsonkeys.h>
 #include <util/print.h>
 
 using namespace lsystem::common;
+using namespace lsystem::constants;
 using namespace util;
 
 namespace {
 
 const constexpr char * UserConfigFile = "config.json";
 const constexpr char * PredefinedConfigFile = ":/data/predefined-config.json";
-
 }
 
 namespace lsystem {
 
 AppConfig::AppConfig(const QJsonObject & obj)
-	: isNull(obj.find("settings") == obj.end() || obj.find("configs") == obj.end())
-	, settings(obj["settings"].toObject())
-	, configMap(obj["configs"].toObject())
+	: isNull(obj.find(JsonKeySettings) == obj.end() || obj.find("configs") == obj.end())
+	, settings(obj[JsonKeySettings].toObject())
+	, configMap(obj[JsonKeyConfigs].toObject())
 {
 }
 
 QJsonObject AppConfig::toJson() const
 {
 	QJsonObject rv;
-	rv["settings"] = settings.toJson();
-	rv["configs"] = configMap.toJson();
+	rv[JsonKeySettings] = settings.toJson();
+	rv[JsonKeyConfigs] = configMap.toJson();
 	return rv;
 }
 
@@ -41,7 +42,7 @@ void ConfigFileStore::loadConfig()
 			preConfigs = appConfig.configMap;
 			currentConfig.settings = appConfig.settings;
 		} else {
-			showError(printStr("predefined config file %1 could not be loaded", QFileInfo(PredefinedConfigFile)));
+			emit showError(printStr("predefined config file %1 could not be loaded", QFileInfo(PredefinedConfigFile)));
 		}
 	}
 
@@ -50,7 +51,7 @@ void ConfigFileStore::loadConfig()
 		if (!appConfig.isNull) {
 			currentConfig = appConfig;
 		} else {
-			showError(printStr("user config file %1 could not be loaded", QFileInfo(UserConfigFile)));
+			emit showError(printStr("user config file %1 could not be loaded", QFileInfo(UserConfigFile)));
 		}
 	} else {
 		saveCurrentConfig();

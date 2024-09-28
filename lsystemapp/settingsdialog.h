@@ -8,21 +8,24 @@ namespace Ui {
 class settingsdialog;
 }
 
+namespace lsystem {
+class ConfigFileStore;
+}
+
 class SettingsDialog : public QDialog
 {
 	Q_OBJECT
 
 public:
-	explicit SettingsDialog(QWidget * parent, lsystem::ConfigFileStore & cfgStore);
+	explicit SettingsDialog(QWidget * parent, lsystem::ConfigFileStore * cfgStore);
 	~SettingsDialog();
 
-private slots:
-	void on_buttonBox_accepted();
-	void on_buttonBox_rejected();
+protected:
+	void accept() override;
 
 private:
 	Ui::settingsdialog * const ui;
-	lsystem::ConfigFileStore & cfgStore;
+	lsystem::ConfigFileStore * const cfgStore;
 	lsystem::common::AppSettings settings;
 
 };

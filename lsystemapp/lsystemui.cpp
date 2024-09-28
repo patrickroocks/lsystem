@@ -3,7 +3,14 @@
 
 #include <aboutdialog.h>
 #include <angleformuladialog.h>
+#include <configfilestore.h>
+#include <configlist.h>
+#include <definitionmodel.h>
+#include <drawarea.h>
+#include <segmentanimator.h>
+#include <segmentdrawer.h>
 #include <settingsdialog.h>
+#include <simulator.h>
 #include <util/containerutils.h>
 #include <util/print.h>
 #include <util/tableitemdelegate.h>
@@ -48,8 +55,9 @@ QString generateBgColorStyle(const QColor & col)
 LSystemUi::LSystemUi(QWidget * parent)
 	: QMainWindow(parent)
 	, ui(new Ui::LSystemUi)
-	, defModel(this)
-	, configList(this)
+	, defModel(new DefinitionModel(this))
+	, configList(new ConfigList(this))
+	, configFileStore(new ConfigFileStore())
 {
 	ui->setupUi(this);
 
@@ -61,23 +69,25 @@ LSystemUi::LSystemUi(QWidget * parent)
 	setupHelperControls();
 	setupStatusAndTimers();
 	setupInteractiveControls();
-	setupDrawArea();
+	setupDrawAreaAndLayers();
 }
 
 void LSystemUi::setupServices()
 {
 	// setup the background service for generating/animating the fractals
-	simulator.moveToThread(&simulatorThread);
-	connect(this, &LSystemUi::simulatorExec, &simulator, &Simulator::exec);
-	connect(&simulator, &Simulator::segmentsReceived, this, &LSystemUi::processSimulatorSegments);
-	connect(&simulator, &Simulator::actionStrReceived, this, &LSystemUi::processActionStr);
-	connect(&simulator, &Simulator::errorReceived, this, &LSystemUi::showErrorInUi);
+	simulator.reset(new Simulator());
+	simulator->moveToThread(&simulatorThread);
+	connect(this, &LSystemUi::simulatorExec, simulator.get(), &Simulator::exec);
+	connect(simulator.get(), &Simulator::segmentsReceived, this, &LSystemUi::processSimulatorSegments);
+	connect(simulator.get(), &Simulator::actionStrReceived, this, &LSystemUi::processActionStr);
+	connect(simulator.get(), &Simulator::errorReceived, this, &LSystemUi::showErrorInUi);
 	simulatorThread.start();
 
-	segDrawer.moveToThread(&segDrawerThread);
-	connect(this, &LSystemUi::startDraw, &segDrawer, &SegmentDrawer::startDraw);
-	connect(&segDrawer, &SegmentDrawer::drawDone, this, &LSystemUi::drawDone);
-	connect(&segDrawer, &SegmentDrawer::drawFrameDone, this, &LSystemUi::drawFrameDone);
+	segDrawer.reset(new SegmentDrawer());
+	segDrawer->moveToThread(&segDrawerThread);
+	connect(this, &LSystemUi::startDraw, segDrawer.get(), &SegmentDrawer::startDraw);
+	connect(segDrawer.get(), &SegmentDrawer::drawDone, this, &LSystemUi::drawDone);
+	connect(segDrawer.get(), &SegmentDrawer::drawFrameDone, this, &LSystemUi::drawFrameDone);
 	segDrawerThread.start();
 
 	// Segment animator (own thread does not really make sense, drawings have to be in the UI thread)
@@ -93,14 +103,14 @@ void LSystemUi::setupServices()
 
 void LSystemUi::setupConfigList()
 {
-	connect(&configList, &ConfigList::configMapUpdated, &configFileStore, &ConfigFileStore::newConfigMap);
-	connect(&configFileStore, &ConfigFileStore::loadedPreAndUserConfigs, &configList, &ConfigList::newPreAndUserConfigs);
-	connect(&configFileStore, &ConfigFileStore::showError, this, &LSystemUi::showErrorInUi);
-	connect(&configFileStore, &ConfigFileStore::newStackSize, &simulator, &Simulator::setMaxStackSize);
+	connect(configList.get(), &ConfigList::configMapUpdated, configFileStore.get(), &ConfigFileStore::newConfigMap);
+	connect(configFileStore.get(), &ConfigFileStore::loadedPreAndUserConfigs, configList.get(), &ConfigList::newPreAndUserConfigs);
+	connect(configFileStore.get(), &ConfigFileStore::showError, this, &LSystemUi::showErrorInUi);
+	connect(configFileStore.get(), &ConfigFileStore::newStackSize, simulator.get(), &Simulator::setMaxStackSize);
 
-	ui->lstConfigs->setModel(&configList);
-	configFileStore.loadConfig();
-	loadConfigByLstIndex(configList.index(0, 0));
+	ui->lstConfigs->setModel(configList.get());
+	configFileStore->loadConfig();
+	loadConfigByLstIndex(configList->index(0, 0));
 
 	connect(ui->cmdDeleteConfig, &QPushButton::clicked, this, &LSystemUi::onCmdDeleteConfigClicked);
 	connect(ui->lstConfigs, &QListView::clicked, this, &LSystemUi::loadConfigByLstIndex);
@@ -110,7 +120,7 @@ void LSystemUi::setupMainControls()
 {
 	// connections/initialization for the main controls
 
-	ui->tblDefinitions->setModel(&defModel);
+	ui->tblDefinitions->setModel(defModel.get());
 	ui->tblDefinitions->setColumnWidth(0, 20);
 	ui->tblDefinitions->setColumnWidth(1, 200);
 	ui->tblDefinitions->setColumnWidth(2, 20);
@@ -121,15 +131,18 @@ void LSystemUi::setupMainControls()
 	tableItemDelegate.reset(new TableItemDelegateAutoUpdate);
 	ui->tblDefinitions->setItemDelegate(tableItemDelegate.data());
 
-	connect(ui->tblDefinitions->selectionModel(), &QItemSelectionModel::selectionChanged, &defModel, &DefinitionModel::selectionChanged);
-	connect(&defModel, &DefinitionModel::deselect, [this]() { ui->tblDefinitions->setCurrentIndex(QModelIndex()); });
-	connect(&defModel, &DefinitionModel::getSelection, [this]() { return ui->tblDefinitions->currentIndex(); });
-	connect(&defModel, &DefinitionModel::newStartSymbol, ui->lblStartSymbol, &QLabel::setText);
-	connect(&defModel, &DefinitionModel::showError, this, &LSystemUi::showErrorInUi);
-	connect(&defModel, &DefinitionModel::edited, this, &LSystemUi::configLiveEdit);
+	connect(ui->tblDefinitions->selectionModel(),
+			&QItemSelectionModel::selectionChanged,
+			defModel.get(),
+			&DefinitionModel::selectionChanged);
+	connect(defModel.get(), &DefinitionModel::deselect, [this]() { ui->tblDefinitions->setCurrentIndex(QModelIndex()); });
+	connect(defModel.get(), &DefinitionModel::getSelection, [this]() { return ui->tblDefinitions->currentIndex(); });
+	connect(defModel.get(), &DefinitionModel::newStartSymbol, ui->lblStartSymbol, &QLabel::setText);
+	connect(defModel.get(), &DefinitionModel::showError, this, &LSystemUi::showErrorInUi);
+	connect(defModel.get(), &DefinitionModel::edited, this, &LSystemUi::configLiveEdit);
 
-	connect(ui->cmdAdd, &QPushButton::clicked, &defModel, &DefinitionModel::add);
-	connect(ui->cmdRemove, &QPushButton::clicked, &defModel, &DefinitionModel::remove);
+	connect(ui->cmdAdd, &QPushButton::clicked, defModel.get(), &DefinitionModel::add);
+	connect(ui->cmdRemove, &QPushButton::clicked, defModel.get(), &DefinitionModel::remove);
 	connect(ui->cmdRightFormula, &QPushButton::clicked, this, &LSystemUi::showRightAngleDialog);
 }
 
@@ -236,14 +249,13 @@ bool LSystemUi::eventFilter(QObject * obj, QEvent * event)
 	return QObject::eventFilter(obj, event);
 }
 
-void LSystemUi::setupDrawArea()
+void LSystemUi::setupDrawAreaAndLayers()
 {
 	drawArea = ui->wdgDraw;
 	drawArea->setMouseTracking(true); // for mouse move event
 	connect(drawArea, &DrawArea::mouseClick, this, &LSystemUi::drawAreaClick);
-	connect(drawArea, &DrawArea::enableUndoRedo, this, &LSystemUi::enableUndoRedo);
-	connect(drawArea, &DrawArea::markingChanged, this, &LSystemUi::markDrawing);
-	connect(drawArea, &DrawArea::highlightChanged, this, &LSystemUi::highlightDrawing);
+	connect(drawArea, &DrawArea::highlightChanged, this, &LSystemUi::highlightChanged);
+	connect(drawArea, &DrawArea::showSymbols, this, &LSystemUi::showSymbols);
 
 	// Label for move/maximize commands
 	lblDrawActions.reset(new ClickableLabel(drawArea));
@@ -253,9 +265,13 @@ void LSystemUi::setupDrawArea()
 	lblDrawActions->setStyleSheet("QLabel { background-color: white; border: 2px solid white;}");
 	connect(lblDrawActions.data(), &ClickableLabel::linkActivated, this, &LSystemUi::processDrawAction);
 
-	drawAreaMenu.reset(new DrawAreaMenu(this)); // needs drawArea
+	DrawingCollection * drawingCollection = &drawArea->getDrawingCollection();
+	connect(drawingCollection, &DrawingCollection::markingChanged, this, &LSystemUi::markingChanged);
+	ui->lstLayers->setModel(drawingCollection);
 
-	ui->lstLayers->setModel(&drawArea->getDrawingCollection());
+	// to get the context menu shortcurts working
+	ui->menubar->addMenu(drawArea->getContextMenu());
+	ui->menubar->setNativeMenuBar(true);
 
 	auto * layersSelModel = ui->lstLayers->selectionModel();
 	connect(layersSelModel, &QItemSelectionModel::selectionChanged, drawArea, &DrawArea::layerSelectionChanged);
@@ -388,11 +404,6 @@ void LSystemUi::showSymbols()
 
 bool LSystemUi::symbolsVisible() const { return symbolsDialog && symbolsDialog->isVisible(); }
 
-void LSystemUi::setBgColor()
-{
-	const QColor col = QColorDialog::getColor(drawArea->getBgColor(), this);
-	if (col.isValid()) drawArea->setBgColor(col);
-}
 
 LSystemUi::DrawPlacement LSystemUi::getDrawPlacement(const lsystem::ui::DrawingFrameSummary & drawingFrameResult) const
 {
@@ -444,17 +455,9 @@ void LSystemUi::resetStatus()
 
 void LSystemUi::showSettings()
 {
-	SettingsDialog dia(this, configFileStore);
+	SettingsDialog dia(this, configFileStore.get());
 	dia.setModal(true);
 	dia.exec();
-}
-
-void LSystemUi::clearAll()
-{
-	drawArea->clear();
-	if (symbolsDialog) {
-		symbolsDialog->clearContent();
-	}
 }
 
 ConfigSet LSystemUi::getConfigSet(bool storeAsLastValid)
@@ -462,7 +465,7 @@ ConfigSet LSystemUi::getConfigSet(bool storeAsLastValid)
 	ConfigSet configSet;
 
 	configSet.name = curConfigName;
-	configSet.definitions = defModel.getDefinitions();
+	configSet.definitions = defModel->getDefinitions();
 
 	bool ok;
 
@@ -522,7 +525,7 @@ void LSystemUi::showConfigSet(const ConfigSet & configSet)
 {
 	disableConfigLiveEdit = true;
 	curConfigName = configSet.name;
-	defModel.setDefinitions(configSet.definitions);
+	defModel->setDefinitions(configSet.definitions);
 	// clang-format off
 	ui->txtScaleDown ->setText(QString::number(configSet.scaling));
 	ui->txtLeft      ->setText(QString::number(configSet.turn.left));
@@ -548,7 +551,7 @@ void LSystemUi::onCmdStoreConfigClicked()
 	ConfigSet cfg = getConfigSet(false);
 	if (!cfg.valid) return;
 
-	ConfigNameKind currentConfig = configList.getConfigNameKindByIndex(ui->lstConfigs->currentIndex());
+	ConfigNameKind currentConfig = configList->getConfigNameKindByIndex(ui->lstConfigs->currentIndex());
 	bool ok;
 	QString configName
 		= QInputDialog::getText(this, "Config name", "Enter a name for the config:", QLineEdit::Normal, currentConfig.configName, &ok);
@@ -557,7 +560,7 @@ void LSystemUi::onCmdStoreConfigClicked()
 
 	curConfigName = configName;
 	cfg.name = configName;
-	configList.storeConfig(cfg);
+	configList->storeConfig(cfg);
 	configLiveEdit();
 }
 
@@ -568,14 +571,12 @@ void LSystemUi::drawAreaClick(int x, int y, Qt::MouseButton button, bool drawing
 
 	if (button == Qt::MouseButton::LeftButton && !drawingMarked) {
 		startPaint(x, y);
-	} else if (button == Qt::MouseButton::RightButton) {
-		drawAreaMenu->menu.exec(drawArea->mapToGlobal(QPoint(x, y)));
-	};
+	}
 }
 
 void LSystemUi::loadConfigByLstIndex(const QModelIndex & index)
 {
-	ConfigSet config = configList.getConfigByIndex(index);
+	ConfigSet config = configList->getConfigByIndex(index);
 	if (config.valid) {
 		showConfigSet(config);
 		if (drawArea) drawArea->markDrawing(0);
@@ -586,22 +587,16 @@ void LSystemUi::loadConfigByLstIndex(const QModelIndex & index)
 
 void LSystemUi::onCmdDeleteConfigClicked()
 {
-	ConfigNameKind currentConfig = configList.getConfigNameKindByIndex(ui->lstConfigs->currentIndex());
+	ConfigNameKind currentConfig = configList->getConfigNameKindByIndex(ui->lstConfigs->currentIndex());
 
 	if (currentConfig.fromUser) {
-		configList.deleteConfig(currentConfig.configName);
+		configList->deleteConfig(currentConfig.configName);
 	} else {
 		showMessage("predefined config can't be deleted", MsgType::Error);
 	}
 }
 
-void LSystemUi::enableUndoRedo(bool undoOrRedo)
-{
-	drawAreaMenu->undoAction->setEnabled(undoOrRedo);
-	drawAreaMenu->redoAction->setEnabled(!undoOrRedo);
-}
-
-void LSystemUi::highlightDrawing(std::optional<DrawingSummary> drawResult)
+void LSystemUi::highlightChanged(std::optional<DrawingSummary> drawResult)
 {
 	highlightedDrawing = drawResult;
 
@@ -661,15 +656,9 @@ void LSystemUi::highlightDrawing(std::optional<DrawingSummary> drawResult)
 	lblDrawActions->setVisible(true);
 }
 
-void LSystemUi::markDrawing()
+void LSystemUi::markingChanged()
 {
 	const auto markedDrawing = drawArea->getMarkedDrawingResult();
-	const auto newDrawingNum = markedDrawing.has_value() ? markedDrawing->drawingNum : 0;
-
-	if (newDrawingNum == markedDrawingNum) return;
-	markedDrawingNum = newDrawingNum;
-
-	drawAreaMenu->setDrawingActionsVisible(markedDrawing.has_value());
 
 	if (markedDrawing.has_value()) {
 		showConfigSet(markedDrawing->config);
@@ -689,35 +678,6 @@ void LSystemUi::markDrawing()
 void LSystemUi::showErrorInUi(const QString & errString) { showMessage(errString, MsgType::Error); }
 
 void LSystemUi::showWarningInUi(const QString & errString) { showMessage(errString, MsgType::Warning); }
-
-void LSystemUi::copyToClipboardMarked()
-{
-	bool transparent;
-	if (transparencyOpt != TransparencyOpt::Ask) {
-		transparent = (transparencyOpt == TransparencyOpt::Transparency);
-	} else {
-		bool doNotAskAnymore = false;
-		// QMessageBox will take ownership (will delete the checkbox)
-		QCheckBox * chkTransparency = new QCheckBox("Don't ask anymore until restart of lsystem");
-		connect(chkTransparency, &QCheckBox::stateChanged, [&doNotAskAnymore](int state) { doNotAskAnymore = static_cast<bool>(state); });
-
-		QMessageBox msgBox(QMessageBox::Icon::Question,
-						   "Transparency",
-						   "Do you want to export the drawing with transparent background (will not work in all programs)?",
-						   QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,
-						   parentWidget());
-		msgBox.setDefaultButton(QMessageBox::Yes);
-		msgBox.setCheckBox(chkTransparency);
-		QMessageBox::StandardButton res = static_cast<QMessageBox::StandardButton>(msgBox.exec());
-		if (res == QMessageBox::Cancel) return;
-		transparent = (res == QMessageBox::Yes);
-		if (doNotAskAnymore) {
-			transparencyOpt = (transparent ? TransparencyOpt::Transparency : TransparencyOpt::NoTransparency);
-		}
-	}
-
-	drawArea->copyToClipboardMarked(transparent);
-}
 
 void LSystemUi::processSimulatorSegments(const common::ExecResult & execResult, const QSharedPointer<lsystem::common::AllDrawData> & data)
 {
@@ -959,7 +919,7 @@ void LSystemUi::onLblStatusLinkActivated(const QString & link)
 		if (config.overrideStackSize) {
 			config.overrideStackSize = *config.overrideStackSize * 2;
 		} else {
-			config.overrideStackSize = configFileStore.getSettings().maxStackSize * 2;
+			config.overrideStackSize = configFileStore->getSettings().maxStackSize * 2;
 		}
 		data->config = config;
 		getAdditionalOptionsForSegmentsMeta(data->meta);
@@ -1238,56 +1198,6 @@ AnimatorResult LSystemUi::newAnimationStep(int step, bool relativeStep)
 
 void LSystemUi::playerValueChanged(int value) { emit goToAnimationStep(value); }
 
-void LSystemUi::undoRedo()
-{
-	drawArea->restoreLastImage();
-	if (drawArea->getCurrentDrawing()) {
-		showConfigSet(drawArea->getCurrentDrawing()->config);
-
-		if (symbolsVisible()) showSymbols();
-	}
-}
-
-// -------------------- DrawAreaMenu --------------------
-
-LSystemUi::DrawAreaMenu::DrawAreaMenu(LSystemUi * parent)
-	: menu(parent)
-{
-	drawingActions << menu.addAction("Delete drawing", Qt::Key_Delete, &*parent->drawArea, &DrawArea::deleteMarked)
-				   << menu.addAction("Copy drawing", Qt::CTRL | Qt::Key_C, parent, &LSystemUi::copyToClipboardMarked)
-				   << menu.addAction("Send to front", &*parent->drawArea, &DrawArea::sendToFrontMarked)
-				   << menu.addAction("Send to back", &*parent->drawArea, &DrawArea::sendToBackMarked) << menu.addSeparator();
-
-	setDrawingActionsVisible(false);
-
-	undoAction = menu.addAction("Undo", Qt::CTRL | Qt::Key_Z, parent, &LSystemUi::undoRedo);
-	undoAction->setEnabled(false);
-	redoAction = menu.addAction("Redo", Qt::CTRL | Qt::Key_Y, parent, &LSystemUi::undoRedo);
-	redoAction->setEnabled(false);
-	menu.addSeparator();
-
-	menu.addAction("Clear all", Qt::CTRL | Qt::Key_Delete, parent, &LSystemUi::clearAll);
-	menu.addAction("Set Bg-Color", Qt::CTRL | Qt::Key_B, parent, &LSystemUi::setBgColor);
-	menu.addSeparator();
-
-	menu.addAction("Copy canvas", &*parent->drawArea, &DrawArea::copyToClipboardFull);
-	menu.addSeparator();
-
-	menu.addAction("Show symbols window", Qt::CTRL | Qt::SHIFT | Qt::Key_S, parent, &LSystemUi::showSymbols);
-
-	// to get the shortcurts working
-	parent->ui->menubar->addMenu(&menu);
-	parent->ui->menubar->setNativeMenuBar(true);
-}
-
-void LSystemUi::DrawAreaMenu::setDrawingActionsVisible(bool visible)
-{
-	// shortcuts become enabled/disabled with making the actions (un)visible
-	for (QAction * action : std::as_const(drawingActions)) {
-		action->setVisible(visible);
-	}
-}
-
 // -------------------- StatusMenu --------------------
 
 LSystemUi::StatusMenu::StatusMenu(LSystemUi * parent)
@@ -1295,5 +1205,3 @@ LSystemUi::StatusMenu::StatusMenu(LSystemUi * parent)
 {
 	menu.addAction("Copy to clipboard", &*parent, &LSystemUi::copyStatus);
 }
-
-// ------------------------------------------------------

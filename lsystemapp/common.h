@@ -1,5 +1,7 @@
 #pragma once
 
+#include <util/qpointenhance.h>
+
 #include <QColor>
 #include <QPointF>
 #include <QtCore>

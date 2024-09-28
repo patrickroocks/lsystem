@@ -11,6 +11,7 @@ SOURCES += \
 	configlist.cpp \
 	definitionmodel.cpp \
 	drawarea.cpp \
+	drawing.cpp \
 	drawingcollection.cpp \
 	lsystemui.cpp \
 	main.cpp \
@@ -23,6 +24,7 @@ SOURCES += \
 	util/focusablelineedit.cpp \
 	util/gradientpreview.cpp \
 	util/playercontrol.cpp \
+	util/qpointenhance.cpp \
 	util/quickangle.cpp \
 	util/quickbase.cpp \
 	util/quicklinear.cpp \
@@ -37,7 +39,9 @@ HEADERS += \
 	configlist.h \
 	definitionmodel.h \
 	drawarea.h \
+	drawing.h \
 	drawingcollection.h \
+	jsonkeys.h \
 	lsystemui.h \
 	segmentanimator.h \
 	segmentdrawer.h \
