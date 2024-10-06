@@ -1,7 +1,7 @@
 $build_dir = "lsystem_out"
 $deploy_dir = "lsystem_win"
-$qt_base_dir = "C:\Qt\5.15.2\mingw81_64\bin"
-$qt_path_ext = "C:\Qt\5.15.2\mingw81_64\bin;C:\Qt\Tools\mingw810_64\bin;C:\Qt\5.15.2\mingw81_64\bin;C:\Qt\Tools\mingw810_64\bin"
+$qt_base_dir = "C:\Qt\6.7.3\mingw_64\bin"
+$qt_path_ext = "C:\Qt\6.7.3\mingw_64\bin;C:\Qt\Tools\mingw1120_64\bin"
 $out_file = "lsystem_win.zip"
 
 function main {
@@ -10,7 +10,7 @@ function main {
 		"Build directory '../../$build_dir' was not found. Run 'win-build.ps1' first."
 		Return
 	}
-	$env:Path += ";C:\Qt\5.15.2\mingw81_64\bin;C:\Qt\Tools\mingw810_64\bin;C:\Qt\5.15.2\mingw81_64\bin;C:\Qt\Tools\mingw810_64\bin"
+	$env:Path += ";" + $qt_path_ext
 	
 	Remove-Item $deploy_dir -Recurse -ErrorAction Ignore
 	mkdir $deploy_dir
@@ -24,9 +24,9 @@ function main {
 	Remove-Item $out_file -Recurse -ErrorAction Ignore
 	Compress-Archive -Path $deploy_dir -DestinationPath $out_file
 	
-	Remove-Item $deploy_dir -Recurse -ErrorAction Ignore
-	
-	"Deploy done: $out_file"
+	"Deploy done."
+	"  Executable is: $pwd\$deploy_dir\lsystemapp.exe"
+	"  Archive file is: $pwd\$out_file"
 }
 
 main
