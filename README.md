@@ -16,15 +16,16 @@ The expansion and rendering of the L-system is done in different threads, such t
 
 To build lsystem on Ubuntu, you will first need to [install Qt >= 6.5](https://www.qt.io/download-open-source). Moreover you will need to install:
 
-        sudo apt install libxkbcommon-dev libxcb-xinerama0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxkbcommon-x11-0 libxcb-cursor0 libglew-dev
+    sudo apt install libxkbcommon-dev libxcb-xinerama0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+        libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxkbcommon-x11-0 libxcb-cursor0 libglew-dev
 
 ## Build and run (Ubuntu)
 
- To build and start lystem, run (assuming that Qt was installed to `/opt/Qt/6.5`):
+To build and start lystem, run (assuming that Qt was installed to `/opt/Qt/6.8.1`):
 
     git clone https://github.com/patrickroocks/lsystem lsystem
     cd lsystem
-    /opt/Qt/6.5/gcc_64/bin/qmake CONFIG+=qtquickcompiler
+    /opt/Qt/6.8.1/gcc_64/bin/qmake CONFIG+=qtquickcompiler
     make qmake_all
     make -j8
     ./lsystemapp/lsystemapp

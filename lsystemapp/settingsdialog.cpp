@@ -10,7 +10,7 @@ SettingsDialog::SettingsDialog(QWidget * parent, lsystem::ConfigFileStore * cfgS
 	, settings(cfgStore->getSettings())
 {
 	ui->setupUi(this);
-	setFixedSize(size());
+	//setFixedSize(size());
 
 	ui->txtStackSize->setText(QString::number(cfgStore->getSettings().maxStackSize));
 }

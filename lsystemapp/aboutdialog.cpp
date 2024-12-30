@@ -10,7 +10,7 @@ AboutDialog::AboutDialog(QWidget * parent)
 	, ui(new Ui::AboutDialog)
 {
 	ui->setupUi(this);
-	setFixedSize(size());
+	//setFixedSize(size());
 
 	// replace %1 and %2 in info string
 	ui->lblAbout->setText(ui->lblAbout->text().arg(lsystem::common::Version, QDate::currentDate().toString("yyyy")));

@@ -339,11 +339,12 @@ bool DrawArea::ContextMenu::getTransparencyForExport(bool * ok)
 		bool doNotAskAnymore = false;
 		// QMessageBox will take ownership (will delete the checkbox)
 		QCheckBox * chkTransparency = new QCheckBox("Don't ask anymore until restart of lsystem");
-		connect(chkTransparency, &QCheckBox::stateChanged, [&doNotAskAnymore](int state) { doNotAskAnymore = static_cast<bool>(state); });
-
+		connect(chkTransparency, &QCheckBox::checkStateChanged, [&doNotAskAnymore](int state) {
+			doNotAskAnymore = static_cast<bool>(state);
+		});
 		QMessageBox msgBox(QMessageBox::Icon::Question,
 						   "Transparency",
-						   "Do you want to export the drawing with transparent background (will not work in all programs)?",
+						   "Do you want to export the drawing with transparent background (will not work in all programs)?\n",
 						   QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,
 						   drawArea->parentWidget());
 		msgBox.setDefaultButton(QMessageBox::Yes);

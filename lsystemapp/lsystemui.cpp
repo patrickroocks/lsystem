@@ -113,6 +113,7 @@ void LSystemUi::setupConfigList()
 	loadConfigByLstIndex(configList->index(0, 0));
 
 	connect(ui->cmdDeleteConfig, &QPushButton::clicked, this, &LSystemUi::onCmdDeleteConfigClicked);
+	connect(ui->cmdStoreConfig, &QPushButton::clicked, this, &LSystemUi::onCmdStoreConfigClicked);
 	connect(ui->lstConfigs, &QListView::clicked, this, &LSystemUi::loadConfigByLstIndex);
 }
 
@@ -151,7 +152,7 @@ void LSystemUi::setupHelperControls()
 	// Color gradient
 	connect(ui->lblGradientStart, &ClickableLabel::mousePressed, this, &LSystemUi::onLblGradientStartMousePressed);
 	connect(ui->lblGradientEnd, &ClickableLabel::mousePressed, this, &LSystemUi::onLblGradientEndMousePressed);
-	connect(ui->chkColorGradient, &QCheckBox::stateChanged, this, &LSystemUi::configLiveEdit);
+	connect(ui->chkColorGradient, &QCheckBox::checkStateChanged, this, &LSystemUi::configLiveEdit);
 	ui->wdgGradientPreview->setColorGradient(&colorGradient);
 	updateGradientStyle();
 
@@ -166,10 +167,10 @@ void LSystemUi::setupHelperControls()
 	connect(ui->cmdClosePlayer, &QPushButton::clicked, this, &LSystemUi::onCmdClosePlayerClicked);
 
 	// CheckBoxes
-	connect(ui->chkShowSliders, &QCheckBox::stateChanged, this, &LSystemUi::onChkShowSlidersChanged);
-	connect(ui->chkShowLastIter, &QCheckBox::stateChanged, this, &LSystemUi::onChkShowLastIterStateChanged);
-	connect(ui->chkAntiAliasing, &QCheckBox::stateChanged, this, &LSystemUi::configLiveEdit);
-	connect(ui->chkAutoMax, &QCheckBox::stateChanged, this, &LSystemUi::configLiveEdit);
+	connect(ui->chkShowSliders, &QCheckBox::checkStateChanged, this, &LSystemUi::onChkShowSlidersChanged);
+	connect(ui->chkShowLastIter, &QCheckBox::checkStateChanged, this, &LSystemUi::onChkShowLastIterStateChanged);
+	connect(ui->chkAntiAliasing, &QCheckBox::checkStateChanged, this, &LSystemUi::configLiveEdit);
+	connect(ui->chkAutoMax, &QCheckBox::checkStateChanged, this, &LSystemUi::configLiveEdit);
 
 	// Defaults
 	connect(ui->cmdResetDefaultOptions, &QPushButton::clicked, this, &LSystemUi::onCmdResetDefaultOptionsClicked);
