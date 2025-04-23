@@ -46,7 +46,7 @@ Your user-defined configs will be stored in a `config.json` file located in the 
 
 ## Build and run (Windows)
 
-Have a look at the PowerShell scripts in the `build` directory.
+Have a look at the PowerShell scripts in the `build-tools` directory.
 
 ## License
 

@@ -1,3 +1,4 @@
+build/*
 *.user
 copy_lsystem.sh
 *.qmlproject.qtds

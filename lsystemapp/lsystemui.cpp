@@ -122,11 +122,11 @@ void LSystemUi::setupMainControls()
 	// connections/initialization for the main controls
 
 	ui->tblDefinitions->setModel(defModel.get());
-	ui->tblDefinitions->setColumnWidth(0, 20);
-	ui->tblDefinitions->setColumnWidth(1, 200);
-	ui->tblDefinitions->setColumnWidth(2, 20);
-	ui->tblDefinitions->setColumnWidth(3, 15);
-	ui->tblDefinitions->setColumnWidth(4, 15);
+	ui->tblDefinitions->setColumnWidth(0, 50);
+	ui->tblDefinitions->setColumnWidth(1, 300);
+	ui->tblDefinitions->setColumnWidth(2, 50);
+	ui->tblDefinitions->setColumnWidth(3, 45);
+	ui->tblDefinitions->setColumnWidth(4, 45);
 	ui->tblDefinitions->setAcceptDrops(true);
 	ui->tblDefinitions->setStyleSheet("QHeaderView::section { background-color: #CCCCCC }");
 	tableItemDelegate.reset(new TableItemDelegateAutoUpdate);
