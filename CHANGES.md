@@ -1,3 +1,8 @@
+# Version 1.0.0
+
+- fixed bug in send to front / send to back
+- fixed bug in replayer when deleting the current drawing
+
 # Version 0.9.0
 
 - added automatic maximize option

@@ -2,5 +2,5 @@
 
 namespace lsystem::common {
 
-static const constexpr char * Version = "0.9.0";
+static const constexpr char* Version = "1.0.0";
 }

@@ -56,7 +56,7 @@ protected:
 
 private:
 	void setNextUndoRedo(bool undoOrRedo);
-	void highlightDrawing(int drawingNum);
+	void setHighlightedDrawing(int drawingNum);
 	void deleteDrawing(int drawingNum);
 
 private slots:

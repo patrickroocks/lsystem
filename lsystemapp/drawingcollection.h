@@ -10,9 +10,9 @@ class DrawingCollection final : public QAbstractListModel
 {
 	Q_OBJECT
 public:
-	void addOrReplaceDrawing(const QSharedPointer<Drawing> & newDrawing);
+	void addOrReplaceDrawing(const QSharedPointer<Drawing>& newDrawing);
 
-	void resize(const QSize & newSize);
+	void resize(const QSize& newSize);
 	void clearAll();
 
 	void redraw(bool keepContent = false);
@@ -22,17 +22,17 @@ public:
 	qint64 getDrawingByPos(const QPoint & pos);
 	QPoint getDrawingOffset(qint64 drawingNum);
 	QPoint getDrawingSize(qint64 drawingNum);
-	QImage & getDrawingImage(qint64 drawingNum);
+	QImage& getDrawingImage(qint64 drawingNum);
 	QImage getImage();
 	int getMarkedDrawingNum() const { return markedDrawing; }
 	int getHighlightedDrawingNum() const { return highlightedDrawing; }
-	Drawing * getCurrentDrawing();
+	Drawing* getCurrentDrawing();
 	bool setMarkedDrawing(qint64 newMarkedDrawing);
 	bool moveDrawing(qint64 drawingNum, const QPoint & newOffset, bool storeUndo = true);
 	bool deleteDrawing(qint64 drawingNum);
 	bool sendToFront(qint64 drawingNum);
 	bool sendToBack(qint64 drawingNum);
-	bool highlightDrawing(qint64 newHighlightedDrawing);
+	bool setHighlightedDrawing(qint64 newHighlightedDrawing);
 	std::optional<DrawingSummary> getHighlightedDrawResult();
 	std::optional<DrawingSummary> getMarkedDrawResult();
 	int getDrawingNumByListIndex(int listIndex) const;
@@ -52,6 +52,7 @@ signals:
 	void markingChanged();
 
 private:
+	bool checkForZIndexChange(qint64 drawingNum, qint64 newZIndex);
 	bool sendToZIndex(qint64 drawingNum, qint64 newZIndex);
 
 	// ListModel:

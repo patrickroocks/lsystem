@@ -661,9 +661,9 @@ void LSystemUi::markingChanged()
 {
 	const auto markedDrawing = drawArea->getMarkedDrawingResult();
 
+	ui->playerControl->setPlaying(false);
 	if (markedDrawing.has_value()) {
 		showConfigSet(markedDrawing->config);
-		ui->playerControl->setPlaying(false);
 		ui->playerControl->setMaxValueAndValue(markedDrawing->segmentsCount, markedDrawing->animStep);
 	}
 

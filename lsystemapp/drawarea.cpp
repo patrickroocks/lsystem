@@ -233,13 +233,14 @@ void DrawArea::mouseMoveEvent(QMouseEvent * event)
 		const bool moveCouldStart = (mouseOverDrawingNum > 0 && mouseOverDrawingNum == drawings.getMarkedDrawingNum());
 		const bool readyForPaint = (drawings.getMarkedDrawingNum() == 0 && mouseOverDrawingNum == 0);
 		setCursor(moveCouldStart ? Qt::OpenHandCursor : (readyForPaint ? Qt::CrossCursor : Qt::ArrowCursor));
-		highlightDrawing(mouseOverDrawingNum);
+		setHighlightedDrawing(mouseOverDrawingNum);
 	}
 }
 
-void DrawArea::highlightDrawing(int drawingNum)
+void DrawArea::setHighlightedDrawing(int drawingNum)
 {
-	if (drawings.highlightDrawing(drawingNum)) {
+	if (drawings.setHighlightedDrawing(drawingNum))
+	{
 		emit highlightChanged(drawings.getHighlightedDrawResult());
 		update();
 	}

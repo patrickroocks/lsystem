@@ -4,7 +4,7 @@ using namespace lsystem::common;
 
 namespace lsystem::ui {
 
-void DrawingCollection::addOrReplaceDrawing(const QSharedPointer<Drawing> & newDrawing)
+void DrawingCollection::addOrReplaceDrawing(const QSharedPointer<Drawing>& newDrawing)
 {
 	if (newDrawing->num == 0) {
 		// add new drawing
@@ -141,7 +141,7 @@ bool DrawingCollection::setMarkedDrawing(qint64 newMarkedDrawing)
 	return true;
 }
 
-bool DrawingCollection::moveDrawing(qint64 drawingNum, const QPoint & newOffset, bool storeUndo)
+bool DrawingCollection::moveDrawing(qint64 drawingNum, const QPoint& newOffset, bool storeUndo)
 {
 	if (!drawings.contains(drawingNum) || drawings[drawingNum]->offset == newOffset) return false;
 
@@ -160,10 +160,14 @@ bool DrawingCollection::deleteDrawing(qint64 drawingNum)
 	storeUndoPoint();
 	zIndexToDrawing.remove(drawings[drawingNum]->zIndex);
 	drawings.remove(drawingNum);
-	if (markedDrawing == drawingNum) markedDrawing = 0;
-	if (highlightedDrawing == drawingNum) highlightedDrawing = 0;
+	bool didRedraw = false;
+	if (markedDrawing == drawingNum)
+		didRedraw = setMarkedDrawing(0);
+	if (highlightedDrawing == drawingNum)
+		didRedraw |= setHighlightedDrawing(0);
 	updateListData();
-	redraw();
+	if (!didRedraw)
+		redraw();
 	return true;
 }
 
@@ -179,7 +183,7 @@ bool DrawingCollection::sendToBack(qint64 drawingNum)
 	return sendToZIndex(drawingNum, zIndexToDrawing.firstKey() - 1);
 }
 
-bool DrawingCollection::highlightDrawing(qint64 newHighlightedDrawing)
+bool DrawingCollection::setHighlightedDrawing(qint64 newHighlightedDrawing)
 {
 	if (highlightedDrawing == newHighlightedDrawing) return false;
 	highlightedDrawing = newHighlightedDrawing;
@@ -205,15 +209,23 @@ std::optional<DrawingSummary> DrawingCollection::getMarkedDrawResult()
 	}
 }
 
+bool DrawingCollection::checkForZIndexChange(qint64 drawingNum, qint64 newZIndex)
+{
+	if (!drawings.contains(drawingNum))
+		return false;
+	const auto& drawing = drawings[drawingNum];
+	const qint64 oldZIndex = drawing->zIndex;
+	// new zIndex is zIndex(front) + 1 or zIndex(back) - 1, i.e., diff <= 1 means no change
+	return qAbs(oldZIndex - newZIndex) >= 2;
+}
+
 bool DrawingCollection::sendToZIndex(qint64 drawingNum, qint64 newZIndex)
 {
-	if (!drawings.contains(drawingNum)) return false;
-	auto & drawing = drawings[drawingNum];
-	const qint64 oldZIndex = drawing->zIndex;
-	if (oldZIndex == newZIndex) return false;
+	if (!checkForZIndexChange(drawingNum, newZIndex))
+		return false;
 
 	storeUndoPoint(drawingNum);
-	drawing->zIndex = newZIndex;
+	drawings[drawingNum]->zIndex = newZIndex;
 	updateZIndexToDrawing();
 	redraw();
 	updateListData();
@@ -226,7 +238,7 @@ int DrawingCollection::rowCount(const QModelIndex & parent) const
 	return drawings.size();
 }
 
-QVariant DrawingCollection::data(const QModelIndex & index, int role) const
+QVariant DrawingCollection::data(const QModelIndex& index, int role) const
 {
 	if (role == Qt::DisplayRole && index.column() == 0) {
 		if (index.row() < drawings.size()) {
@@ -237,7 +249,7 @@ QVariant DrawingCollection::data(const QModelIndex & index, int role) const
 	return QVariant();
 }
 
-QString DrawingCollection::getRow(const QModelIndex & index) const
+QString DrawingCollection::getRow(const QModelIndex& index) const
 {
 	if (index.row() >= listData.size()) return QString{};
 	return listData[index.row()].description;
@@ -250,7 +262,7 @@ void DrawingCollection::updateListData()
 	listData.clear();
 	for (qint64 drawNum : std::as_const(zIndexToDrawing)) {
 		ListEntry entry;
-		auto & drawing = drawings[drawNum];
+		auto& drawing = drawings[drawNum];
 		entry.description = "[" + QString::number(drawNum) + "] " + drawing->config.name + " (" + QString::number(drawing->offset.x())
 							+ ", " + QString::number(drawing->offset.y()) + ")";
 		entry.drawNum = drawNum;
@@ -270,7 +282,8 @@ int DrawingCollection::getDrawingNumByListIndex(int listIndex) const
 void DrawingCollection::updateZIndexToDrawing()
 {
 	zIndexToDrawing.clear();
-	for (const auto & drawing : std::as_const(drawings)) {
+	for (const auto& drawing : std::as_const(drawings))
+	{
 		zIndexToDrawing[drawing->zIndex] = drawing->num;
 	}
 }
